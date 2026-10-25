@@ -29,7 +29,7 @@ public final class ExperimentService {
             var version=catalog.version(actor,UUID.fromString(entry.path("evaluator_version").asText()));
             var item=evaluators.addObject(); item.put("id",version.id().toString()); item.set("content",version.content());
         }
-        return repository.start(actor,command,hash,snapshot);
+        return repository.start(actor,command,hash,snapshot,clock.instant());
     }
     public ExperimentRecord get(WorkspaceActor actor,UUID id) { return repository.get(actor,id); }
     public List<ExperimentRecord> list(WorkspaceActor actor,int offset,int limit) {

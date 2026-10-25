@@ -136,5 +136,23 @@
     "schema": "criterion-result.json",
     "type": "CriterionResult",
     "valid": true
+  },
+  {
+    "file": "valid-register-worker.json",
+    "schema": "register-worker-request.json",
+    "type": "RegisterWorkerRequest",
+    "valid": true
+  },
+  {
+    "file": "bad-register-protocol.json",
+    "schema": "register-worker-request.json",
+    "type": "RegisterWorkerRequest",
+    "valid": false
+  },
+  {
+    "file": "bad-register-concurrency.json",
+    "schema": "register-worker-request.json",
+    "type": "RegisterWorkerRequest",
+    "valid": false
   }
 ]

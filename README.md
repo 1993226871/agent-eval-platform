@@ -24,7 +24,7 @@
 </div>
 
 > [!IMPORTANT]
-> 项目正在开发：已实现共享协议和后端身份模块，完整评测平台、SDK及部署包尚未交付。下文整体能力为首版规划，SDK代码片段为接口示意，不代表已发布 API。当前可验证内容见[后端运行说明](docs/development/backend.md)和[实施进度](docs/development/progress.md)。
+> 项目正在开发：已实现共享协议、后端身份、版本化资源和Worker控制链路，完整评测平台、SDK及部署包尚未交付。下文整体能力为首版规划，SDK代码片段为接口示意，不代表已发布 API。当前可验证内容见[后端运行说明](docs/development/backend.md)和[实施进度](docs/development/progress.md)。
 
 <a id="overview"></a>
 ## Overview
@@ -164,7 +164,7 @@ Docker Compose 组织服务，Python 代码的安全执行需要额外的强化�
 - [x] 编写分阶段实施计划，明确接口、测试与验收条件。
 - [x] 确认实施计划，采用当前会话逐项TDD实现。
 - [x] 实现共享协议、私人工作空间与后端身份基础。
-- [ ] 实现私人工作空间、版本化任务与持久化调度。
+- [x] 实现后端私人工作空间、版本化任务与持久化调度。
 - [ ] 打通 Java/Python SDK 和自建轨迹采集。
 - [ ] 实现规则、LLM、Python 三类评测器。
 - [ ] 完成额度账本、报告、证据定位和版本比较。

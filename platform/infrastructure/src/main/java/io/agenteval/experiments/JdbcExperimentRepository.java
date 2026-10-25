@@ -20,19 +20,19 @@ public class JdbcExperimentRepository implements ExperimentRepository {
             if(!hash.equals(row.getString("request_hash"))) throw new CatalogConflictException(); return row.getObject("id",UUID.class);
         }).optional();
     }
-    @Override public UUID start(WorkspaceActor actor,StartExperimentCommand command,String hash,JsonNode snapshot) {
+    @Override public UUID start(WorkspaceActor actor,StartExperimentCommand command,String hash,JsonNode snapshot,java.time.Instant now) {
         return tx.execute(status -> {
             // Serialize starts within a workspace; prevents duplicate-key races and partial trial expansion.
             jdbc.sql("select id from workspaces where id=? for update").param(actor.workspaceId()).query(UUID.class).single();
             var existing=replay(actor,command.idempotencyKey(),hash); if(existing.isPresent()) return existing.get();
             UUID id=UUID.randomUUID();
-            jdbc.sql("insert into experiments(id,workspace_id,agent_id,agent_version,dataset_version_id,suite_version_id,repeat_count,deadline,snapshot,idempotency_key,request_hash) values (?,?,?,?,?,?,?,?,cast(? as jsonb),?,?)")
-                .params(id,actor.workspaceId(),command.agentId(),command.agentVersion(),command.datasetVersionId(),command.suiteVersionId(),command.repeatCount(),java.sql.Timestamp.from(command.deadline()),snapshot.toString(),command.idempotencyKey(),hash).update();
+            jdbc.sql("insert into experiments(id,workspace_id,agent_id,agent_version,dataset_version_id,suite_version_id,repeat_count,deadline,snapshot,idempotency_key,request_hash,created_at) values (?,?,?,?,?,?,?,?,cast(? as jsonb),?,?,?)")
+                .params(id,actor.workspaceId(),command.agentId(),command.agentVersion(),command.datasetVersionId(),command.suiteVersionId(),command.repeatCount(),java.sql.Timestamp.from(command.deadline()),snapshot.toString(),command.idempotencyKey(),hash,java.sql.Timestamp.from(now)).update();
             int index=0;
             for(var task:snapshot.path("dataset").path("cases")) {
                 for(int attempt=1;attempt<=command.repeatCount();attempt++) {
-                    jdbc.sql("insert into trials(id,experiment_id,workspace_id,case_index,attempt,trace_id,task) values (?,?,?,?,?,?,cast(? as jsonb))")
-                        .params(UUID.randomUUID(),id,actor.workspaceId(),index,attempt,UUID.randomUUID().toString().replace("-",""),task.toString()).update();
+                    jdbc.sql("insert into trials(id,experiment_id,workspace_id,case_index,attempt,trace_id,task,next_run_at,created_at) values (?,?,?,?,?,?,cast(? as jsonb),?,?)")
+                        .params(UUID.randomUUID(),id,actor.workspaceId(),index,attempt,UUID.randomUUID().toString().replace("-",""),task.toString(),java.sql.Timestamp.from(now),java.sql.Timestamp.from(now)).update();
                 }
                 index++;
             }
