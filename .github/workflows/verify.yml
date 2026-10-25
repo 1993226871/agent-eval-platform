@@ -27,3 +27,8 @@ jobs:
           cache: maven
       - run: chmod +x mvnw
       - run: ./mvnw --batch-mode --no-transfer-progress verify
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r sdks/python/requirements-test.lock
+      - run: python scripts/verify_phase_b.py

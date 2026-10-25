@@ -62,7 +62,7 @@ public class JdbcLeaseRepository implements LeaseRepository {
             var row=lockAttempt(p,trialId,token); requireLive(row,now);
             if(row.context().status()==TrialExecutionStatus.RUNNING) return;
             if(row.context().status()!=TrialExecutionStatus.LEASED || !row.context().experimentStatus().equals("ACTIVE")) throw new AttemptRejectedException();
-            jdbc.sql("update trials set status='RUNNING' where id=? and status='LEASED'").param(trialId).update();
+            jdbc.sql("update trials set status='RUNNING',started_at=coalesce(started_at,?) where id=? and status='LEASED'").params(Timestamp.from(now),trialId).update();
         });
     }
     @Override public HeartbeatReply heartbeat(WorkerPrincipal p,UUID trialId,String token,Instant now) {

@@ -24,7 +24,7 @@
 </div>
 
 > [!IMPORTANT]
-> 项目正在开发：已实现后端身份、版本化资源、Worker调度、轨迹/附件、证据快照及双语言SDK。评分执行、Web界面和完整部署包仍在实施中。下文整体能力包含首版规划，当前可验证内容见[后端运行说明](docs/development/backend.md)、[Python SDK](sdks/python/README.md)、[Java SDK](sdks/java/README.md)和[实施进度](docs/development/progress.md)。
+> 项目正在开发：已实现后端身份、版本化资源、Worker调度、轨迹/附件、证据快照、双语言SDK、规则评分和报告API。LLM/Python执行、累计额度、Web界面和完整部署包仍在实施中。当前可复现[双SDK评分闭环](docs/development/reporting.md)，其他能力包含首版规划；详见[实施进度](docs/development/progress.md)。
 
 <a id="overview"></a>
 ## Overview
@@ -73,11 +73,11 @@ flowchart LR
 
 ## Evaluation methods
 
-| 方式 | 适用内容 | 示例 |
-| --- | --- | --- |
-| Rule-based | 可明确表达的事实和约束 | JSON Schema、参数检查、必要步骤、调用次数 |
-| LLM-as-judge | 开放性内容和语义判断 | 信息完整性、证据支持、工具结果使用是否合理 |
-| Custom Python | 特定业务计算与自定义指标 | 根据订单折扣、优惠券和运费计算应退金额 |
+| 方式 | 适用内容 | 示例 | 当前状态 |
+| --- | --- | --- | --- |
+| Rule-based | 可明确表达的事实和约束 | Schema、参数、显式依赖、调用次数 | 可执行并查询报告 |
+| LLM-as-judge | 开放性内容和语义判断 | 信息完整性、证据支持、工具结果使用是否合理 | 已提供配置范式，执行待接入 |
+| Custom Python | 特定业务计算与自定义指标 | 根据折扣、优惠券和运费计算应退金额 | 已提供配置范式，隔离执行待接入 |
 
 三类评测器使用统一的结果结构：状态、分数、通过结论、解释和证据引用。Python 代码在平台的强化隔离环境执行，默认无网络访问。
 

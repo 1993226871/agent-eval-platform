@@ -1,0 +1,30 @@
+{
+  "verified_at": "2026-10-25T20:29:47.811364+00:00",
+  "postgres": "17.11",
+  "results": [
+    {
+      "sdk": "python",
+      "verdict": "PASS",
+      "score": 1,
+      "span_count": 2,
+      "root_count": 1,
+      "planned_attempts": 1,
+      "determinable_attempts": 1,
+      "started_attempts": 1,
+      "observed_durations": 1,
+      "evaluation_state": "COMPLETED"
+    },
+    {
+      "sdk": "java",
+      "verdict": "PASS",
+      "score": 1,
+      "span_count": 2,
+      "root_count": 1,
+      "planned_attempts": 1,
+      "determinable_attempts": 1,
+      "started_attempts": 1,
+      "observed_durations": 1,
+      "evaluation_state": "COMPLETED"
+    }
+  ]
+}

@@ -13,6 +13,7 @@
 | AssertJ | 3.27.3 | 实际测试运行 |
 | networknt JSON Schema | 1.5.6 | 校验 JSON Schema 2020-12 和共享fixture |
 | SLF4J test nop | 2.0.17 | 只用于纯协议模块测试日志绑定 |
+| SLF4J API | 2.0.18 | Boot BOM实际解析；双SDK端到端脚本Java运行类路径 |
 | compiler plugin | 3.14.0 | JDK21编译 |
 | Surefire / Failsafe | 3.5.3 | 单元/集成测试阶段约定 |
 | PostgreSQL | 17.11 | 官方镜像已拉取 |

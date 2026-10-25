@@ -18,6 +18,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
 
 @Testcontainers
+@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @SpringBootTest(classes=PlatformWorkerApplication.class,webEnvironment=SpringBootTest.WebEnvironment.NONE,properties="spring.flyway.enabled=true")
 class WorkerStartupIT {
     @Container static PostgreSQLContainer<?> postgres=new PostgreSQLContainer<>("postgres:17.11");

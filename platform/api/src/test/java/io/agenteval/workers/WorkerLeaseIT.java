@@ -25,6 +25,7 @@ import java.net.http.*;
 import static org.assertj.core.api.Assertions.*;
 
 @Testcontainers
+@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @SpringBootTest(classes={PlatformApiApplication.class,WorkerLeaseIT.TimeConfiguration.class},webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
 class WorkerLeaseIT {
     @Container static PostgreSQLContainer<?> postgres=new PostgreSQLContainer<>("postgres:17.11");
