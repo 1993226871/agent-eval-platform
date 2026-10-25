@@ -47,7 +47,9 @@ public class JdbcExperimentRepository implements ExperimentRepository {
     }
     @Override public void cancel(WorkspaceActor actor,UUID id) {
         tx.executeWithoutResult(status -> {
-            get(actor,id); jdbc.sql("update experiments set status='CANCELLED' where id=? and workspace_id=?").params(id,actor.workspaceId()).update();
+            get(actor,id);
+            jdbc.sql("select id from scheduler_guard where id=1 for update").query(Integer.class).single();
+            jdbc.sql("update experiments set status='CANCELLED' where id=? and workspace_id=?").params(id,actor.workspaceId()).update();
             jdbc.sql("update trials set status='CANCELLED' where experiment_id=? and workspace_id=? and status='QUEUED'").params(id,actor.workspaceId()).update();
         });
     }

@@ -48,6 +48,7 @@ class WorkerLeaseIT {
     @Autowired LeaseService leases;
     @Autowired LeaseSweeper sweeper;
     @Autowired ObjectMapper json;
+    @Autowired javax.sql.DataSource dataSource;
     @LocalServerPort int port;
     @BeforeEach void advancePastOldLeases() { clock.advance(3600); }
 
@@ -154,6 +155,23 @@ class WorkerLeaseIT {
         assertThat(last.leaseExpiresAt()).isEqualTo(grant.task().deadline());
         clock.advance(16); sweeper.sweep(100);
         assertThat(experiments.trials(s.actor(),s.experimentId()).getFirst().status()).isEqualTo(TrialExecutionStatus.TIMED_OUT);
+    }
+    @Test void cancellationAndCompletionUseSameSerializationBoundary() throws Exception {
+        var s=setup(); var worker=register(s,"race"); var grant=leases.claim(s.principal(),claim(s,worker)).orElseThrow();
+        leases.started(s.principal(),grant.trialId(),grant.attemptToken());
+        try(var connection=dataSource.getConnection(); var executor=Executors.newFixedThreadPool(2)) {
+            connection.setAutoCommit(false);
+            try(var statement=connection.createStatement(); var result=statement.executeQuery("select id from scheduler_guard where id=1 for update")) { assertThat(result.next()).isTrue(); }
+            var completed=executor.submit(() -> { leases.complete(s.principal(),grant.trialId(),grant.attemptToken(),success()); return true; });
+            var cancelled=executor.submit(() -> { experiments.cancel(s.actor(),s.experimentId()); return true; });
+            try {
+                assertThatThrownBy(() -> completed.get(200,TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+                assertThatThrownBy(() -> cancelled.get(200,TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+                assertThat(experiments.trials(s.actor(),s.experimentId()).getFirst().status()).isEqualTo(TrialExecutionStatus.RUNNING);
+            } finally { connection.commit(); }
+            assertThat(completed.get(5,TimeUnit.SECONDS)).isTrue(); assertThat(cancelled.get(5,TimeUnit.SECONDS)).isTrue();
+            assertThat(experiments.get(s.actor(),s.experimentId()).status()).isEqualTo("CANCELLED");
+        }
     }
     CompletionRequest success() throws Exception { return new CompletionRequest(TrialExecutionStatus.SUCCEEDED,json.readTree("{\"amount\":100}"),0,0,0,List.of()); }
     HttpResponse<String> post(String secret,String path,String body,String attempt) throws Exception {

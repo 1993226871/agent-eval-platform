@@ -47,7 +47,17 @@ Worker控制请求使用`Authorization: Bearer <secret>`，不能使用浏览器
 | POST /api/v1/trials/{id}/heartbeat | 返回cancel_requested和lease_expires_at |
 | POST /api/v1/trials/{id}/complete | 提交执行终态和结果，完全相同的重复提交幂等；204 |
 
-complete body由共享`completion-request.json`约束。SDK必须先确认started再调用Agent；完成前flush事件，提交final_sequence/event_count/dropped_count/artifact_ids。轨迹上传API在后续任务实现，目前控制链路可保存最终结果。
+complete body由共享`completion-request.json`约束。SDK必须先确认started再调用Agent；完成前flush事件，提交final_sequence/event_count/dropped_count/artifact_ids。
+
+## 轨迹上传与查询
+
+`POST /api/v1/trials/{id}/events:batch`使用相同Bearer及尝试令牌，body为`{"events":[共享trace-event模型]}`。批次最多100事件、实际请求不超过1MiB、单事件payload不超过64KiB。响应`acknowledged_event_ids`只在数据库事务提交成功后确认。
+
+同event_id同内容可重试；不同内容或重复sequence冲突返回409，整批回滚。服务端来源固定为worker_reported，客户端不能声明成独立验证。输入/输出及异常以原始事件保存，调用树是可重建投影。
+
+浏览器通过`GET /api/v1/traces/{trial_id}?limit=50&cursor=...`分页查询。游标绑定当前空间和Trial，并固定首个分页的上界；刷新查询可读取后续新节点。Worker凭证不能替代浏览器访问其他空间。
+
+终态后默认30秒内可补收迟到证据，超出窗口拒绝。补收不会改变执行结果；证据快照与重评在后续任务中实现。
 
 ## 失联和取消
 

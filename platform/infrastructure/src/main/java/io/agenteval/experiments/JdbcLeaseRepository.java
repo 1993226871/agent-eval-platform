@@ -47,6 +47,16 @@ public class JdbcLeaseRepository implements LeaseRepository {
     @Override public AttemptContext validateAttempt(WorkerPrincipal p,UUID trialId,String token,Instant now) {
         return tx.execute(status -> { var row=lockAttempt(p,trialId,token); requireLive(row,now); return row.context(); });
     }
+    @Override public AttemptContext validateUploadAttempt(WorkerPrincipal p,UUID trialId,String token,Instant now) {
+        return tx.execute(status -> {
+            var row=lockAttempt(p,trialId,token);
+            if(row.completedAt()!=null) {
+                if(!row.completedAt().plusSeconds(30).isAfter(now)) throw new AttemptRejectedException();
+                return row.context();
+            }
+            requireLive(row,now); return row.context();
+        });
+    }
     @Override public void started(WorkerPrincipal p,UUID trialId,String token,Instant now) {
         tx.executeWithoutResult(status -> {
             var row=lockAttempt(p,trialId,token); requireLive(row,now);
@@ -59,7 +69,7 @@ public class JdbcLeaseRepository implements LeaseRepository {
         return tx.execute(status -> {
             var row=lockAttempt(p,trialId,token);
             if(row.context().experimentStatus().equals("CANCELLED")) {
-                jdbc.sql("update trials set status='CANCELLED' where id=? and status in ('LEASED','RUNNING')").param(trialId).update();
+                jdbc.sql("update trials set status='CANCELLED',completed_at=coalesce(completed_at,?) where id=? and status in ('LEASED','RUNNING')").params(Timestamp.from(now),trialId).update();
                 return new HeartbeatReply(true,row.context().leaseExpiresAt());
             }
             requireLive(row,now);
@@ -81,7 +91,7 @@ public class JdbcLeaseRepository implements LeaseRepository {
                 if(row.context().status()!=TrialExecutionStatus.RUNNING) throw new AttemptRejectedException();
                 if(!row.context().deadline().isAfter(now)) terminal=TrialExecutionStatus.TIMED_OUT;
             }
-            jdbc.sql("update trials set status=?,completion=cast(? as jsonb),completion_hash=?,completed_at=? where id=?")
+            jdbc.sql("update trials set status=?,completion=cast(? as jsonb),completion_hash=?,completed_at=coalesce(completed_at,?) where id=?")
                 .params(terminal.name(),payload.toString(),hash,Timestamp.from(now),trialId).update();
         });
     }
@@ -95,9 +105,11 @@ public class JdbcLeaseRepository implements LeaseRepository {
         return jdbc.sql(query).query(Integer.class).single();
     }
     private AttemptRow lockAttempt(WorkerPrincipal p,UUID id,String token) {
+        // Match cancellation/claim lock order before touching experiment or trial rows.
+        jdbc.sql("select id from scheduler_guard where id=1 for update").query(Integer.class).single();
         requireCredential(p);
-        var row=jdbc.sql("select t.status,t.completion_hash,l.worker_id,l.token_hash,l.expires_at,l.execution_deadline,e.status experiment_status from trial_leases l join trials t on t.id=l.trial_id join experiments e on e.id=t.experiment_id join worker_instances w on w.id=l.worker_id where l.trial_id=? and l.workspace_id=? and w.credential_id=? for update of t,l,e")
-            .params(id,p.workspaceId(),p.credentialId()).query((r,n) -> new AttemptRow(new AttemptContext(p.workspaceId(),id,r.getObject("worker_id",UUID.class),TrialExecutionStatus.valueOf(r.getString("status")),r.getTimestamp("expires_at").toInstant(),r.getTimestamp("execution_deadline").toInstant(),r.getString("experiment_status")),r.getString("token_hash"),r.getString("completion_hash"))).optional().orElseThrow(AttemptRejectedException::new);
+        var row=jdbc.sql("select t.status,t.completion_hash,t.completed_at,l.worker_id,l.token_hash,l.expires_at,l.execution_deadline,e.status experiment_status from trial_leases l join trials t on t.id=l.trial_id join experiments e on e.id=t.experiment_id join worker_instances w on w.id=l.worker_id where l.trial_id=? and l.workspace_id=? and w.credential_id=? for update of t,l,e")
+            .params(id,p.workspaceId(),p.credentialId()).query((r,n) -> new AttemptRow(new AttemptContext(p.workspaceId(),id,r.getObject("worker_id",UUID.class),TrialExecutionStatus.valueOf(r.getString("status")),r.getTimestamp("expires_at").toInstant(),r.getTimestamp("execution_deadline").toInstant(),r.getString("experiment_status")),r.getString("token_hash"),r.getString("completion_hash"),r.getTimestamp("completed_at")==null?null:r.getTimestamp("completed_at").toInstant())).optional().orElseThrow(AttemptRejectedException::new);
         if(!TokenSecrets.matches(row.tokenHash(),token)) throw new AttemptRejectedException(); return row;
     }
     private void requireCredential(WorkerPrincipal p) {
@@ -109,5 +121,5 @@ public class JdbcLeaseRepository implements LeaseRepository {
     private JsonNode tree(String value) { try { return json.readTree(value); } catch(java.io.IOException invalid) { throw new IllegalStateException(invalid); } }
     private static Instant min(Instant a,Instant b) { return a.isBefore(b)?a:b; }
     private record Candidate(UUID id,String traceId,JsonNode task,Instant deadline) {}
-    private record AttemptRow(AttemptContext context,String tokenHash,String completionHash) {}
+    private record AttemptRow(AttemptContext context,String tokenHash,String completionHash,Instant completedAt) {}
 }
