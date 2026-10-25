@@ -23,6 +23,7 @@ import java.net.http.*;
 import static org.assertj.core.api.Assertions.*;
 
 @Testcontainers
+@org.springframework.context.annotation.Import(TraceIngestionIT.StorageConfig.class)
 @SpringBootTest(classes=PlatformApiApplication.class,webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
 class TraceIngestionIT {
     @Container static PostgreSQLContainer<?> postgres=new PostgreSQLContainer<>("postgres:17.11");
@@ -39,6 +40,31 @@ class TraceIngestionIT {
     @Autowired ObjectMapper json;
     @LocalServerPort int port;
     final ProtocolCodec codec=new ProtocolCodec();
+    @Test void artifactUploadRequiresCorrectAttemptAndReservesPerTrialQuota() throws Exception {
+        var s=setup();
+        var request=new RegisterArtifactRequest("report.json","application/json",70L*1024*1024,"a".repeat(64),"first-report");
+        var first=artifactPost(s,s.grant().attemptToken(),codec.encode(request));
+        assertThat(first.statusCode()).isEqualTo(200);
+        assertThat(json.readTree(first.body()).path("upload_url").asText()).contains("staging/");
+        assertThat(artifactPost(s,"wrong-token",codec.encode(request)).statusCode()).isEqualTo(409);
+        assertThat(artifactPost(s,s.grant().attemptToken(),codec.encode(new RegisterArtifactRequest("second.json","application/json",40L*1024*1024,"b".repeat(64),"second-report"))).statusCode()).isEqualTo(413);
+        assertThatThrownBy(() -> leases.complete(s.principal(),s.grant().trialId(),s.grant().attemptToken(),new CompletionRequest(TrialExecutionStatus.SUCCEEDED,codec.tree("42"),0,0,0,List.of(UUID.randomUUID())))).isInstanceOf(AttemptRejectedException.class);
+    }
+    @org.springframework.boot.test.context.TestConfiguration
+    static class StorageConfig {
+        @org.springframework.context.annotation.Bean @org.springframework.context.annotation.Primary
+        ArtifactStore testStore() { return new ArtifactStore() {
+            public URI uploadUrl(String key,long size) { return URI.create("https://storage.test/"+key); }
+            public URI downloadUrl(String key) { return URI.create("https://storage.test/"+key); }
+            public void verifyAndSeal(String stage,String sealed,long size,String hash) { throw new IllegalStateException("Not a storage integration test"); }
+        }; }
+    }
+    HttpResponse<String> artifactPost(Setup s,String token,String body) throws Exception {
+        var request=HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/v1/trials/"+s.grant().trialId()+"/artifacts"))
+            .header("Authorization","Bearer "+s.credential().secret()).header("X-Attempt-Token",token).header("Content-Type","application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+        try(var client=HttpClient.newHttpClient()) { return client.send(request,HttpResponse.BodyHandlers.ofString()); }
+    }
     record Setup(WorkspaceActor actor,WorkerPrincipal principal,IssuedCredential credential,LeaseGrant grant) {}
     Setup setup() {
         var actor=identities.createUser(UUID.randomUUID()+"@test.local","Temporary-Password-1",false).actor();

@@ -155,4 +155,7 @@
     "type": "RegisterWorkerRequest",
     "valid": false
   }
+  ,{"file":"valid-register-artifact.json","schema":"register-artifact-request.json","type":"RegisterArtifactRequest","valid":true}
+  ,{"file":"bad-artifact-path.json","schema":"register-artifact-request.json","type":"RegisterArtifactRequest","valid":false}
+  ,{"file":"bad-register-artifact-size.json","schema":"register-artifact-request.json","type":"RegisterArtifactRequest","valid":false}
 ]

@@ -84,6 +84,9 @@ public class JdbcLeaseRepository implements LeaseRepository {
         tx.executeWithoutResult(status -> {
             var row=lockAttempt(p,trialId,token); var payload=json.valueToTree(request); String hash=CanonicalJson.hash(payload);
             if(row.completionHash()!=null) { if(!row.completionHash().equals(hash)) throw new AttemptRejectedException(); return; }
+            for(var artifactId:request.artifactIds()) {
+                if(jdbc.sql("select id from artifacts where id=? and workspace_id=? and trial_id=?").params(artifactId,p.workspaceId(),trialId).query(UUID.class).optional().isEmpty()) throw new AttemptRejectedException();
+            }
             TrialExecutionStatus terminal=request.status();
             if(row.context().experimentStatus().equals("CANCELLED") || row.context().status()==TrialExecutionStatus.CANCELLED) terminal=TrialExecutionStatus.CANCELLED;
             else {

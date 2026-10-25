@@ -21,6 +21,8 @@ public class ApiExceptionHandler {
     @ExceptionHandler(io.agenteval.workers.CapacityExceededException.class) ResponseEntity<ProblemDetail> capacity() { return problem(429,"CAPACITY_REACHED"); }
     @ExceptionHandler(io.agenteval.telemetry.TelemetryConflictException.class) ResponseEntity<ProblemDetail> traceConflict() { return problem(409,"TRACE_CONFLICT"); }
     @ExceptionHandler(io.agenteval.telemetry.TelemetryLimitException.class) ResponseEntity<ProblemDetail> traceLimit() { return problem(413,"TRACE_LIMIT_EXCEEDED"); }
+    @ExceptionHandler(io.agenteval.telemetry.EvidencePendingException.class) ResponseEntity<ProblemDetail> evidencePending() { return problem(409,"EVIDENCE_PENDING"); }
+    @ExceptionHandler(io.agenteval.telemetry.StorageUnavailableException.class) ResponseEntity<ProblemDetail> storageUnavailable() { return problem(503,"STORAGE_UNAVAILABLE"); }
     private ResponseEntity<ProblemDetail> problem(int status,String code) {
         var body=ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(status),"Request rejected"); body.setProperty("code",code); body.setProperty("request_id",UUID.randomUUID());
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(body);

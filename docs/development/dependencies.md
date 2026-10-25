@@ -19,11 +19,15 @@
 | Testcontainers | 1.21.4 | Docker Desktop27.5.1 + PostgreSQL实际运行 |
 | Spring Security | 6.5.11 | 实际HTTP登录、CSRF及会话测试 |
 | Spring Session | 3.5.7 | JDBC持久化Session集成测试 |
+| AWS Java SDK S3 / URLConnection | 2.31.20 | HTTPS Maven Central解析、实际S3兼容对象读写 |
+| S3Mock（仅测试） | 4.11.0 | Docker容器中的上传、校验失败和封存验证 |
 
 PostgreSQL 镜像 digest：`postgres@sha256:b8faeff7712663c2773a190181e1246e37e364b887611c04658c28b44e2408fe`。
 
+S3Mock 镜像 digest：`adobe/s3mock@sha256:cd49108c0094bc3f420b24bff354073032a9ec1a6f4cc89f8e8f483a308cf99e`。实现依据[AWS预签名URL文档](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/examples-s3-presign.html)及[S3Mock固定版本说明](https://github.com/adobe/S3Mock/tree/4.11.0)；S3Mock是测试依赖，部署存储实现仍在部署任务中确定。
+
 本地默认 Java17 保持不变，运行前将 JAVA_HOME 指向 JDK21。项目提供 `.mvn/settings.xml` 使用 HTTPS Central；不提交本机下载缓存、JDK或真实凭证。
 
-Python3.11.5和Node24.15.0在当前机器可用；其SDK/前端测试尚未执行。CI目标JDK21，Node22计划在web任务锁定。Redis、S3、Python镜像和前端lockfile由对应任务在实际运行后补充，不能把计划版本写成已验证。
+Python3.11.5和Node24.15.0在当前机器可用；其SDK/前端测试尚未执行。CI目标JDK21，Node22计划在web任务锁定。Redis、部署S3兼容实现、Python镜像和前端lockfile由对应任务在实际运行后补充，不能把计划版本写成已验证。
 
 Spring Boot 保留已选3.x；具体维护来源和适用性在正式发布前核实，不因文档存在对应版本就声称社区支持。
