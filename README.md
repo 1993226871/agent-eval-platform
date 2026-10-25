@@ -16,7 +16,7 @@
 <p>
   <a href="#overview">项目介绍</a> ·
   <a href="#architecture">架构</a> ·
-  <a href="#sdk-preview">SDK 设计预览</a> ·
+  <a href="#sdk-preview">SDK 接入</a> ·
   <a href="#documentation">设计文档</a> ·
   <a href="#roadmap">路线图</a>
 </p>
@@ -24,7 +24,7 @@
 </div>
 
 > [!IMPORTANT]
-> 项目正在开发：已实现共享协议、后端身份、版本化资源和Worker控制链路，完整评测平台、SDK及部署包尚未交付。下文整体能力为首版规划，SDK代码片段为接口示意，不代表已发布 API。当前可验证内容见[后端运行说明](docs/development/backend.md)和[实施进度](docs/development/progress.md)。
+> 项目正在开发：已实现后端身份、版本化资源、Worker调度、轨迹/附件和证据快照；Python SDK可从源码安装。Java SDK、评分执行、Web界面和完整部署包仍在实施中。下文整体能力包含首版规划，当前可验证内容见[后端运行说明](docs/development/backend.md)、[Python SDK](sdks/python/README.md)和[实施进度](docs/development/progress.md)。
 
 <a id="overview"></a>
 ## Overview
@@ -85,28 +85,32 @@ flowchart LR
 > “任务失败”“证据不足”和“评分器异常”是不同状态。用户上报的执行记录也不等同于独立环境验证；平台会标明证据来源和可评估范围。
 
 <a id="sdk-preview"></a>
-## SDK design preview
+## SDK integration
 
-SDK 计划提供两部分能力：**Worker 接入**和**执行轨迹采集**。下面展示预期使用方式，包名、方法名及参数尚未冻结。
+SDK提供 **Worker 接入**和**执行轨迹采集**。Python已实现，Java示例仍为后续设计预览；两个包均尚未发布到公共制品仓库。
 
 ### Python
 
 ```python
-# 接口设计示意，当前不可安装或运行。
-from agent_eval import EvaluationWorker, observe
+# python -m pip install ./sdks/python
+from threading import Event
+from agent_eval import AgentResult, EvaluationWorker, observe
 
 worker = EvaluationWorker.from_env()
 
 @observe(kind="tool")
 def query_order(order_id: str):
-    return order_service.query(order_id)
+    return {"amount": 100, "status": "paid"}  # 替换为自己的工具实现
 
-@worker.agent("customer-service")
 def evaluate_agent(task):
-    # 复用现有 Agent；内部调用仍需对应的埋点或集成。
-    return my_agent.run(task.input)
+    return AgentResult(query_order(task.input["order_id"]))
 
-worker.start()
+worker.register_agent("YOUR_AGENT_UUID", evaluate_agent)
+try:
+    worker.start()
+    Event().wait()
+finally:
+    worker.stop()
 ```
 
 ### Java
@@ -154,7 +158,7 @@ Docker Compose 组织服务，Python 代码的安全执行需要额外的强化�
 
 参阅[分阶段实施计划](docs/superpowers/plans/2026-10-25-agent-evaluation-platform.md)：20 项 TDD 任务，覆盖文件布局、共享接口、测试命令和阶段验收。实现状态与本地验证记录见[实施进度](docs/development/progress.md)。
 
-完整平台的SDK安装和部署指南尚未发布；已实现后端的构建与启动方式见[后端运行说明](docs/development/backend.md)。
+Python接入、缓存和关闭行为见[SDK指南](sdks/python/README.md)；后端构建与启动见[运行说明](docs/development/backend.md)。完整平台部署指南将在部署验收后提供。
 
 <a id="roadmap"></a>
 ## Roadmap

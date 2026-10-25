@@ -21,6 +21,9 @@
 | Spring Session | 3.5.7 | JDBC持久化Session集成测试 |
 | AWS Java SDK S3 / URLConnection | 2.31.20 | HTTPS Maven Central解析、实际S3兼容对象读写 |
 | S3Mock（仅测试） | 4.11.0 | Docker容器中的上传、校验失败和封存验证 |
+| Python | 3.11.5（本机）/3.11（CI系列） | 隔离venv测试、wheel安装、本地订单示例 |
+| httpx / jsonschema | 0.28.1 / 4.23.0 | Python Worker HTTP协议与共享fixture验证 |
+| pytest / setuptools | 8.3.5 / 80.9.0 | 47项SDK测试、隔离构建wheel |
 
 PostgreSQL 镜像 digest：`postgres@sha256:b8faeff7712663c2773a190181e1246e37e364b887611c04658c28b44e2408fe`。
 
@@ -28,6 +31,6 @@ S3Mock 镜像 digest：`adobe/s3mock@sha256:cd49108c0094bc3f420b24bff354073032a9
 
 本地默认 Java17 保持不变，运行前将 JAVA_HOME 指向 JDK21。项目提供 `.mvn/settings.xml` 使用 HTTPS Central；不提交本机下载缓存、JDK或真实凭证。
 
-Python3.11.5和Node24.15.0在当前机器可用；其SDK/前端测试尚未执行。CI目标JDK21，Node22计划在web任务锁定。Redis、部署S3兼容实现、Python镜像和前端lockfile由对应任务在实际运行后补充，不能把计划版本写成已验证。
+Python SDK实际解析的传递依赖锁定于 `sdks/python/requirements-test.lock`，不复用或修改全局Anaconda环境。Node24.15.0在当前机器可用，前端测试尚未执行；CI目标Node22在web任务锁定。Redis、部署S3兼容实现、Python Runner镜像和前端lockfile由对应任务在实际运行后补充，不能把计划版本写成已验证。
 
 Spring Boot 保留已选3.x；具体维护来源和适用性在正式发布前核实，不因文档存在对应版本就声称社区支持。

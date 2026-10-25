@@ -17,6 +17,9 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+*.egg-info/
+sdks/python/build/
+.agent-eval/
 
 # Frontend
 node_modules/
