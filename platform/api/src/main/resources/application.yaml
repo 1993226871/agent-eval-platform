@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: agent-eval-platform
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/agenteval}
+    username: ${DATABASE_USER:agenteval}
+    password: ${DATABASE_PASSWORD:}
+  session:
+    jdbc:
+      initialize-schema: never
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    deserialization:
+      fail-on-unknown-properties: true
+server:
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        secure: ${SECURE_COOKIES:true}
+        same-site: lax
+app:
+  secure-cookies: ${SECURE_COOKIES:true}

@@ -7,8 +7,8 @@
 | JDK | Temurin 21.0.12.1+1（本机项目内工具） | Adoptium API、下载 SHA256 校验、实际 Maven 测试 |
 | Java release | 21 | Maven compiler release |
 | Maven wrapper | 3.3.2，下载 Maven 3.9.9 | 官方 wrapper plugin 生成，HTTPS Maven Central |
-| Spring Boot | 3.5.16（后续模块使用） | Maven Central POM HTTP200，尚未完成启动集成测试 |
-| Jackson | 2.18.3 | BOM和协议测试实际解析 |
+| Spring Boot | 3.5.16 | Maven解析、启动及真实PostgreSQL身份集成测试 |
+| Jackson | 2.21.4 | 随Boot BOM对齐；协议测试再次通过 |
 | JUnit | 5.11.4 | 参数化协议测试实际运行 |
 | AssertJ | 3.27.3 | 实际测试运行 |
 | networknt JSON Schema | 1.5.6 | 校验 JSON Schema 2020-12 和共享fixture |
@@ -16,6 +16,9 @@
 | compiler plugin | 3.14.0 | JDK21编译 |
 | Surefire / Failsafe | 3.5.3 | 单元/集成测试阶段约定 |
 | PostgreSQL | 17.11 | 官方镜像已拉取 |
+| Testcontainers | 1.21.4 | Docker Desktop27.5.1 + PostgreSQL实际运行 |
+| Spring Security | 6.5.11 | 实际HTTP登录、CSRF及会话测试 |
+| Spring Session | 3.5.7 | JDBC持久化Session集成测试 |
 
 PostgreSQL 镜像 digest：`postgres@sha256:b8faeff7712663c2773a190181e1246e37e364b887611c04658c28b44e2408fe`。
 

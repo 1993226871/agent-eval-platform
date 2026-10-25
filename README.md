@@ -7,7 +7,7 @@
 面向自定义 Agent 的评测平台，连接任务、执行轨迹与质量证据。
 
 <p>
-  <img src="https://img.shields.io/badge/status-design_stage-f59e0b?style=flat-square" alt="Status: design stage" />
+  <img src="https://img.shields.io/badge/status-in_development-f59e0b?style=flat-square" alt="Status: in development" />
   <img src="https://img.shields.io/badge/backend-Java_21-007396?style=flat-square" alt="Backend target: Java 21" />
   <img src="https://img.shields.io/badge/SDKs-Java_%2B_Python-3776AB?style=flat-square" alt="Planned SDKs: Java and Python" />
   <img src="https://img.shields.io/badge/evaluation-rules_%2B_LLM_%2B_code-0f766e?style=flat-square" alt="Planned evaluation methods: rules, LLM and code" />
@@ -24,7 +24,7 @@
 </div>
 
 > [!IMPORTANT]
-> 项目目前处于设计阶段，仓库包含设计规格，尚无可运行的平台、SDK 或部署包。下文能力为首版规划，代码片段为接口示意，不代表已发布 API。
+> 项目正在开发：已实现共享协议和后端身份模块，完整评测平台、SDK及部署包尚未交付。下文整体能力为首版规划，SDK代码片段为接口示意，不代表已发布 API。当前可验证内容见[后端运行说明](docs/development/backend.md)和[实施进度](docs/development/progress.md)。
 
 <a id="overview"></a>
 ## Overview
@@ -152,9 +152,9 @@ Docker Compose 组织服务，Python 代码的安全执行需要额外的强化�
 - 累计额度、调用预留、结算、异常对账和安全边界。
 - 数据模型、测试策略和端到端验收场景。
 
-下一步参阅[分阶段实施计划](docs/superpowers/plans/2026-10-25-agent-evaluation-platform.md)：20 项 TDD 任务，覆盖文件布局、共享接口、测试命令和阶段验收。计划已编写，产品实现尚未开始。
+参阅[分阶段实施计划](docs/superpowers/plans/2026-10-25-agent-evaluation-platform.md)：20 项 TDD 任务，覆盖文件布局、共享接口、测试命令和阶段验收。实现状态与本地验证记录见[实施进度](docs/development/progress.md)。
 
-当前没有安装命令或运行快速开始；可运行示例和部署指南将随实现补充。
+完整平台的SDK安装和部署指南尚未发布；已实现后端的构建与启动方式见[后端运行说明](docs/development/backend.md)。
 
 <a id="roadmap"></a>
 ## Roadmap
@@ -162,7 +162,8 @@ Docker Compose 组织服务，Python 代码的安全执行需要额外的强化�
 - [x] 明确产品范围、技术栈和 SDK Worker 接入模式。
 - [x] 编写设计规格并完成独立可实施性审阅。
 - [x] 编写分阶段实施计划，明确接口、测试与验收条件。
-- [ ] 确认实施计划并选择执行方式。
+- [x] 确认实施计划，采用当前会话逐项TDD实现。
+- [x] 实现共享协议、私人工作空间与后端身份基础。
 - [ ] 实现私人工作空间、版本化任务与持久化调度。
 - [ ] 打通 Java/Python SDK 和自建轨迹采集。
 - [ ] 实现规则、LLM、Python 三类评测器。

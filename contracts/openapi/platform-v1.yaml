@@ -1,0 +1,135 @@
+openapi: 3.1.0
+info:
+  title: AgentEval Platform API
+  version: 0.1.0
+  description: Implemented identity endpoints. Worker, catalog and evaluation endpoints will be added by their owning tasks.
+servers:
+  - url: /
+security:
+  - session: []
+paths:
+  /api/v1/auth/csrf:
+    get:
+      operationId: getCsrfToken
+      security: []
+      responses:
+        '200':
+          description: CSRF token for the current browser session; send it using header_name on mutations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [header_name, token]
+                properties:
+                  header_name: {type: string}
+                  token: {type: string}
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      security: []
+      description: Requires a previously fetched CSRF token and its associated session cookie.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string, format: email}
+                password: {type: string, format: password}
+      responses:
+        '200': {description: Authenticated; fetch me to check required password change.}
+        '401': {$ref: '#/components/responses/Rejected'}
+        '403': {$ref: '#/components/responses/Rejected'}
+  /api/v1/auth/me:
+    get:
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user without secrets.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user_id, workspace_id, email, admin, must_change_password]
+                properties:
+                  user_id: {type: string, format: uuid}
+                  workspace_id: {type: string, format: uuid}
+                  email: {type: string, format: email}
+                  admin: {type: boolean}
+                  must_change_password: {type: boolean}
+        '401': {$ref: '#/components/responses/Rejected'}
+  /api/v1/auth/password:
+    post:
+      operationId: changePassword
+      description: Requires CSRF; revokes old sessions and issues a new session for the current caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [current_password, new_password]
+              properties:
+                current_password: {type: string, format: password}
+                new_password: {type: string, format: password, minLength: 12}
+      responses:
+        '204': {description: Password changed.}
+        '400': {$ref: '#/components/responses/Rejected'}
+        '401': {$ref: '#/components/responses/Rejected'}
+        '403': {$ref: '#/components/responses/Rejected'}
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      description: Requires CSRF; invalidates the browser session.
+      responses:
+        '204': {description: Session invalidated.}
+        '403': {$ref: '#/components/responses/Rejected'}
+  /api/v1/workspace:
+    get:
+      operationId: getPrivateWorkspace
+      responses:
+        '200':
+          description: The current user's sole private workspace.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: {type: string, format: uuid}
+        '401': {$ref: '#/components/responses/Rejected'}
+        '403': {$ref: '#/components/responses/Rejected'}
+  /api/v1/workspaces/{id}:
+    get:
+      operationId: getPrivateWorkspaceById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Own workspace only.}
+        '404': {$ref: '#/components/responses/Rejected'}
+        '401': {$ref: '#/components/responses/Rejected'}
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: SESSION
+  responses:
+    Rejected:
+      description: Request rejected without disclosing credentials or private resource existence.
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            required: [status, code, detail, request_id]
+            properties:
+              status: {type: integer}
+              code: {type: string}
+              detail: {type: string}
+              request_id: {type: string, format: uuid}
