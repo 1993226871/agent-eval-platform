@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "claim-request",
+  "$id": "urn:agenteval:v1:claim-request",
+  "type": "object",
+  "properties": {
+    "worker_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "agent_version": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "max_wait_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20
+    }
+  },
+  "required": [
+    "worker_id",
+    "agent_id",
+    "agent_version",
+    "max_wait_seconds"
+  ],
+  "additionalProperties": false
+}

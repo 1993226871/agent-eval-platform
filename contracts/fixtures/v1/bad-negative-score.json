@@ -1,0 +1,11 @@
+{
+  "criterion_id": "amount",
+  "status": "SCORED",
+  "score": -0.1,
+  "passed": true,
+  "reason": "正确",
+  "evidence_refs": [
+    "event:00000000-0000-0000-0000-000000000002"
+  ],
+  "evaluator_version": "00000000-0000-0000-0000-000000000001"
+}

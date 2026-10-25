@@ -1,0 +1,11 @@
+{
+  "criterion_id": "amount",
+  "status": "INSUFFICIENT_EVIDENCE",
+  "score": null,
+  "passed": null,
+  "reason": "缺少证据",
+  "evidence_refs": [
+    "event:00000000-0000-0000-0000-000000000002"
+  ],
+  "evaluator_version": "00000000-0000-0000-0000-000000000001"
+}

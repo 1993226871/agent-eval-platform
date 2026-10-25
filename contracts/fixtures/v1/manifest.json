@@ -1,0 +1,140 @@
+[
+  {
+    "file": "valid-trace-event.json",
+    "schema": "trace-event.json",
+    "type": "TraceEvent",
+    "valid": true
+  },
+  {
+    "file": "valid-trial-context.json",
+    "schema": "trial-context.json",
+    "type": "TrialContextPayload",
+    "valid": true
+  },
+  {
+    "file": "valid-criterion-result.json",
+    "schema": "criterion-result.json",
+    "type": "CriterionResult",
+    "valid": true
+  },
+  {
+    "file": "valid-claim-request.json",
+    "schema": "claim-request.json",
+    "type": "ClaimRequest",
+    "valid": true
+  },
+  {
+    "file": "valid-lease-grant.json",
+    "schema": "lease-grant.json",
+    "type": "LeaseGrant",
+    "valid": true
+  },
+  {
+    "file": "valid-completion-request.json",
+    "schema": "completion-request.json",
+    "type": "CompletionRequest",
+    "valid": true
+  },
+  {
+    "file": "valid-evaluation-context.json",
+    "schema": "evaluation-context.json",
+    "type": "EvaluationContext",
+    "valid": true
+  },
+  {
+    "file": "valid-artifact-ref.json",
+    "schema": "artifact-ref.json",
+    "type": "ArtifactRef",
+    "valid": true
+  },
+  {
+    "file": "bad-version.json",
+    "schema": "trace-event.json",
+    "type": "TraceEvent",
+    "valid": false
+  },
+  {
+    "file": "bad-uuid.json",
+    "schema": "trace-event.json",
+    "type": "TraceEvent",
+    "valid": false
+  },
+  {
+    "file": "bad-zero-trace.json",
+    "schema": "trace-event.json",
+    "type": "TraceEvent",
+    "valid": false
+  },
+  {
+    "file": "bad-sequence.json",
+    "schema": "trace-event.json",
+    "type": "TraceEvent",
+    "valid": false
+  },
+  {
+    "file": "bad-kind.json",
+    "schema": "trace-event.json",
+    "type": "TraceEvent",
+    "valid": false
+  },
+  {
+    "file": "bad-source.json",
+    "schema": "trace-event.json",
+    "type": "TraceEvent",
+    "valid": false
+  },
+  {
+    "file": "bad-negative-score.json",
+    "schema": "criterion-result.json",
+    "type": "CriterionResult",
+    "valid": false
+  },
+  {
+    "file": "bad-large-score.json",
+    "schema": "criterion-result.json",
+    "type": "CriterionResult",
+    "valid": false
+  },
+  {
+    "file": "bad-missing-score.json",
+    "schema": "criterion-result.json",
+    "type": "CriterionResult",
+    "valid": false
+  },
+  {
+    "file": "bad-unscored-score.json",
+    "schema": "criterion-result.json",
+    "type": "CriterionResult",
+    "valid": false
+  },
+  {
+    "file": "bad-long-wait.json",
+    "schema": "claim-request.json",
+    "type": "ClaimRequest",
+    "valid": false
+  },
+  {
+    "file": "bad-completion-state.json",
+    "schema": "completion-request.json",
+    "type": "CompletionRequest",
+    "valid": false
+  },
+  {
+    "file": "bad-secret-task.json",
+    "schema": "trial-context.json",
+    "type": "TrialContextPayload",
+    "valid": false
+  },
+  {
+    "file": "bad-artifact-size.json",
+    "schema": "artifact-ref.json",
+    "type": "ArtifactRef",
+    "valid": false
+  },
+  {
+    "file": "valid-insufficient.json",
+    "schema": "criterion-result.json",
+    "type": "CriterionResult",
+    "valid": true
+  }
+]

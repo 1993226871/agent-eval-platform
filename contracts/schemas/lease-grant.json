@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "lease-grant",
+  "$id": "urn:agenteval:v1:lease-grant",
+  "type": "object",
+  "properties": {
+    "trial_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^(?!0{32}$)[0-9a-f]{32}$"
+    },
+    "attempt_token": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "lease_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "task": {
+      "type": "object",
+      "properties": {
+        "trial_id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        },
+        "instruction": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "input": {},
+        "deadline": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "trial_id",
+        "instruction",
+        "input",
+        "deadline"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "trial_id",
+    "trace_id",
+    "attempt_token",
+    "lease_expires_at",
+    "task"
+  ],
+  "additionalProperties": false
+}

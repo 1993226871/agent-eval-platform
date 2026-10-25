@@ -30,6 +30,8 @@ test-results/
 data/
 artifacts/
 .spool/
+.tools/
+.superpowers/
 
 # Editor and operating system
 .idea/

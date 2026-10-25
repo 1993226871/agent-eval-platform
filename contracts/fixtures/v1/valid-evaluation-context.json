@@ -1,0 +1,39 @@
+{
+  "trial_id": "00000000-0000-0000-0000-000000000001",
+  "snapshot_id": "00000000-0000-0000-0000-000000000001",
+  "task_input": {
+    "order_id": "A"
+  },
+  "expected": {
+    "amount": 100
+  },
+  "output": {
+    "amount": 100
+  },
+  "events": [
+    {
+      "schema_version": "1.0",
+      "event_id": "00000000-0000-0000-0000-000000000002",
+      "trial_id": "00000000-0000-0000-0000-000000000001",
+      "trace_id": "11111111111111111111111111111111",
+      "span_id": "1111111111111111",
+      "parent_span_id": null,
+      "event_type": "span.started",
+      "span_kind": "tool",
+      "name": "query_order",
+      "sequence": 1,
+      "occurred_at": "2026-10-25T08:00:00Z",
+      "payload": {
+        "input": {
+          "订单": "A"
+        }
+      },
+      "capture": {
+        "redacted": false,
+        "truncated": false
+      }
+    }
+  ],
+  "artifacts": [],
+  "completeness": "COMPLETE"
+}

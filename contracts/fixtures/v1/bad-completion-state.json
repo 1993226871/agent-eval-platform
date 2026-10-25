@@ -1,0 +1,10 @@
+{
+  "status": "RUNNING",
+  "output": {
+    "ok": true
+  },
+  "final_sequence": 2,
+  "event_count": 2,
+  "dropped_count": 0,
+  "artifact_ids": []
+}
