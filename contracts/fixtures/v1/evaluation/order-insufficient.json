@@ -1,0 +1,1 @@
+{"config":{"operator":"eq","selector":"/output/amount","expected":100},"output":{},"completeness":"PARTIAL","status":"INSUFFICIENT_EVIDENCE","score":null,"passed":null}

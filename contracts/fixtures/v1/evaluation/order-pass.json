@@ -1,0 +1,1 @@
+{"config":{"operator":"eq","selector":"/output/amount","expected":100},"output":{"amount":100},"completeness":"NONE","status":"SCORED","score":1,"passed":true}
