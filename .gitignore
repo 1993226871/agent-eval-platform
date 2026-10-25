@@ -1,0 +1,38 @@
+# Local secrets and configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Java
+target/
+*.class
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Frontend
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Local runtime data
+*.log
+data/
+artifacts/
+.spool/
+
+# Editor and operating system
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
