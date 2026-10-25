@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "trace-event",
+  "$id": "urn:agenteval:v1:trace-event",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "trial_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^(?!0{32}$)[0-9a-f]{32}$"
+    },
+    "span_id": {
+      "type": "string",
+      "pattern": "^(?!0{16}$)[0-9a-f]{16}$"
+    },
+    "parent_span_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(?!0{16}$)[0-9a-f]{16}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "event_type": {
+      "enum": [
+        "span.started",
+        "span.completed",
+        "span.failed",
+        "log",
+        "artifact.created"
+      ]
+    },
+    "span_kind": {
+      "enum": [
+        "agent",
+        "model",
+        "tool",
+        "retrieval",
+        "custom"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {},
+    "capture": {
+      "type": "object",
+      "properties": {
+        "redacted": {
+          "type": "boolean"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "redacted",
+        "truncated"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "event_id",
+    "trial_id",
+    "trace_id",
+    "span_id",
+    "parent_span_id",
+    "event_type",
+    "span_kind",
+    "name",
+    "sequence",
+    "occurred_at",
+    "payload",
+    "capture"
+  ],
+  "additionalProperties": false
+}

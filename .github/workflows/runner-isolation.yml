@@ -1,0 +1,22 @@
+name: Hardened Runner acceptance
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolation:
+    # Dedicated node only. Never attach privileged execution to untrusted PR triggers.
+    runs-on: [self-hosted, linux, agent-eval-runsc]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r runner/requirements-test.lock
+      - run: docker build --tag agent-eval-sandbox:acceptance runner/sandbox
+      - name: Verify hardened runtime and isolation
+        shell: bash
+        run: |
+          export RUNNER_TEST_IMAGE="$(docker image inspect --format '{{.Id}}' agent-eval-sandbox:acceptance)"
+          python -m pytest runner/tests/integration -q

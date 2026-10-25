@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "register-artifact-request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "media_type", "size_bytes", "sha256", "idempotency_key"],
+  "properties": {
+    "name": {"type": "string", "minLength": 1, "maxLength": 200, "allOf": [{"pattern": "\\S"}, {"pattern": "^[^/\\\\]+$"}], "not": {"pattern": "[\\u0000-\\u001f\\u007f-\\u009f]"}},
+    "media_type": {"type": "string", "maxLength": 200, "pattern": "^[A-Za-z0-9!#$&^_.+-]+/[A-Za-z0-9!#$&^_.+-]+$"},
+    "size_bytes": {"type": "integer", "minimum": 0, "maximum": 104857600},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "idempotency_key": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$"}
+  }
+}

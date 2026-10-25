@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-eval-runner"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["fastapi==0.162.0", "uvicorn==0.54.0", "pydantic==2.14.1", "httpx==0.28.1", "jsonschema==4.26.0"]
+
+[project.optional-dependencies]
+test = ["pytest==9.1.1"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent_eval_runner*"]
+
+[tool.setuptools.package-data]
+agent_eval_runner = ["schemas/*.json"]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "tests"]
+testpaths = ["tests"]
+markers = ["integration: requires a qualified Linux host, registered runsc and the pinned sandbox image"]

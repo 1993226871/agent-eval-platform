@@ -38,3 +38,5 @@ Python SDK实际解析的传递依赖锁定于 `sdks/python/requirements-test.lo
 Java SDK复用协议模块Jackson2.21.4，未引入Spring运行依赖。SQLite JDBC版本依据[官方发布记录](https://github.com/xerial/sqlite-jdbc/releases/tag/3.53.4.0)并验证Maven Central可解析；Windows本地测试已执行，Linux由同一Maven CI验证。
 
 Spring Boot 保留已选3.x；具体维护来源和适用性在正式发布前核实，不因文档存在对应版本就声称社区支持。
+
+Runner 使用独立虚拟环境，解析依赖锁定于 `runner/requirements-test.lock`：FastAPI0.162.0、Uvicorn0.54.0、Pydantic2.14.1、httpx0.28.1、jsonschema4.26.0、pytest9.1.1。官方Python基础镜像为 `python:3.11-slim@sha256:b7a9e5f6a93d6d4a31f129bbd4bdee69efccb6ded0fb230d78aafaf37af98377`，镜像元数据Python3.11.17；已成功构建本地guest镜像。控制层本地Python3.11.5测试通过，Linux/runsc隔离验收未验证。

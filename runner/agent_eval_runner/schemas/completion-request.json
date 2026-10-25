@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "completion-request",
+  "$id": "urn:agenteval:v1:completion-request",
+  "type": "object",
+  "properties": {
+    "status": {
+      "enum": [
+        "SUCCEEDED",
+        "FAILED",
+        "TIMED_OUT",
+        "CANCELLED"
+      ]
+    },
+    "output": {},
+    "final_sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "event_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "dropped_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "artifact_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+      }
+    }
+  },
+  "required": [
+    "status",
+    "output",
+    "final_sequence",
+    "event_count",
+    "dropped_count",
+    "artifact_ids"
+  ],
+  "additionalProperties": false
+}
