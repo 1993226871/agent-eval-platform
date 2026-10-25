@@ -24,6 +24,7 @@
 | Python | 3.11.5（本机）/3.11（CI系列） | 隔离venv测试、wheel安装、本地订单示例 |
 | httpx / jsonschema | 0.28.1 / 4.23.0 | Python Worker HTTP协议与共享fixture验证 |
 | pytest / setuptools | 8.3.5 / 80.9.0 | 47项SDK测试、隔离构建wheel |
+| SQLite JDBC | 3.53.4.0 | Maven Central解析、Java缓存恢复/并发测试 |
 
 PostgreSQL 镜像 digest：`postgres@sha256:b8faeff7712663c2773a190181e1246e37e364b887611c04658c28b44e2408fe`。
 
@@ -32,5 +33,7 @@ S3Mock 镜像 digest：`adobe/s3mock@sha256:cd49108c0094bc3f420b24bff354073032a9
 本地默认 Java17 保持不变，运行前将 JAVA_HOME 指向 JDK21。项目提供 `.mvn/settings.xml` 使用 HTTPS Central；不提交本机下载缓存、JDK或真实凭证。
 
 Python SDK实际解析的传递依赖锁定于 `sdks/python/requirements-test.lock`，不复用或修改全局Anaconda环境。Node24.15.0在当前机器可用，前端测试尚未执行；CI目标Node22在web任务锁定。Redis、部署S3兼容实现、Python Runner镜像和前端lockfile由对应任务在实际运行后补充，不能把计划版本写成已验证。
+
+Java SDK复用协议模块Jackson2.21.4，未引入Spring运行依赖。SQLite JDBC版本依据[官方发布记录](https://github.com/xerial/sqlite-jdbc/releases/tag/3.53.4.0)并验证Maven Central可解析；Windows本地测试已执行，Linux由同一Maven CI验证。
 
 Spring Boot 保留已选3.x；具体维护来源和适用性在正式发布前核实，不因文档存在对应版本就声称社区支持。

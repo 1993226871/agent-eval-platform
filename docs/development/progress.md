@@ -84,3 +84,12 @@
 - 47项测试通过，覆盖全部共享fixture、并行上下文、缓存溢出、秘密脱敏、丢失确认重传、HTTP令牌撤销、期限取消、大载荷附件和非法输出。
 - 实际构建wheel、安装并运行本地订单演示，输出amount=100/status=paid；GitHub CI增加Python3.11独立作业。
 - 任务7实现提交533ff4a已通过GitHub Linux Java CI；当前Python改动提交后继续验证CI。完整平台仍未完成，Java SDK与评分引擎为下一阶段。
+
+## 任务9：Java SDK与跨语言接入
+
+- 已实现无Spring运行依赖的Java21 SDK、独立心跳/上传线程、持久执行去重、可观察取消、显式工具/Span记录及异步上下文恢复。
+- Java与Python消费同一套共享fixture，支持脱敏缓存、丢失确认重传、大载荷附件化和显式文件上传；对象存储请求不携带平台凭证。
+- 先观察到慢上传阻塞心跳、HTTP响应体停滞不受请求头超时保护，再用独立上传线程和完整响应总期限修复；响应限制1MiB。
+- Java全量69项测试通过，其中SDK11项；Python47项再次通过。两套本地订单演示均实际运行，返回amount=100/status=paid。
+- b9393c6提交已通过GitHub Linux Java+Python双作业。Java SDK接入与限制见[指南](../../sdks/java/README.md)。未包含可选Spring注解模块，Spring项目可使用显式包装。
+- 评分引擎、累计额度、前端和完整端到端部署仍在后续任务中实现。

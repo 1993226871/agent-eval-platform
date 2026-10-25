@@ -24,7 +24,7 @@
 </div>
 
 > [!IMPORTANT]
-> 项目正在开发：已实现后端身份、版本化资源、Worker调度、轨迹/附件和证据快照；Python SDK可从源码安装。Java SDK、评分执行、Web界面和完整部署包仍在实施中。下文整体能力包含首版规划，当前可验证内容见[后端运行说明](docs/development/backend.md)、[Python SDK](sdks/python/README.md)和[实施进度](docs/development/progress.md)。
+> 项目正在开发：已实现后端身份、版本化资源、Worker调度、轨迹/附件、证据快照及双语言SDK。评分执行、Web界面和完整部署包仍在实施中。下文整体能力包含首版规划，当前可验证内容见[后端运行说明](docs/development/backend.md)、[Python SDK](sdks/python/README.md)、[Java SDK](sdks/java/README.md)和[实施进度](docs/development/progress.md)。
 
 <a id="overview"></a>
 ## Overview
@@ -87,7 +87,7 @@ flowchart LR
 <a id="sdk-preview"></a>
 ## SDK integration
 
-SDK提供 **Worker 接入**和**执行轨迹采集**。Python已实现，Java示例仍为后续设计预览；两个包均尚未发布到公共制品仓库。
+SDK提供 **Worker 接入**和**执行轨迹采集**。双语言包可从源码构建安装，尚未发布到公共制品仓库。
 
 ### Python
 
@@ -116,18 +116,18 @@ finally:
 ### Java
 
 ```java
-// 接口设计示意，当前没有可下载的 Maven 构件。
+// 先从源码安装 io.agenteval:agent-eval-sdk:0.1.0。
 try (var worker = EvaluationWorker.fromEnvironment()) {
-    worker.registerAgent("customer-service", context ->
-        telemetry.tool("query_order", () ->
-            orderService.query(context.input())
-        )
+    worker.registerAgent("YOUR_AGENT_UUID", context ->
+        AgentResult.of(Telemetry.tool("query_order", () ->
+            Map.of("amount", 100, "status", "paid")
+        ))
     );
     worker.startAndAwait();
 }
 ```
 
-两套 SDK 共用事件协议、运行标识和契约用例；Java 提供显式包装及可选注解集成，Python 提供装饰器和上下文管理器。
+两套SDK共用事件协议、运行标识和契约用例；Java提供显式包装和异步上下文传递，Python提供装饰器和上下文管理器。当前不包含Java注解集成模块。
 
 ## Technology
 
@@ -158,7 +158,7 @@ Docker Compose 组织服务，Python 代码的安全执行需要额外的强化�
 
 参阅[分阶段实施计划](docs/superpowers/plans/2026-10-25-agent-evaluation-platform.md)：20 项 TDD 任务，覆盖文件布局、共享接口、测试命令和阶段验收。实现状态与本地验证记录见[实施进度](docs/development/progress.md)。
 
-Python接入、缓存和关闭行为见[SDK指南](sdks/python/README.md)；后端构建与启动见[运行说明](docs/development/backend.md)。完整平台部署指南将在部署验收后提供。
+接入、缓存和关闭行为见[Python指南](sdks/python/README.md)及[Java指南](sdks/java/README.md)；后端构建与启动见[运行说明](docs/development/backend.md)。完整平台部署指南将在部署验收后提供。
 
 <a id="roadmap"></a>
 ## Roadmap
