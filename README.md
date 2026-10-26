@@ -24,7 +24,7 @@
 </div>
 
 > [!IMPORTANT]
-> 项目正在开发：已实现双语言SDK、自建轨迹/证据、规则与LLM评分、累计额度/对账、混合调度、私人工作台、报告/对比、重评、删除清理、资源预算和审计。真实Linux/runsc隔离测试已通过，生产节点需重新验收。HTTPS Compose、备份恢复与浏览器完整流程已验证，双SDK三类评测的Linux联测正在进行。参阅[快速开始](docs/guides/quickstart.md)与[实施进度](docs/development/progress.md)。
+> 源码预览版 `0.1.0`：双语言SDK、自建证据、RULE/LLM/PYTHON评测、累计额度/对账、私人工作台、报告/对比、重评、删除清理、资源预算与审计均已实现。HTTPS Compose、双SDK三类评测、真实runsc隔离、浏览器完整流程和备份恢复已通过验收。生产执行节点需重新验收，真实付费模型准确率与高可用部署不在本次验证范围。参阅[快速开始](docs/guides/quickstart.md)、[验收记录](docs/development/acceptance.md)及[完整实现决策](docs/development/implementation-decisions.md)。
 
 <a id="overview"></a>
 ## Overview
@@ -141,7 +141,7 @@ try (var worker = EvaluationWorker.fromEnvironment()) {
 | Deployment | Linux · Docker Compose |
 | Engineering | TDD · 共享协议契约 · 租户与额度并发测试 |
 
-Docker Compose 组织服务，Python 代码的安全执行需要额外的强化沙箱边界。组件补丁版本和发布包坐标将在实施时核对并锁定。
+Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界。依赖版本、lockfile与实际取得的镜像digest已锁定；SDK坐标 `0.1.0` 为源码构建，尚未发布公共包仓库。
 
 <a id="documentation"></a>
 ## Documentation
@@ -170,10 +170,10 @@ Docker Compose 组织服务，Python 代码的安全执行需要额外的强化�
 - [x] 实现共享协议、私人工作空间与后端身份基础。
 - [x] 实现后端私人工作空间、版本化任务与持久化调度。
 - [x] 打通 Java/Python SDK 和自建轨迹采集。
-- [ ] 实现规则、LLM、Python 三类评测器。
+- [x] 实现规则、LLM、Python 三类评测器。
 - [x] 完成额度账本、报告、证据定位和版本比较。
 - [x] 实现实验删除、资源预算、审计记录和私人工作台。
-- [ ] 发布演示 Agent、基础任务集与部署指南。
+- [x] 提供演示 Agent、基础任务集、部署与恢复指南。
 
 ## Development
 
