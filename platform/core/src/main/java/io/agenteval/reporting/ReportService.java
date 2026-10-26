@@ -18,7 +18,8 @@ public final class ReportService {
         }
         durations.sort(Long::compareTo); var efficiency=new ExperimentReport.Efficiency(durations.size(),percentile(durations,0.5),percentile(durations,0.95),"worker_reported");
         return new ExperimentReport(experimentId,data.datasetVersionId(),data.suiteVersionId(),data.agentVersion(),data.experimentStatus(),data.trials().size(),started,finished,passed+failed,passed,failed,unknown,pending,cancelled,
-            ExperimentReport.Rate.of(passed,data.trials().size()),ExperimentReport.Rate.of(passed,passed+failed),Map.copyOf(executions),aggregator.dimensions(data.entries(),data.trials().stream().map(ReportData.TrialEvaluation::results).toList()),efficiency);
+            ExperimentReport.Rate.of(passed,data.trials().size()),ExperimentReport.Rate.of(passed,passed+failed),Map.copyOf(executions),aggregator.dimensionsForAttempts(data.trials().stream().map(row->new EvaluationAggregator.Attempt(entries(data,row),row.results())).toList()),efficiency,
+            data.trials().stream().map(row->row.suiteVersionId()==null?data.suiteVersionId():row.suiteVersionId()).distinct().sorted().toList());
     }
     public Page trials(WorkspaceActor actor,UUID experimentId,String cursor,int limit) {
         if(limit<1 || limit>100) throw new IllegalArgumentException("Invalid page size"); var data=repository.load(actor,experimentId); int offset=0;
@@ -31,10 +32,11 @@ public final class ReportService {
         String next=end<data.trials().size()?Base64.getUrlEncoder().withoutPadding().encodeToString((actor.workspaceId()+"|"+experimentId+"|"+end).getBytes(StandardCharsets.UTF_8)):null; return new Page(items,next);
     }
     private TrialReport trial(ReportData data,ReportData.TrialEvaluation row) {
-        boolean pending=row.runId()==null || Set.of("QUEUED","PENDING","RUNNING").contains(row.evaluationState()); var aggregate=aggregator.aggregate(data.entries(),row.results(),pending);
+        boolean pending=row.runId()==null || Set.of("QUEUED","PENDING","RUNNING","WAITING_QUOTA").contains(row.evaluationState()); var aggregate=aggregator.aggregate(entries(data,row),row.results(),pending);
         String verdict=row.executionStatus()==TrialExecutionStatus.CANCELLED?"CANCELLED":aggregate.verdict();
-        return new TrialReport(row.trialId(),row.caseIndex(),row.attempt(),row.executionStatus(),row.runId(),row.snapshotId(),row.evaluationState(),verdict,aggregate.dimensions(),row.results().values().stream().sorted(Comparator.comparing(CriterionResult::criterionId).thenComparing(CriterionResult::evaluatorVersion)).toList(),row.durationMs());
+        return new TrialReport(row.trialId(),row.caseIndex(),row.attempt(),row.executionStatus(),row.runId(),row.snapshotId(),row.evaluationState(),verdict,aggregate.dimensions(),row.results().values().stream().sorted(Comparator.comparing(CriterionResult::criterionId).thenComparing(CriterionResult::evaluatorVersion)).toList(),row.durationMs(),row.suiteVersionId()==null?data.suiteVersionId():row.suiteVersionId());
     }
+    private List<EvaluationEntry> entries(ReportData data,ReportData.TrialEvaluation row) { return row.entries().isEmpty()?data.entries():row.entries(); }
     private Long percentile(List<Long> values,double probability) { return values.isEmpty()?null:values.get(Math.max(0,(int)Math.ceil(values.size()*probability)-1)); }
     public record Page(List<TrialReport> items,String nextCursor) { public Page { items=List.copyOf(items); } }
 }

@@ -10,4 +10,5 @@ public interface ArtifactRepository {
     void finishVerification(WorkerPrincipal principal,UUID trial,String token,ArtifactRecord artifact,Instant now);
     void abandonVerification(ArtifactRecord artifact);
     ArtifactRecord get(WorkspaceActor actor,UUID artifact);
+    ArtifactRecord getEvidence(WorkspaceActor actor,UUID trialId,UUID snapshotId,UUID artifact);
 }

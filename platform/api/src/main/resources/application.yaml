@@ -22,3 +22,8 @@ server:
         same-site: lax
 app:
   secure-cookies: ${SECURE_COOKIES:true}
+  runner:
+    enabled: ${RUNNER_ENABLED:false}
+    base-url: ${RUNNER_BASE_URL:http://runner:8091}
+    internal-key: ${RUNNER_INTERNAL_KEY:}
+    image-digest: ${RUNNER_IMAGE_DIGEST:}

@@ -73,4 +73,14 @@ class RunnerSandboxClientTest {
         response=envelope(job(),"{\"status\":\"SCORED\",\"score\":1,\"reason\":\"bad\",\"evidence_refs\":[]}");
         assertThat(client().evaluate(job,context()).status()).isEqualTo(CriterionStatus.ERROR);
     }
+    @Test void timeoutPreservesDiagnosticAndNeverBecomesAgentZero() throws Exception {
+        var job=job(); response="{\"job_id\":\""+job.id()+"\",\"state\":\"ERROR\",\"code\":\"TIMEOUT\",\"result\":null}";
+        var result=client().evaluate(job,context());
+        assertThat(result.status()).isEqualTo(CriterionStatus.ERROR); assertThat(result.score()).isNull(); assertThat(result.reason()).contains("TIMEOUT");
+    }
+    @Test void syntaxRejectionPreservesBoundedCodeWithoutExposingUserSource() throws Exception {
+        var job=job(); status=422; response="{\"code\":\"SYNTAX_ERROR\"}";
+        var result=client().evaluate(job,context());
+        assertThat(result.status()).isEqualTo(CriterionStatus.ERROR); assertThat(result.score()).isNull(); assertThat(result.reason()).contains("SYNTAX_ERROR");
+    }
 }

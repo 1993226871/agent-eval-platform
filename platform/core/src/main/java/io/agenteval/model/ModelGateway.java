@@ -8,13 +8,17 @@ public final class ModelGateway {
     private final Clock clock;
     public ModelGateway(ModelCallRepository calls,JudgeProvider provider,Clock clock) { this.calls=calls; this.provider=provider; this.clock=clock; }
     public JudgeResponse judge(JudgeRequest request) {
-        var prepared=calls.prepare(request,clock.instant());
+        return judge(request,null);
+    }
+    public JudgeResponse judge(JudgeRequest request,UUID evaluationJobId) {
+        var prepared=calls.prepare(request,clock.instant(),evaluationJobId);
         if(prepared.dispatch()==null) return prepared.response();
         var dispatch=prepared.dispatch();
         JudgeProvider.PreparedCall outbound;
         try { outbound=provider.prepare(dispatch); }
         catch(RuntimeException unavailable) { return calls.failUnsent(dispatch,clock.instant()); }
-        calls.markSendIntent(dispatch,clock.instant());
+        var rejected=calls.markSendIntent(dispatch,clock.instant());
+        if(rejected!=null) return rejected;
         ProviderResponse response;
         try { response=outbound.send(); }
         catch(RuntimeException uncertain) { return calls.uncertain(dispatch,clock.instant()); }

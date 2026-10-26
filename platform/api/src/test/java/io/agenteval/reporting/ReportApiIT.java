@@ -31,6 +31,7 @@ class ReportApiIT {
     @Autowired org.springframework.jdbc.core.simple.JdbcClient jdbc;
     @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
     @Autowired io.agenteval.telemetry.EvidenceService evidence;
+    @Autowired io.agenteval.catalog.CatalogService catalog;
     @LocalServerPort int port;
     @Test void authenticatesReportsAndHidesOtherWorkspacesAndTaskReferences() throws Exception {
         var account=identities.createUser(UUID.randomUUID()+"@test.local","Temporary-Password-1",false); var actor=account.actor();
@@ -57,6 +58,20 @@ class ReportApiIT {
             assertThat(get(other,reviews).statusCode()).isEqualTo(404);
             assertThat(post(other,reviews,"{\"score\":1,\"reason\":\"Foreign\"}").statusCode()).isEqualTo(404);
             assertThat(jdbc.sql("select payload::text from evaluation_results where job_id=?").param(result).query(String.class).single()).isEqualTo(original);
+            String regradePath="/api/v1/trial-evaluations/"+trial.id()+"/reevaluations";
+            String command=json.writeValueAsString(Map.of("suite_version_id",bundle.suiteVersion().id(),"include_late",false,"idempotency_key","http-regrade"));
+            var regrade=post(owner,regradePath,command); assertThat(regrade.statusCode()).isEqualTo(202);
+            var replay=post(owner,regradePath,command); assertThat(replay.statusCode()).isEqualTo(202); assertThat(replay.body()).isEqualTo(regrade.body());
+            String run=json.readTree(regrade.body()).path("run_id").asText();
+            assertThat(get(owner,"/api/v1/evaluation-runs/"+run).statusCode()).isEqualTo(200);
+            assertThat(get(other,"/api/v1/evaluation-runs/"+run).statusCode()).isEqualTo(404);
+            assertThat(post(other,regradePath,command).statusCode()).isEqualTo(404);
+            var draft=catalog.draft(actor,bundle.evaluatorVersion().resourceId());
+            String previewPath="/api/v1/evaluators/"+draft.id()+"/previews";
+            var preview=post(owner,previewPath,json.writeValueAsString(Map.of("revision",draft.revision(),"trial_id",trial.id(),"idempotency_key","http-preview")));
+            assertThat(preview.statusCode()).isEqualTo(202);
+            String previewRun=json.readTree(preview.body()).path("run_id").asText();
+            assertThat(json.readTree(get(owner,"/api/v1/evaluation-runs/"+previewRun).body()).path("purpose").asText()).isEqualTo("PREVIEW");
         }
     }
     URI uri(String path) { return URI.create("http://localhost:"+port+path); }

@@ -27,18 +27,23 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
     private <T> T locked(Supplier<T> action) {
         return transactions.execute(status -> { jdbc.sql("select id from model_gateway_guard where id=1 for update").query(Integer.class).single(); return action.get(); });
     }
-    private record Stored(JudgeRequest request,String hash,String state,long upper,UUID token,Instant deadline,JudgeResponse response) {}
+    private record Stored(JudgeRequest request,String hash,String state,long upper,UUID token,Instant deadline,JudgeResponse response,UUID jobId) {}
     private Optional<Stored> find(UUID callId) {
-        return jdbc.sql("select * from model_calls where call_id=?").param(callId).query((row,index) -> new Stored(decode(row.getString("request_json"),JudgeRequest.class),row.getString("request_hash"),row.getString("state"),row.getLong("upper_credits"),row.getObject("dispatch_token",UUID.class),row.getTimestamp("dispatch_deadline")==null?null:row.getTimestamp("dispatch_deadline").toInstant(),decode(row.getString("response_json"),JudgeResponse.class))).optional();
+        return jdbc.sql("select * from model_calls where call_id=?").param(callId).query((row,index) -> new Stored(decode(row.getString("request_json"),JudgeRequest.class),row.getString("request_hash"),row.getString("state"),row.getLong("upper_credits"),row.getObject("dispatch_token",UUID.class),row.getTimestamp("dispatch_deadline")==null?null:row.getTimestamp("dispatch_deadline").toInstant(),decode(row.getString("response_json"),JudgeResponse.class),row.getObject("evaluation_job_id",UUID.class))).optional();
     }
-    public Preparation prepare(JudgeRequest request,Instant now) {
+    public Preparation prepare(JudgeRequest request,Instant now,UUID evaluationJobId) {
         String body=encode(request),hash=hash(body);
         return locked(() -> {
             var previous=find(request.callId());
             if(previous.isPresent()) {
                 var prior=previous.get();
-                if(!prior.hash().equals(hash) || !prior.request().workspaceId().equals(request.workspaceId())) throw new ModelCallConflictException();
+                if(!prior.hash().equals(hash) || !prior.request().workspaceId().equals(request.workspaceId()) || !Objects.equals(prior.jobId(),evaluationJobId)) throw new ModelCallConflictException();
                 if(!ModelCallStateMachine.waiting(prior.state())) return new Preparation(prior.response(),null);
+            }
+            if(!evaluationActive(evaluationJobId,request.workspaceId(),now)) {
+                var cancelled=empty(request,"CANCELLED","EVALUATION_NOT_ACTIVE");
+                if(previous.isPresent()) update(previous.get(),"CANCELLED",cancelled,now);
+                return new Preparation(cancelled,null);
             }
             var profile=profiles.require(request.modelProfileId());
             if(!profile.price().id().equals(request.priceVersionId()) || request.maxOutputTokens()>profile.maxOutputTokens() || body.getBytes(StandardCharsets.UTF_8).length>profile.maxRequestBytes()) throw new IllegalArgumentException("Model request exceeds fixed profile");
@@ -57,23 +62,34 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
                 else { quota.reserve(request.workspaceId(),request.callId(),upper); state="RESERVED"; token=UUID.randomUUID(); deadline=now.plusSeconds(90); }
             }
             var response=empty(request,state,state.equals("MODEL_DISABLED")?"MODEL_DISABLED":null);
-            if(previous.isEmpty()) jdbc.sql("insert into model_calls(call_id,workspace_id,profile_id,price_version_id,request_hash,request_json,state,upper_credits,dispatch_token,dispatch_deadline,response_json,created_at,updated_at) values(?,?,?,?,?,cast(? as jsonb),?,?,?,?,cast(? as jsonb),?,?)")
-                .param(1,request.callId()).param(2,request.workspaceId()).param(3,profile.id()).param(4,profile.price().id()).param(5,hash).param(6,body).param(7,state).param(8,upper).param(9,token,Types.OTHER).param(10,deadline==null?null:deadline.atOffset(java.time.ZoneOffset.UTC),Types.TIMESTAMP_WITH_TIMEZONE).param(11,encode(response)).param(12,Timestamp.from(now)).param(13,Timestamp.from(now)).update();
+            if(previous.isEmpty()) jdbc.sql("insert into model_calls(call_id,workspace_id,profile_id,price_version_id,request_hash,request_json,state,upper_credits,dispatch_token,dispatch_deadline,response_json,created_at,updated_at,evaluation_job_id) values(?,?,?,?,?,cast(? as jsonb),?,?,?,?,cast(? as jsonb),?,?,?)")
+                .param(1,request.callId()).param(2,request.workspaceId()).param(3,profile.id()).param(4,profile.price().id()).param(5,hash).param(6,body).param(7,state).param(8,upper).param(9,token,Types.OTHER).param(10,deadline==null?null:deadline.atOffset(java.time.ZoneOffset.UTC),Types.TIMESTAMP_WITH_TIMEZONE).param(11,encode(response)).param(12,Timestamp.from(now)).param(13,Timestamp.from(now)).param(14,evaluationJobId,Types.OTHER).update();
             else {
                 ModelCallStateMachine.require(previous.get().state(),state);
                 jdbc.sql("update model_calls set state=?,dispatch_token=?,dispatch_deadline=?,response_json=cast(? as jsonb),updated_at=? where call_id=?")
                     .param(1,state).param(2,token,Types.OTHER).param(3,deadline==null?null:deadline.atOffset(java.time.ZoneOffset.UTC),Types.TIMESTAMP_WITH_TIMEZONE).param(4,encode(response)).param(5,Timestamp.from(now)).param(6,request.callId()).update();
             }
-            return new Preparation(response,state.equals("RESERVED")?new ModelDispatch(request,profile,token,deadline,upper):null);
+            return new Preparation(response,state.equals("RESERVED")?new ModelDispatch(request,profile,token,deadline,upper,evaluationJobId):null);
         });
     }
     private Stored requireDispatch(ModelDispatch dispatch,Instant now,String state) {
         var stored=find(dispatch.request().callId()).orElseThrow(ModelCallConflictException::new);
-        if(!stored.state().equals(state) || !Objects.equals(stored.token(),dispatch.token()) || !stored.hash().equals(hash(encode(dispatch.request()))) || stored.deadline()==null || !now.isBefore(stored.deadline())) throw new ModelCallConflictException();
+        if(!stored.state().equals(state) || !Objects.equals(stored.token(),dispatch.token()) || !Objects.equals(stored.jobId(),dispatch.evaluationJobId()) || !stored.hash().equals(hash(encode(dispatch.request()))) || stored.deadline()==null || !now.isBefore(stored.deadline())) throw new ModelCallConflictException();
         return stored;
     }
-    public void markSendIntent(ModelDispatch dispatch,Instant now) {
-        locked(() -> { var stored=requireDispatch(dispatch,now,"RESERVED"); quota.markSendIntent(stored.request().callId()); update(stored,"SEND_INTENT",empty(stored.request(),"SEND_INTENT",null),now); return null; });
+    public JudgeResponse markSendIntent(ModelDispatch dispatch,Instant now) {
+        return locked(() -> {
+            var stored=requireDispatch(dispatch,now,"RESERVED");
+            if(!evaluationActive(stored.jobId(),stored.request().workspaceId(),now)) {
+                quota.releaseUnsent(stored.request().callId()); var rejected=empty(stored.request(),"FAILED_UNSENT","EVALUATION_CANCELLED_BEFORE_SEND"); update(stored,"FAILED_UNSENT",rejected,now); return rejected;
+            }
+            quota.markSendIntent(stored.request().callId()); update(stored,"SEND_INTENT",empty(stored.request(),"SEND_INTENT",null),now); return null;
+        });
+    }
+    private boolean evaluationActive(UUID jobId,UUID workspace,Instant now) {
+        if(jobId==null) return true; // Internal administrator connectivity checks have no evaluation job.
+        jdbc.sql("select id from scheduler_guard where id=1 for update").query(Integer.class).single();
+        return jdbc.sql("select count(*) from evaluation_jobs j join trials t on t.id=j.trial_id join experiments e on e.id=t.experiment_id where j.id=? and j.workspace_id=? and j.status='RUNNING' and j.lease_expires_at>? and t.status<>'CANCELLED' and e.status<>'CANCELLED'").params(jobId,workspace,Timestamp.from(now)).query(Long.class).single()==1;
     }
     public JudgeResponse failUnsent(ModelDispatch dispatch,Instant now) {
         return locked(() -> { var stored=requireDispatch(dispatch,now,"RESERVED"); quota.releaseUnsent(stored.request().callId()); var result=empty(stored.request(),"FAILED_UNSENT","PROVIDER_PREPARATION_FAILED"); update(stored,"FAILED_UNSENT",result,now); return result; });

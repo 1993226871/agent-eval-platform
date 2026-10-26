@@ -24,7 +24,7 @@
 </div>
 
 > [!IMPORTANT]
-> 项目正在开发：已实现后端身份、版本化资源、Worker调度、轨迹/附件、证据快照、双语言SDK、规则评分和报告API。LLM/Python执行、累计额度、Web界面和完整部署包仍在实施中。当前可复现[双SDK评分闭环](docs/development/reporting.md)，其他能力包含首版规划；详见[实施进度](docs/development/progress.md)。
+> 项目正在开发：已实现双语言SDK、任务/轨迹/证据、规则与LLM评分、累计额度/模型对账、人工复核、混合调度和独立重评/草稿试运行。Python Runner已实现，强化隔离尚待Linux/runsc节点验收，默认关闭。Web界面与完整部署包仍在实施。可复现[双SDK评分闭环](docs/development/reporting.md)，更多能力见[混合评测说明](docs/development/mixed-evaluation.md)及[实施进度](docs/development/progress.md)。
 
 <a id="overview"></a>
 ## Overview

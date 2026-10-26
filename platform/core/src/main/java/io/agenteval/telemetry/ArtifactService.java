@@ -28,4 +28,9 @@ public final class ArtifactService {
     public URI download(WorkspaceActor actor,UUID id) {
         var artifact=repository.get(actor,id); if(!artifact.status().equals("AVAILABLE")) throw new EvidencePendingException(); return store.downloadUrl(artifact.objectKey());
     }
+    public URI downloadEvidence(WorkspaceActor actor,UUID trialId,UUID snapshotId,ArtifactRef reference) {
+        var artifact=repository.getEvidence(actor,trialId,snapshotId,reference.artifactId());
+        if(!artifact.reference().equals(reference)) throw new io.agenteval.identity.ScopeViolationException();
+        return store.downloadUrl(artifact.objectKey());
+    }
 }

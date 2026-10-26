@@ -1,0 +1,14 @@
+ALTER TABLE grading_jobs DROP CONSTRAINT grading_jobs_snapshot_id_key;
+ALTER TABLE grading_jobs ADD COLUMN initial_run BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE grading_jobs ADD COLUMN run_ordinal BIGSERIAL UNIQUE;
+ALTER TABLE grading_jobs ADD COLUMN run_config JSONB;
+ALTER TABLE grading_jobs ADD COLUMN idempotency_key VARCHAR(128);
+ALTER TABLE grading_jobs ADD COLUMN request_hash CHAR(64);
+ALTER TABLE grading_jobs ADD COLUMN suite_version_id UUID;
+ALTER TABLE grading_jobs ADD COLUMN suite_kind VARCHAR(16) NOT NULL DEFAULT 'SUITE' CHECK(suite_kind='SUITE');
+UPDATE grading_jobs g SET suite_version_id=e.suite_version_id FROM trials t JOIN experiments e ON e.id=t.experiment_id WHERE g.trial_id=t.id;
+ALTER TABLE grading_jobs ALTER COLUMN suite_version_id SET NOT NULL;
+ALTER TABLE grading_jobs ADD CONSTRAINT evaluation_run_suite_scope FOREIGN KEY(suite_version_id,workspace_id,suite_kind) REFERENCES catalog_versions(id,workspace_id,kind);
+ALTER TABLE grading_jobs ADD CONSTRAINT evaluation_run_idempotency UNIQUE(workspace_id,trial_id,idempotency_key);
+CREATE UNIQUE INDEX initial_grade_snapshot ON grading_jobs(snapshot_id) WHERE initial_run;
+CREATE INDEX evaluation_run_latest ON grading_jobs(trial_id,run_ordinal DESC);

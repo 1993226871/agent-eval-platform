@@ -77,4 +77,9 @@ class LlmEvaluatorTest {
             assertThat(result.score()).isEqualByComparingTo(sample.path("human_score").decimalValue());
         }
     }
+    @Test void unavailableModelProfileIsConfigurationErrorRatherThanInfiniteProcessingRecovery() throws Exception {
+        var evaluator=new LlmEvaluator(request -> { throw new io.agenteval.identity.ScopeViolationException(); });
+        var result=evaluator.evaluate(job(List.of("output"),32768),context("{}"));
+        assertThat(result.status()).isEqualTo(CriterionStatus.ERROR); assertThat(result.score()).isNull();
+    }
 }

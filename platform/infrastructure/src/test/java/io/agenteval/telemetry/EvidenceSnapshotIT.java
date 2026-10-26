@@ -81,6 +81,22 @@ class EvidenceSnapshotIT {
         assertThat(evidence.freezeReady(200)).isGreaterThanOrEqualTo(1);
         assertThat(sql.queryForObject("select count(*) from evidence_snapshots where trial_id=?",Integer.class,trial)).isEqualTo(1);
     }
+    @Test void runnerDownloadIsBoundToFrozenMembershipTrialAndExactMetadata() {
+        UUID id=UUID.randomUUID();
+        sql.update("insert into artifacts(id,workspace_id,trial_id,name,media_type,size_bytes,sha256,staging_key,object_key,idempotency_key,created_at) values(?,?,?,?,?,?,?,?,?,?,?)",id,actor.workspaceId(),trial,"result.txt","text/plain",3,"a".repeat(64),"staging/"+id,"sealed/"+id,"test-artifact-key",java.sql.Timestamp.from(now));
+        sql.update("update trials set completion=jsonb_set(completion,'{artifact_ids}',cast(? as jsonb)) where id=?","[\""+id+"\"]",trial);
+        var first=evidence.freeze(actor,trial,false);
+        sql.update("update artifacts set status='AVAILABLE',verified_at=? where id=?",java.sql.Timestamp.from(now),id);
+        var late=evidence.freeze(actor,trial,true);
+        var store=mock(ArtifactStore.class); when(store.downloadUrl("sealed/"+id)).thenReturn(java.net.URI.create("https://storage.test/artifact"));
+        var artifacts=new ArtifactService(new JdbcArtifactRepository(jdbc,tx,mock(LeaseRepository.class)),store,Clock.fixed(now,ZoneOffset.UTC));
+        var reference=new ArtifactRef(id,"result.txt","text/plain",3,"a".repeat(64));
+        assertThatThrownBy(()->artifacts.downloadEvidence(actor,trial,first.id(),reference)).isInstanceOf(ScopeViolationException.class);
+        assertThatThrownBy(()->artifacts.downloadEvidence(actor,UUID.randomUUID(),late.id(),reference)).isInstanceOf(ScopeViolationException.class);
+        assertThatThrownBy(()->artifacts.downloadEvidence(actor,trial,late.id(),new ArtifactRef(id,"result.txt","text/plain",4,"a".repeat(64)))).isInstanceOf(ScopeViolationException.class);
+        assertThat(artifacts.downloadEvidence(actor,trial,late.id(),reference)).isEqualTo(java.net.URI.create("https://storage.test/artifact"));
+        verify(store,times(1)).downloadUrl(anyString());
+    }
     @Test void queuedExpiryProducesFreezableTerminalWithoutWorkerCompletion() {
         sql.update("update trials set status='QUEUED',completion=null,completed_at=null where id=?",trial);
         sql.update("update experiments set deadline=? where id=(select experiment_id from trials where id=?)",java.sql.Timestamp.from(now.minusSeconds(60)),trial);

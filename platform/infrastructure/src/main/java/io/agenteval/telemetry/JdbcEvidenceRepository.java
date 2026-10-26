@@ -20,11 +20,17 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
     private final ProtocolCodec codec=new ProtocolCodec();
     public JdbcEvidenceRepository(JdbcClient jdbc,PlatformTransactionManager manager,ObjectMapper json) { this.jdbc=jdbc; tx=new TransactionTemplate(manager); this.json=json; }
     @Override public EvidenceSnapshot freeze(WorkspaceActor actor,UUID trial,boolean includeLate,Instant now) {
+        return freeze(actor,trial,includeLate,now,true);
+    }
+    @Override public EvidenceSnapshot freezeForEvaluation(WorkspaceActor actor,UUID trial,boolean includeLate,Instant now) {
+        return freeze(actor,trial,includeLate,now,false);
+    }
+    private EvidenceSnapshot freeze(WorkspaceActor actor,UUID trial,boolean includeLate,Instant now,boolean scheduleDefault) {
         return tx.execute(transaction -> {
             // Same lock boundary as ingestion and completion: the manifest cannot race a committed ack.
             jdbc.sql("select id from scheduler_guard where id=1 for update").query(Integer.class).single();
-            var row=jdbc.sql("select t.status,t.task,t.completion,t.completed_at,e.snapshot,e.status experiment_status from trials t join experiments e on e.id=t.experiment_id where t.id=? and t.workspace_id=? for update of t,e")
-                .params(trial,actor.workspaceId()).query((r,n) -> new TrialEvidence(r.getString("status"),tree(r.getString("task")),tree(r.getString("completion")),r.getTimestamp("completed_at")==null?null:r.getTimestamp("completed_at").toInstant(),tree(r.getString("snapshot")),r.getString("experiment_status"))).optional().orElseThrow(ScopeViolationException::new);
+            var row=jdbc.sql("select t.status,t.task,t.completion,t.completed_at,e.snapshot,e.suite_version_id,e.status experiment_status from trials t join experiments e on e.id=t.experiment_id where t.id=? and t.workspace_id=? for update of t,e")
+                .params(trial,actor.workspaceId()).query((r,n) -> new TrialEvidence(r.getString("status"),tree(r.getString("task")),tree(r.getString("completion")),r.getTimestamp("completed_at")==null?null:r.getTimestamp("completed_at").toInstant(),tree(r.getString("snapshot")),r.getString("experiment_status"),r.getObject("suite_version_id",UUID.class))).optional().orElseThrow(ScopeViolationException::new);
             var first=jdbc.sql("select * from evidence_snapshots where trial_id=? order by ordinal limit 1").param(trial).query(this::map).optional();
             if(first.isPresent() && !includeLate) return first.get();
             if(row.completedAt()==null || Set.of("QUEUED","LEASED","RUNNING").contains(row.status())) throw new EvidencePendingException();
@@ -74,7 +80,7 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
             if(existing.isPresent()) return existing.get();
             UUID id=UUID.randomUUID();
             jdbc.sql("insert into evidence_snapshots(id,workspace_id,trial_id,content_hash,completeness,manifest,created_at) values (?,?,?,?,?,cast(? as jsonb),?)").params(id,actor.workspaceId(),trial,hash,completeness.name(),manifest.toString(),Timestamp.from(now)).update();
-            if(!row.status().equals("CANCELLED") && !row.experimentStatus().equals("CANCELLED")) jdbc.sql("insert into grading_jobs(id,workspace_id,trial_id,snapshot_id,next_run_at,created_at) values (?,?,?,?,?,?)").params(UUID.randomUUID(),actor.workspaceId(),trial,id,Timestamp.from(now),Timestamp.from(now)).update();
+            if(scheduleDefault && !row.status().equals("CANCELLED") && !row.experimentStatus().equals("CANCELLED")) jdbc.sql("insert into grading_jobs(id,workspace_id,trial_id,snapshot_id,suite_version_id,next_run_at,created_at) values (?,?,?,?,?,?,?)").params(UUID.randomUUID(),actor.workspaceId(),trial,id,row.suiteVersion(),Timestamp.from(now),Timestamp.from(now)).update();
             return new EvidenceSnapshot(id,trial,hash,completeness,manifest,now);
         });
     }
@@ -88,7 +94,7 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
     private TraceEvent decode(JsonNode event) { try { return codec.decode(event.toString(),TraceEvent.class); } catch(java.io.IOException invalid) { throw new IllegalStateException(invalid); } }
     private JsonNode tree(String value) { if(value==null) return NullNode.instance; try { return json.readTree(value); } catch(java.io.IOException invalid) { throw new IllegalStateException(invalid); } }
     private EvidenceSnapshot map(java.sql.ResultSet r,int n) throws java.sql.SQLException { return new EvidenceSnapshot(r.getObject("id",UUID.class),r.getObject("trial_id",UUID.class),r.getString("content_hash"),EvidenceCompleteness.valueOf(r.getString("completeness")),tree(r.getString("manifest")),r.getTimestamp("created_at").toInstant()); }
-    private record TrialEvidence(String status,JsonNode task,JsonNode completion,Instant completedAt,JsonNode experiment,String experimentStatus) {}
+    private record TrialEvidence(String status,JsonNode task,JsonNode completion,Instant completedAt,JsonNode experiment,String experimentStatus,UUID suiteVersion) {}
     private record StoredEvent(JsonNode event,String hash,String origin) {}
     private record Candidate(UUID id,WorkspaceActor actor) {}
 }

@@ -4,8 +4,9 @@ import java.time.Instant;
 import java.util.UUID;
 public interface ModelCallRepository {
     record Preparation(JudgeResponse response,ModelDispatch dispatch) {}
-    Preparation prepare(JudgeRequest request,Instant now);
-    void markSendIntent(ModelDispatch dispatch,Instant now);
+    default Preparation prepare(JudgeRequest request,Instant now) { return prepare(request,now,null); }
+    Preparation prepare(JudgeRequest request,Instant now,UUID evaluationJobId);
+    JudgeResponse markSendIntent(ModelDispatch dispatch,Instant now);
     JudgeResponse complete(ModelDispatch dispatch,ProviderResponse response,Instant now);
     JudgeResponse uncertain(ModelDispatch dispatch,Instant now);
     JudgeResponse failUnsent(ModelDispatch dispatch,Instant now);

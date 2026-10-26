@@ -7,3 +7,9 @@ spring:
     password: ${DATABASE_PASSWORD:}
   flyway:
     enabled: false
+app:
+  runner:
+    enabled: ${RUNNER_ENABLED:false}
+    base-url: ${RUNNER_BASE_URL:http://runner:8091}
+    internal-key: ${RUNNER_INTERNAL_KEY:}
+    image-digest: ${RUNNER_IMAGE_DIGEST:}

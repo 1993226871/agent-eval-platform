@@ -54,6 +54,14 @@ public class JdbcArtifactRepository implements ArtifactRepository {
     }
     @Override public void abandonVerification(ArtifactRecord artifact) { jdbc.sql("update artifacts set status='PENDING',verification_token=null,verification_started_at=null where id=? and status='VERIFYING' and verification_token=?").params(artifact.id(),artifact.verificationToken()).update(); }
     @Override public ArtifactRecord get(WorkspaceActor actor,UUID id) { return jdbc.sql("select * from artifacts where id=? and workspace_id=?").params(id,actor.workspaceId()).query(this::map).optional().orElseThrow(ScopeViolationException::new); }
+    @Override public ArtifactRecord getEvidence(WorkspaceActor actor,UUID trial,UUID snapshot,UUID id) {
+        return jdbc.sql("""
+            select a.* from artifacts a join evidence_snapshots s on s.trial_id=a.trial_id and s.workspace_id=a.workspace_id
+            where a.id=? and a.workspace_id=? and a.trial_id=? and s.id=? and a.status='AVAILABLE'
+              and exists(select 1 from jsonb_array_elements(s.manifest->'artifacts') v where v->>'artifact_id'=a.id::text
+                and v->>'sha256'=a.sha256 and (v->>'size_bytes')::bigint=a.size_bytes and v->>'name'=a.name and v->>'media_type'=a.media_type)
+            """).params(id,actor.workspaceId(),trial,snapshot).query(this::map).optional().orElseThrow(ScopeViolationException::new);
+    }
     private ArtifactRecord find(UUID workspace,UUID trial,UUID id) { return jdbc.sql("select * from artifacts where id=? and workspace_id=? and trial_id=? for update").params(id,workspace,trial).query(this::map).optional().orElseThrow(AttemptRejectedException::new); }
     private ArtifactRecord map(java.sql.ResultSet r,int n) throws java.sql.SQLException { return new ArtifactRecord(r.getObject("id",UUID.class),r.getObject("trial_id",UUID.class),r.getObject("workspace_id",UUID.class),r.getString("name"),r.getString("media_type"),r.getLong("size_bytes"),r.getString("sha256"),r.getString("staging_key"),r.getString("object_key"),r.getString("status"),r.getObject("verification_token",UUID.class)); }
 }

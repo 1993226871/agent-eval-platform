@@ -60,11 +60,16 @@ public final class RunnerSandboxClient implements SandboxClient, AutoCloseable {
             int status=response.statusCode();
             if(status==202 || status==429 || status==502 || status==504) throw new RetryableException("Runner execution pending; retry the same job ID");
             JsonNode envelope=codec.tree(new String(response.body(),StandardCharsets.UTF_8));
+            if(status==422 && Set.of("SYNTAX_ERROR","INVALID_CODE_HASH_OR_SIZE","RESOURCE_LIMIT","RESOURCE_LIMIT_TOO_LOW").contains(envelope.path("code").asText()))
+                return unscored(job,CriterionStatus.ERROR,"PYTHON_"+envelope.path("code").asText());
             if(!envelope.path("job_id").asText().equals(job.id().toString())) throw new IllegalArgumentException("Runner job mismatch");
             if(status==503 && envelope.path("code").asText().equals("CAPABILITY_UNAVAILABLE") && envelope.path("state").asText().equals("UNAVAILABLE"))
                 return unscored(job,CriterionStatus.SKIPPED,"CAPABILITY_UNAVAILABLE");
             if(status!=200) return unscored(job,CriterionStatus.ERROR,"RUNNER_REQUEST_REJECTED");
-            if(!envelope.path("state").asText().equals("COMPLETED")) return unscored(job,CriterionStatus.ERROR,"PYTHON_EXECUTION_FAILED");
+            if(!envelope.path("state").asText().equals("COMPLETED")) {
+                String errorCode=envelope.path("code").asText();
+                return unscored(job,CriterionStatus.ERROR,Set.of("TIMEOUT","OUT_OF_MEMORY","NO_RESULT","PROCESS_ERROR","PROCESS_EXIT_TIMEOUT","EXECUTION_UNKNOWN","RESULT_LIMIT","INVALID_RESULT_JSON","INVALID_RESULT_FIELDS","INVALID_SCORE","UNKNOWN_EVIDENCE_REFERENCE","SANDBOX_EXECUTION_FAILED").contains(errorCode)?"PYTHON_"+errorCode:"PYTHON_EXECUTION_FAILED");
+            }
             if(!envelope.path("runtime").asText().equals("runsc") || !envelope.path("image_digest").asText().equals(image)
                 || !envelope.path("code").asText().equals("COMPLETED")) throw new IllegalArgumentException("Unapproved execution identity");
             JsonNode raw=envelope.path("result");

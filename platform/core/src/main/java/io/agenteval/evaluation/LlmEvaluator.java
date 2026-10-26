@@ -8,13 +8,14 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.BiFunction;
 
 public final class LlmEvaluator implements Evaluator {
-    private final Function<JudgeRequest,JudgeResponse> gateway;
+    private final BiFunction<JudgeRequest,UUID,JudgeResponse> gateway;
     private final JudgePromptBuilder prompts=new JudgePromptBuilder();
     private final ObjectMapper json=new ObjectMapper().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION).enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
-    public LlmEvaluator(ModelGateway gateway) { this(gateway::judge); }
-    LlmEvaluator(Function<JudgeRequest,JudgeResponse> gateway) { this.gateway=gateway; }
+    public LlmEvaluator(ModelGateway gateway) { this.gateway=gateway::judge; }
+    LlmEvaluator(Function<JudgeRequest,JudgeResponse> gateway) { this.gateway=(request,jobId)->gateway.apply(request); }
     @Override public CriterionResult evaluate(EvaluatorDefinition definition,EvaluationContext context) {
         return unscored(definition,CriterionStatus.ERROR,"LLM evaluation requires a durable job and workspace identity");
     }
@@ -27,7 +28,7 @@ public final class LlmEvaluator implements Evaluator {
                 var prompt=prompts.build(definition,context,attempt==1);
                 UUID callId=UUID.nameUUIDFromBytes(("agent-eval:judge:"+job.id()+":"+attempt).getBytes(StandardCharsets.UTF_8));
                 var request=new JudgeRequest(job.owner().workspaceId(),callId,prompts.id(config,"model_profile_id"),prompts.id(config,"price_version_id"),prompt.system(),prompt.data(),config.path("max_output_tokens").asInt());
-                var response=gateway.apply(request);
+                var response=gateway.apply(request,job.id());
                 if(!response.callId().equals(callId) || !response.profileId().equals(request.modelProfileId()) || !response.priceVersionId().equals(request.priceVersionId())) return unscored(definition,CriterionStatus.ERROR,"MODEL_CALL_IDENTITY_MISMATCH");
                 switch(response.status()) {
                     case "WAITING_QUOTA" -> { return unscored(definition,CriterionStatus.WAITING_QUOTA,"Model call "+callId+" awaits cumulative credits"); }
@@ -41,6 +42,7 @@ public final class LlmEvaluator implements Evaluator {
             }
             throw new IllegalStateException("Unreachable Judge retry state");
         } catch(JudgePromptBuilder.EvidenceUnavailable missing) { return unscored(definition,CriterionStatus.INSUFFICIENT_EVIDENCE,missing.getMessage()); }
+        catch(io.agenteval.identity.ScopeViolationException unavailable) { return unscored(definition,CriterionStatus.ERROR,"MODEL_PROFILE_UNAVAILABLE"); }
         catch(IllegalArgumentException invalid) { return unscored(definition,CriterionStatus.ERROR,"INVALID_JUDGE_CONFIGURATION_OR_CONTEXT"); }
     }
     private CriterionResult parse(EvaluatorDefinition definition,EvaluationContext context,JudgePromptBuilder.Prompt prompt,String content) {

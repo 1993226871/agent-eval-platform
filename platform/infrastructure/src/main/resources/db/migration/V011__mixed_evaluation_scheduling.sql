@@ -1,0 +1,14 @@
+ALTER TABLE evaluation_jobs DROP CONSTRAINT evaluation_jobs_status_check;
+ALTER TABLE evaluation_jobs ADD CONSTRAINT evaluation_jobs_status_check CHECK(status IN ('QUEUED','RUNNING','DONE','CANCELLED','WAITING_QUOTA','DEFERRED'));
+ALTER TABLE evaluation_jobs ADD COLUMN next_run_at TIMESTAMPTZ;
+UPDATE evaluation_jobs SET next_run_at=created_at;
+ALTER TABLE evaluation_jobs ALTER COLUMN next_run_at SET NOT NULL;
+ALTER TABLE evaluation_jobs ALTER COLUMN next_run_at SET DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE evaluation_jobs ADD COLUMN last_result JSONB;
+ALTER TABLE evaluation_jobs ADD COLUMN wait_reason VARCHAR(1000);
+CREATE INDEX evaluation_jobs_wait_ready ON evaluation_jobs(next_run_at,status);
+ALTER TABLE evaluation_jobs ADD CONSTRAINT evaluation_job_workspace UNIQUE(id,workspace_id);
+ALTER TABLE model_calls ADD COLUMN evaluation_job_id UUID;
+ALTER TABLE model_calls ADD CONSTRAINT model_call_evaluation_job FOREIGN KEY(evaluation_job_id,workspace_id) REFERENCES evaluation_jobs(id,workspace_id);
+ALTER TABLE model_calls DROP CONSTRAINT model_calls_state_check;
+ALTER TABLE model_calls ADD CONSTRAINT model_calls_state_check CHECK(state IN ('WAITING_QUOTA','WAITING_CAPACITY','RESERVED','SEND_INTENT','PENDING_RECONCILIATION','SUCCEEDED','RECONCILED','FAILED_UNSENT','MODEL_DISABLED','CANCELLED'));

@@ -9,6 +9,7 @@ public final class EvidenceService {
     private final ProtocolCodec codec=new ProtocolCodec();
     public EvidenceService(EvidenceRepository repository,Clock clock) { this.repository=repository; this.clock=clock; }
     public EvidenceSnapshot freeze(WorkspaceActor actor,UUID trial,boolean includeLate) { return repository.freeze(actor,trial,includeLate,clock.instant()); }
+    public EvidenceSnapshot freezeForEvaluation(WorkspaceActor actor,UUID trial,boolean includeLate) { return repository.freezeForEvaluation(actor,trial,includeLate,clock.instant()); }
     public EvidenceSnapshot load(WorkspaceActor actor,UUID id) { return repository.load(actor,id); }
     public int freezeReady(int limit) { if(limit<1 || limit>200) throw new IllegalArgumentException(); return repository.freezeReady(limit,clock.instant()); }
     public EvaluationContext context(WorkspaceActor actor,UUID id) {
