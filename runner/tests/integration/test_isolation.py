@@ -1,5 +1,6 @@
 """Acceptance gate: absence of a hardened node is a failure, never a green skip."""
 import os
+import json
 from pathlib import Path
 import sys
 import time
@@ -80,7 +81,7 @@ def test_network_filesystem_process_and_secret_boundaries(engine):
     return {"status":"SCORED", "score":1, "reason":"Isolation boundaries checked", "evidence_refs":["output"]}
 '''
     result = run(engine, code)
-    assert result["state"] == "COMPLETED", result
+    assert result["state"] == "COMPLETED", json.dumps(result, ensure_ascii=False)
     assert result["result"]["score"] == 1
 
 
@@ -91,7 +92,7 @@ def test_bounded_logs_and_independent_result(engine):
     print("y" * 200000, file=sys.stderr)
     return {"status":"SCORED", "score":1, "reason":"Independent result", "evidence_refs":["output"]}
 ''')
-    assert result["state"] == "COMPLETED", result
+    assert result["state"] == "COMPLETED", json.dumps(result, ensure_ascii=False)
     assert len(result["stdout"].encode()) <= 65536
     assert len(result["stderr"].encode()) <= 65536
     assert result["stdout_truncated"] and result["stderr_truncated"]
