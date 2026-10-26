@@ -37,6 +37,20 @@ class EvidenceReadAdmissionFilterTest {
             assertThat(first.get(5,TimeUnit.SECONDS)).isTrue();
         }
     }
+    @Test void reportReadsShareTheSamePerUserMemoryAdmission() throws Exception {
+        var filter=new EvidenceReadAdmissionFilter(); var entered=new CountDownLatch(1); var release=new CountDownLatch(1);
+        try(var pool=Executors.newVirtualThreadPerTaskExecutor()) {
+            var first=pool.submit(() -> { filter.doFilter(request("one"),new MockHttpServletResponse(),hold(entered,release)); return true; });
+            try {
+                assertThat(entered.await(5,TimeUnit.SECONDS)).isTrue();
+                var report=request("one"); report.setRequestURI("/api/v1/reports/experiments/00000000-0000-0000-0000-000000000001/trials");
+                var response=new MockHttpServletResponse(); filter.doFilter(report,response,(req,res)->{}); assertThat(response.getStatus()).isEqualTo(429);
+                var summary=request("one"); summary.setRequestURI("/api/v1/reports/experiments/00000000-0000-0000-0000-000000000001");
+                var scalarResponse=new MockHttpServletResponse(); filter.doFilter(summary,scalarResponse,(req,res)->{}); assertThat(scalarResponse.getStatus()).isEqualTo(200);
+            } finally { release.countDown(); }
+            assertThat(first.get(5,TimeUnit.SECONDS)).isTrue();
+        }
+    }
     @Test void releasesAfterSerializationFailureAndLeavesPagedTraceReadsUnaffected() throws Exception {
         var filter=new EvidenceReadAdmissionFilter();
         assertThatThrownBy(() -> filter.doFilter(request("one"),new MockHttpServletResponse(),(request,response)->{ throw new ServletException("Disconnected client"); })).isInstanceOf(ServletException.class);

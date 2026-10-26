@@ -9,7 +9,7 @@ public final class ReportService {
     private final EvaluationAggregator aggregator;
     public ReportService(ReportRepository repository,EvaluationAggregator aggregator) { this.repository=repository; this.aggregator=aggregator; }
     public ExperimentReport get(WorkspaceActor actor,UUID experimentId) {
-        return render(repository.load(actor,experimentId));
+        return render(repository.summary(actor,experimentId));
     }
     ExperimentReport render(ReportData data) {
         UUID experimentId=data.experimentId(); int passed=0,failed=0,unknown=0,pending=0,cancelled=0,started=0,finished=0; var executions=new TreeMap<String,Integer>(); var durations=new ArrayList<Long>();
@@ -25,14 +25,15 @@ public final class ReportService {
             data.trials().stream().map(row->row.suiteVersionId()==null?data.suiteVersionId():row.suiteVersionId()).distinct().sorted().toList());
     }
     public Page trials(WorkspaceActor actor,UUID experimentId,String cursor,int limit) {
-        if(limit<1 || limit>100) throw new IllegalArgumentException("Invalid page size"); var data=repository.load(actor,experimentId); int offset=0;
+        if(limit<1 || limit>100) throw new IllegalArgumentException("Invalid page size"); int offset=0;
         if(cursor!=null) {
             try { if(cursor.length()>512) throw new IllegalArgumentException(); var fields=new String(Base64.getUrlDecoder().decode(cursor),StandardCharsets.UTF_8).split("\\|",-1);
-                if(fields.length!=3 || !fields[0].equals(actor.workspaceId().toString()) || !fields[1].equals(experimentId.toString())) throw new IllegalArgumentException(); offset=Integer.parseInt(fields[2]); if(offset<0 || offset>data.trials().size()) throw new IllegalArgumentException();
+                if(fields.length!=3 || !fields[0].equals(actor.workspaceId().toString()) || !fields[1].equals(experimentId.toString())) throw new IllegalArgumentException(); offset=Integer.parseInt(fields[2]); if(offset<0) throw new IllegalArgumentException();
             } catch(IllegalArgumentException invalid) { throw new IllegalArgumentException("Invalid report cursor"); }
         }
-        int end=Math.min(data.trials().size(),offset+limit); var items=data.trials().subList(offset,end).stream().map(row -> trial(data,row)).toList();
-        String next=end<data.trials().size()?Base64.getUrlEncoder().withoutPadding().encodeToString((actor.workspaceId()+"|"+experimentId+"|"+end).getBytes(StandardCharsets.UTF_8)):null; return new Page(items,next);
+        var page=repository.page(actor,experimentId,offset,limit); var data=page.data();
+        int end=offset+data.trials().size(); var items=data.trials().stream().map(row -> trial(data,row)).toList();
+        String next=end<page.total()?Base64.getUrlEncoder().withoutPadding().encodeToString((actor.workspaceId()+"|"+experimentId+"|"+end).getBytes(StandardCharsets.UTF_8)):null; return new Page(items,next);
     }
     TrialReport trial(ReportData data,ReportData.TrialEvaluation row) {
         boolean pending=row.runId()==null || Set.of("QUEUED","PENDING","RUNNING","WAITING_QUOTA","WAITING_RESOURCES").contains(row.evaluationState()); var aggregate=aggregator.aggregate(entries(data,row),row.results(),pending);

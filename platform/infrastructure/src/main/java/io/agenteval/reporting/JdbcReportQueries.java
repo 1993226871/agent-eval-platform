@@ -18,10 +18,13 @@ public class JdbcReportQueries implements ComparisonQueries {
     public JdbcReportQueries(JdbcClient jdbc, PlatformTransactionManager manager, ObjectMapper json, io.agenteval.evaluation.JdbcEvaluationRepository reports) {
         this.jdbc=jdbc; this.json=json; this.reports=reports; read=new TransactionTemplate(manager); read.setReadOnly(true); read.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
     }
-    @Override public ReportData load(WorkspaceActor actor, UUID experiment) { return reports.load(actor,experiment); }
+    @Override public ReportData load(WorkspaceActor actor, UUID experiment) { return reports.summary(actor,experiment); }
     @Override public Pair pair(WorkspaceActor actor, UUID left, UUID right) { return read.execute(status -> new Pair(input(actor,left),input(actor,right))); }
     private Input input(WorkspaceActor actor, UUID experiment) {
-        var data=reports.load(actor,experiment);
+        return input(actor,experiment,false);
+    }
+    private Input input(WorkspaceActor actor, UUID experiment,boolean full) {
+        var data=full?reports.load(actor,experiment):reports.summary(actor,experiment);
         var versions=new TreeSet<String>(); var bindings=new TreeSet<String>();
         // Project only immutable identifiers; never load evaluator code or dataset bodies for comparison.
         var configurations=jdbc.sql("""
@@ -56,7 +59,7 @@ public class JdbcReportQueries implements ComparisonQueries {
                 """
             ).params(experiment,actor.workspaceId()).query(Long.class).single();
             if(bytes>byteLimit) throw new ReportExportLimitException();
-            var input=input(actor,experiment);
+            var input=input(actor,experiment,true);
             var reviews=jdbc.sql("""
                 with latest as (select distinct on(g.trial_id) g.id from grading_jobs g join trials t on t.id=g.trial_id where t.experiment_id=? and t.workspace_id=? and g.purpose<>'PREVIEW' order by g.trial_id,g.run_ordinal desc)
                 select h.* from human_reviews h join evaluation_results r on r.job_id=h.result_id join latest l on l.id=r.run_id where h.workspace_id=? order by h.created_at,h.id

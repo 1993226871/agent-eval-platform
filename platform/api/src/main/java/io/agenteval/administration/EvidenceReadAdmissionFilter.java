@@ -15,13 +15,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 @Order(Ordered.LOWEST_PRECEDENCE)
 public final class EvidenceReadAdmissionFilter extends OncePerRequestFilter {
-    private static final Pattern LARGE_READ=Pattern.compile("/api/v1/(?:evidence/snapshots/[^/]+|reports/experiments/[^/]+/export)");
+    private static final Pattern LARGE_READ=Pattern.compile("/api/v1/(?:evidence/snapshots/[^/]+|reports/(?:experiments/[^/]+(?:/(?:export|trials))?|comparison)|catalog|experiments)");
     private final Semaphore slots=new Semaphore(2);
     private final ConcurrentHashMap<String,Boolean> users=new ConcurrentHashMap<>();
     @Override protected boolean shouldNotFilter(HttpServletRequest request) { return !request.getMethod().equals("GET") || !LARGE_READ.matcher(request.getRequestURI()).matches(); }
     @Override protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain) throws ServletException,IOException {
         if(!slots.tryAcquire()) { reject(response); return; }
         String user=request.getUserPrincipal()==null?"anonymous":Objects.toString(request.getUserPrincipal().getName(),"anonymous");
+        // A page needs its cheap scalar summary concurrently. Both still share the two process slots.
+        boolean scalar=request.getRequestURI().matches("/api/v1/reports/(?:experiments/[^/]+|comparison)");
+        user+=scalar?"|summary":"|body";
         if(users.putIfAbsent(user,Boolean.TRUE)!=null) { slots.release(); reject(response); return; }
         try { chain.doFilter(request,response); }
         finally { users.remove(user); slots.release(); }

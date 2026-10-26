@@ -18,8 +18,13 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
     private final TransactionTemplate tx;
     private final TransactionTemplate readTx;
     private final ObjectMapper json;
+    private final long reportBodyLimit;
     private final ProtocolCodec codec=new ProtocolCodec();
-    public JdbcEvaluationRepository(JdbcClient jdbc,PlatformTransactionManager manager,ObjectMapper json) {
+    @org.springframework.beans.factory.annotation.Autowired
+    public JdbcEvaluationRepository(JdbcClient jdbc,PlatformTransactionManager manager,ObjectMapper json) { this(jdbc,manager,json,16L*1024*1024); }
+    public JdbcEvaluationRepository(JdbcClient jdbc,PlatformTransactionManager manager,ObjectMapper json,long reportBodyLimit) {
+        if(reportBodyLimit<1 || reportBodyLimit>16L*1024*1024) throw new IllegalArgumentException("Invalid report body budget");
+        this.reportBodyLimit=reportBodyLimit;
         this.jdbc=jdbc; tx=new TransactionTemplate(manager); this.json=json;
         readTx=new TransactionTemplate(manager); readTx.setReadOnly(true); readTx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
     }
@@ -127,19 +132,36 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
         if(refs.size()>1000 || refs.stream().anyMatch(ref -> !allowed.contains(ref))) throw new IllegalArgumentException("Unknown snapshot reference");
     }
     @Override public ReportData load(WorkspaceActor actor,UUID experimentId) {
-        return readTx.execute(transaction -> loadReport(actor,experimentId));
+        return readTx.execute(transaction -> loadReport(actor,experimentId,false,null,null));
     }
-    private ReportData loadReport(WorkspaceActor actor,UUID experimentId) {
-        var experiment=jdbc.sql("select dataset_version_id,suite_version_id,agent_version,status,jsonb_build_object('suite',snapshot->'suite') snapshot from experiments where id=? and workspace_id=? and status not in ('DELETING','DELETED')").params(experimentId,actor.workspaceId())
+    @Override public ReportData summary(WorkspaceActor actor,UUID experimentId) { return readTx.execute(transaction -> loadReport(actor,experimentId,true,null,null)); }
+    @Override public ReportRepository.PageData page(WorkspaceActor actor,UUID experimentId,int offset,int limit) {
+        if(offset<0 || offset>1000 || limit<1 || limit>100) throw new IllegalArgumentException("Invalid report page");
+        return readTx.execute(transaction -> {
+            var data=loadReport(actor,experimentId,false,offset,limit);
+            int count=jdbc.sql("select count(*) from trials where experiment_id=? and workspace_id=?").params(experimentId,actor.workspaceId()).query(Integer.class).single();
+            if(offset>count) throw new IllegalArgumentException("Invalid report cursor");
+            return new ReportRepository.PageData(data,count);
+        });
+    }
+    private String suiteProjection(String source) {
+        return "(select jsonb_build_object('entries',coalesce(jsonb_agg(jsonb_build_object('evaluator_version',item->'evaluator_version','dimension',item->'dimension','required_to_pass',item->'required_to_pass','weight',item->'weight')),'[]'::jsonb)) from jsonb_array_elements(coalesce(("+source+")->'entries','[]'::jsonb)) item)";
+    }
+    private ReportData loadReport(WorkspaceActor actor,UUID experimentId,boolean summary,Integer offset,Integer limit) {
+        String pageFilter=offset==null?"":" and t.id in (select p.id from trials p where p.experiment_id=t.experiment_id and p.workspace_id=t.workspace_id order by p.case_index,p.attempt limit "+limit+" offset "+offset+")";
+        var experiment=jdbc.sql("select dataset_version_id,suite_version_id,agent_version,status,jsonb_build_object('suite',"+suiteProjection("snapshot->'suite'")+") snapshot from experiments where id=? and workspace_id=? and status not in ('DELETING','DELETED')").params(experimentId,actor.workspaceId())
             .query((r,n) -> new ExperimentSource(r.getObject("dataset_version_id",UUID.class),r.getObject("suite_version_id",UUID.class),r.getString("agent_version"),r.getString("status"),tree(r.getString("snapshot")))).optional().orElseThrow(ScopeViolationException::new);
-        var scores=jdbc.sql("""
-            with latest as (select distinct on (g.trial_id) g.id from grading_jobs g join trials t on t.id=g.trial_id where t.experiment_id=? and t.workspace_id=? and g.purpose<>'PREVIEW' order by g.trial_id,g.run_ordinal desc)
+        String scoreQuery="""
+            with latest as (select distinct on (g.trial_id) g.id from grading_jobs g join trials t on t.id=g.trial_id where t.experiment_id=? and t.workspace_id=? and g.purpose<>'PREVIEW' %s order by g.trial_id,g.run_ordinal desc)
             select r.run_id,r.evaluator_version,r.payload from evaluation_results r join latest l on l.id=r.run_id
             union all select j.run_id,j.evaluator_version,j.last_result payload from evaluation_jobs j join latest l on l.id=j.run_id where j.last_result is not null and j.status in ('WAITING_QUOTA','RUNNING')
-            """).params(experimentId,actor.workspaceId()).query((r,n) -> new ResultRow(r.getObject("run_id",UUID.class),r.getObject("evaluator_version",UUID.class),decode(r.getString("payload")))).list();
+            """.formatted(pageFilter);
+        if(!summary && jdbc.sql("select coalesce(sum(octet_length(payload::text)),0) from ("+scoreQuery+") bounded").params(experimentId,actor.workspaceId()).query(Long.class).single()>reportBodyLimit) throw new io.agenteval.administration.ResourceReadLimitException();
+        String projection=summary?"select run_id,evaluator_version,jsonb_set(jsonb_set(jsonb_set(payload,'{criterion_id}',to_jsonb(left(payload->>'criterion_id',128))),'{reason}','\"Summary projection\"'::jsonb),'{evidence_refs}','[]'::jsonb) payload from ("+scoreQuery+") scalar":scoreQuery;
+        var scores=jdbc.sql(projection).params(experimentId,actor.workspaceId()).query((r,n) -> new ResultRow(r.getObject("run_id",UUID.class),r.getObject("evaluator_version",UUID.class),decode(r.getString("payload")))).list();
         var byRun=new HashMap<UUID,Map<UUID,CriterionResult>>(); for(var score:scores) byRun.computeIfAbsent(score.run(),key -> new HashMap<>()).put(score.version(),score.result());
         var trials=jdbc.sql("""
-            select t.id,t.case_index,t.attempt,t.status,t.started_at,t.evidence_wait_reason,g.id run_id,g.snapshot_id,g.suite_version_id,g.suite_config,g.status evaluation_state,
+            select t.id,t.case_index,t.attempt,t.status,t.started_at,t.evidence_wait_reason,g.id run_id,g.snapshot_id,g.suite_version_id,%s suite_config,g.status evaluation_state,
               (select case when count(distinct value->>'span_id')=1
                 and count(*) filter(where value->>'event_type'='span.started')>=1
                 and count(*) filter(where value->>'event_type' in ('span.completed','span.failed'))=1
@@ -149,8 +171,8 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
                 and value->>'event_type' in ('span.started','span.completed','span.failed')) duration_ms
             from trials t left join lateral
               (select j.*,e.manifest,coalesce(j.run_config->'suite',e.manifest#>'{experiment_snapshot,suite}',parent.snapshot->'suite') suite_config from grading_jobs j join evidence_snapshots e on e.id=j.snapshot_id join experiments parent on parent.id=t.experiment_id where j.trial_id=t.id and j.purpose<>'PREVIEW' order by j.run_ordinal desc limit 1) g on true
-            where t.experiment_id=? and t.workspace_id=? order by t.case_index,t.attempt
-            """)
+            where t.experiment_id=? and t.workspace_id=? %s order by t.case_index,t.attempt
+            """.formatted(suiteProjection("g.suite_config"),pageFilter))
             .params(experimentId,actor.workspaceId()).query((r,n) -> {
                 UUID run=r.getObject("run_id",UUID.class); var start=r.getTimestamp("started_at"); String status=r.getString("evaluation_state"); if(status==null || status.equals("QUEUED")) status="PENDING";
                 return new ReportData.TrialEvaluation(r.getObject("id",UUID.class),r.getInt("case_index"),r.getInt("attempt"),TrialExecutionStatus.valueOf(r.getString("status")),start==null?null:start.toInstant(),run,r.getObject("snapshot_id",UUID.class),status,byRun.getOrDefault(run,Map.of()),duration(r.getString("duration_ms")),r.getObject("suite_version_id",UUID.class),r.getString("suite_config")==null?List.of():entries(tree(r.getString("suite_config"))),r.getString("evidence_wait_reason"));

@@ -9,6 +9,13 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def checksum(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        while chunk := source.read(1024 * 1024): digest.update(chunk)
+    return digest.hexdigest()
+
+
 def manage(mode, env_file, directory, extra_files=()):
     directory = Path(directory).resolve()
     compose = ["docker", "compose", "--env-file", str(Path(env_file).resolve()), "-f", str(ROOT / "deploy/compose.yaml")]
@@ -28,11 +35,11 @@ def manage(mode, env_file, directory, extra_files=()):
         objects = directory / "objects"; objects.mkdir(mode=0o700)
         uid = str(os.getuid()) + ":" + str(os.getgid()) if hasattr(os, "getuid") else "10001:10001"
         run("run", "--rm", "--no-deps", "--user", uid, "--volume", directory.as_posix() + ":/backup", "storage-init", "backup", "/backup/objects")
-        digest = hashlib.sha256((directory / "database.dump").read_bytes()).hexdigest()
+        digest = checksum(directory / "database.dump")
         (directory / "backup.json").write_text(json.dumps({"version": 1, "database_sha256": digest}), encoding="utf-8")
     else:
         manifest = json.loads((directory / "backup.json").read_text(encoding="utf-8"))
-        if manifest.get("version") != 1 or hashlib.sha256((directory / "database.dump").read_bytes()).hexdigest() != manifest["database_sha256"]:
+        if manifest.get("version") != 1 or checksum(directory / "database.dump") != manifest["database_sha256"]:
             raise ValueError("Invalid database backup")
         if database_query("select count(*) from information_schema.tables where table_schema='public'") != "0":
             raise ValueError("Restore destination database must be empty; nothing was dropped")

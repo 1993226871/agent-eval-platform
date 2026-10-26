@@ -115,6 +115,21 @@ class ReportComparisonIT {
         }
         assertThat(comparisons.compare(owner,judges.get(0),judges.get(1)).reasons()).contains("MODEL_PRICE_VERSION_MISMATCH","NO_DETERMINABLE_DATA");
     }
+    @Test void summaryAndSmallTrialPageDoNotLoadEveryCriterionBody() {
+        UUID experiment=run(dataset,suite);
+        long largest=jdbc.sql("select max(octet_length(r.payload::text)) from evaluation_results r join trials t on t.id=r.trial_id where t.experiment_id=?").param(experiment).query(Long.class).single();
+        var repository=new JdbcEvaluationRepository(jdbc,transactions,json,largest+64);
+        assertThatThrownBy(() -> repository.load(owner,experiment)).isInstanceOf(io.agenteval.administration.ResourceReadLimitException.class);
+        var summary=repository.summary(owner,experiment);
+        assertThat(summary.trials()).hasSize(3);
+        assertThat(summary.trials().getFirst().results().values()).allSatisfy(result -> { assertThat(result.evidenceRefs()).isEmpty(); assertThat(result.reason()).isEqualTo("Summary projection"); });
+        var service=new ReportService(repository,new EvaluationAggregator());
+        assertThat(service.get(owner,experiment).plannedAttempts()).isEqualTo(3);
+        var page=service.trials(owner,experiment,null,1);
+        assertThat(page.items()).hasSize(1); assertThat(page.items().getFirst().criteria().getFirst().reason()).isNotEqualTo("Summary projection");
+        assertThat(page.nextCursor()).isNotNull(); assertThat(service.trials(owner,experiment,page.nextCursor(),1).items()).hasSize(1);
+        assertThatThrownBy(() -> repository.summary(user(),experiment)).isInstanceOf(ScopeViolationException.class);
+    }
     @Test void rejectsOversizedExportBeforeLoadingPrivateBodies() {
         UUID experiment=run(dataset,suite);
         var queries=new JdbcReportQueries(jdbc,transactions,json,new JdbcEvaluationRepository(jdbc,transactions,json));

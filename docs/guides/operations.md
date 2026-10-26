@@ -33,6 +33,8 @@ python scripts/manage_backup.py restore --env-file /private/restore.env --direct
 
 已完成一次真实 PostgreSQL 与 RustFS 备份/恢复演练，目标为新建的独立实例，校验行数、私人实验和附件字节，并验证再次恢复会拒绝非空数据库。此演练不等于已验证所有云 S3 或大规模恢复时间。
 
+专用 Runner 的执行注册表不在平台数据库备份内。单独停止控制服务后备份完整 `RUNNER_WORK_ROOT`，保留原镜像ID和内部密钥；恢复其注册表后再启用平台 Python 调度。不要通过清空 SQLite 或换一个空工作目录处理未知执行，否则会失去原作业的幂等历史。
+
 ## 密钥轮换
 
 Worker 密钥通过私人 Agent 页签发新凭证、替换 Agent 环境、验证上线，再撤销旧凭证。旧密钥撤销后不能领取、续约或完成任务；应安排在无执行中业务时轮换。
