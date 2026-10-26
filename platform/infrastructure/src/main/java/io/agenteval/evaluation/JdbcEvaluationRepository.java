@@ -26,7 +26,7 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
     @Override public int schedule(int limit,Instant now) {
         return tx.execute(transaction -> {
             guard(); cancelJobs(now);
-            var runs=jdbc.sql("select g.id,g.workspace_id,g.trial_id,g.snapshot_id,coalesce(g.run_config,s.manifest->'experiment_snapshot') configuration from grading_jobs g join evidence_snapshots s on s.id=g.snapshot_id join trials t on t.id=g.trial_id join experiments e on e.id=t.experiment_id where g.status='QUEUED' and e.status not in ('CANCELLED','DELETING','DELETED') order by g.created_at,g.id limit ? for update of g skip locked")
+            var runs=jdbc.sql("select g.id,g.workspace_id,g.trial_id,g.snapshot_id,coalesce(g.run_config,s.manifest->'experiment_snapshot',e.snapshot) configuration from grading_jobs g join evidence_snapshots s on s.id=g.snapshot_id join trials t on t.id=g.trial_id join experiments e on e.id=t.experiment_id where g.status='QUEUED' and e.status not in ('CANCELLED','DELETING','DELETED') order by g.created_at,g.id limit ? for update of g skip locked")
                 .param(limit).query((r,n) -> new PendingRun(r.getObject("id",UUID.class),r.getObject("workspace_id",UUID.class),r.getObject("trial_id",UUID.class),r.getObject("snapshot_id",UUID.class),tree(r.getString("configuration")))).list();
             for(var run:runs) {
                 var frozen=run.manifest(); var entries=entries(frozen.path("suite"));
@@ -130,7 +130,7 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
         return readTx.execute(transaction -> loadReport(actor,experimentId));
     }
     private ReportData loadReport(WorkspaceActor actor,UUID experimentId) {
-        var experiment=jdbc.sql("select dataset_version_id,suite_version_id,agent_version,status,snapshot from experiments where id=? and workspace_id=? and status not in ('DELETING','DELETED')").params(experimentId,actor.workspaceId())
+        var experiment=jdbc.sql("select dataset_version_id,suite_version_id,agent_version,status,jsonb_build_object('suite',snapshot->'suite') snapshot from experiments where id=? and workspace_id=? and status not in ('DELETING','DELETED')").params(experimentId,actor.workspaceId())
             .query((r,n) -> new ExperimentSource(r.getObject("dataset_version_id",UUID.class),r.getObject("suite_version_id",UUID.class),r.getString("agent_version"),r.getString("status"),tree(r.getString("snapshot")))).optional().orElseThrow(ScopeViolationException::new);
         var scores=jdbc.sql("""
             with latest as (select distinct on (g.trial_id) g.id from grading_jobs g join trials t on t.id=g.trial_id where t.experiment_id=? and t.workspace_id=? and g.purpose<>'PREVIEW' order by g.trial_id,g.run_ordinal desc)
@@ -148,7 +148,7 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
                 where value->>'span_kind'='agent' and value->'parent_span_id'='null'::jsonb
                 and value->>'event_type' in ('span.started','span.completed','span.failed')) duration_ms
             from trials t left join lateral
-              (select j.*,e.manifest,coalesce(j.run_config->'suite',e.manifest#>'{experiment_snapshot,suite}') suite_config from grading_jobs j join evidence_snapshots e on e.id=j.snapshot_id where j.trial_id=t.id and j.purpose<>'PREVIEW' order by j.run_ordinal desc limit 1) g on true
+              (select j.*,e.manifest,coalesce(j.run_config->'suite',e.manifest#>'{experiment_snapshot,suite}',parent.snapshot->'suite') suite_config from grading_jobs j join evidence_snapshots e on e.id=j.snapshot_id join experiments parent on parent.id=t.experiment_id where j.trial_id=t.id and j.purpose<>'PREVIEW' order by j.run_ordinal desc limit 1) g on true
             where t.experiment_id=? and t.workspace_id=? order by t.case_index,t.attempt
             """)
             .params(experimentId,actor.workspaceId()).query((r,n) -> {

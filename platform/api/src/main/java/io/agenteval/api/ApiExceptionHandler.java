@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(io.agenteval.administration.ResourceReadLimitException.class) ResponseEntity<ProblemDetail> readLimit() { return problem(413,"BODY_PAGE_TOO_LARGE"); }
     @ExceptionHandler(io.agenteval.reporting.ReportExportLimitException.class) ResponseEntity<ProblemDetail> exportLimit() { return problem(413,"EXPORT_TOO_LARGE"); }
     @ExceptionHandler(io.agenteval.catalog.DatasetImportException.class) ResponseEntity<ProblemDetail> jsonl(io.agenteval.catalog.DatasetImportException failure) {
         var body=ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,"Invalid JSONL at line "+failure.line());

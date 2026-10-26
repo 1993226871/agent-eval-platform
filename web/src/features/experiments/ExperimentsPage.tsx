@@ -24,7 +24,7 @@ export function ExperimentsPage() {
     queryKey: [workspace_id, "experiments", offset],
     queryFn: () =>
       request(
-        api.GET("/api/v1/experiments", {
+        api.GET("/api/v1/experiment-summaries", {
           params: { query: { offset, limit: 25 } },
         }),
       ),

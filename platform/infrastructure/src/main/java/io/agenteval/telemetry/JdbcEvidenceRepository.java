@@ -29,12 +29,12 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
         return tx.execute(transaction -> {
             // Same lock boundary as ingestion and completion: the manifest cannot race a committed ack.
             jdbc.sql("select id from scheduler_guard where id=1 for update").query(Integer.class).single();
-            var row=jdbc.sql("select t.status,t.task,t.completion,t.completed_at,e.snapshot,e.suite_version_id,e.status experiment_status from trials t join experiments e on e.id=t.experiment_id where t.id=? and t.workspace_id=? and e.status not in ('DELETING','DELETED') for update of t,e")
-                .params(trial,actor.workspaceId()).query((r,n) -> new TrialEvidence(r.getString("status"),tree(r.getString("task")),tree(r.getString("completion")),r.getTimestamp("completed_at")==null?null:r.getTimestamp("completed_at").toInstant(),tree(r.getString("snapshot")),r.getString("experiment_status"),r.getObject("suite_version_id",UUID.class))).optional().orElseThrow(ScopeViolationException::new);
+            var row=jdbc.sql("select t.status,t.task,t.completion,t.completed_at,e.id experiment_id,e.snapshot,e.suite_version_id,e.status experiment_status from trials t join experiments e on e.id=t.experiment_id where t.id=? and t.workspace_id=? and e.status not in ('DELETING','DELETED') for update of t,e")
+                .params(trial,actor.workspaceId()).query((r,n) -> new TrialEvidence(r.getString("status"),tree(r.getString("task")),tree(r.getString("completion")),r.getTimestamp("completed_at")==null?null:r.getTimestamp("completed_at").toInstant(),tree(r.getString("snapshot")),r.getString("experiment_status"),r.getObject("suite_version_id",UUID.class),r.getObject("experiment_id",UUID.class))).optional().orElseThrow(ScopeViolationException::new);
             var first=jdbc.sql("select * from evidence_snapshots where trial_id=? order by ordinal limit 1").param(trial).query(this::map).optional();
             if(first.isPresent() && !includeLate) return first.get();
             if(row.completedAt()==null || Set.of("QUEUED","LEASED","RUNNING").contains(row.status())) throw new EvidencePendingException();
-            var manifest=json.createObjectNode(); manifest.set("task",row.task()); manifest.set("completion",row.completion()); manifest.set("experiment_snapshot",row.experiment()); manifest.put("execution_status",row.status());
+            var manifest=json.createObjectNode(); manifest.set("task",row.task()); manifest.set("completion",row.completion()); manifest.putObject("configuration_ref").put("experiment_id",row.experimentId().toString()).put("content_hash",CanonicalJson.hash(row.experiment())); manifest.put("execution_status",row.status());
             var events=manifest.putArray("events"); var hashes=manifest.putArray("event_hashes"); var issues=manifest.putArray("issues");
             var records=jdbc.sql("select event_json,content_hash,origin from trace_events where workspace_id=? and trial_id=? order by sequence").params(actor.workspaceId(),trial).query((r,n) -> new StoredEvent(tree(r.getString("event_json")),r.getString("content_hash"),r.getString("origin"))).list();
             long expectedSequence=1; boolean gap=false,truncated=false; var starts=new HashMap<String,TraceEvent>(); var ends=new HashSet<String>();
@@ -106,7 +106,7 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
     private TraceEvent decode(JsonNode event) { try { return codec.decode(event.toString(),TraceEvent.class); } catch(java.io.IOException invalid) { throw new IllegalStateException(invalid); } }
     private JsonNode tree(String value) { if(value==null) return NullNode.instance; try { return json.readTree(value); } catch(java.io.IOException invalid) { throw new IllegalStateException(invalid); } }
     private EvidenceSnapshot map(java.sql.ResultSet r,int n) throws java.sql.SQLException { return new EvidenceSnapshot(r.getObject("id",UUID.class),r.getObject("trial_id",UUID.class),r.getString("content_hash"),EvidenceCompleteness.valueOf(r.getString("completeness")),tree(r.getString("manifest")),r.getTimestamp("created_at").toInstant()); }
-    private record TrialEvidence(String status,JsonNode task,JsonNode completion,Instant completedAt,JsonNode experiment,String experimentStatus,UUID suiteVersion) {}
+    private record TrialEvidence(String status,JsonNode task,JsonNode completion,Instant completedAt,JsonNode experiment,String experimentStatus,UUID suiteVersion,UUID experimentId) {}
     private record StoredEvent(JsonNode event,String hash,String origin) {}
     private record Candidate(UUID id,WorkspaceActor actor) {}
 }

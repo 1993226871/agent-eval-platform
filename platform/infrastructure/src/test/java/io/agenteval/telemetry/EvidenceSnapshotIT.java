@@ -49,6 +49,14 @@ class EvidenceSnapshotIT {
         sql.update("update trials set status='SUCCEEDED',completed_at=?,completion=cast(? as jsonb) where id=?",java.sql.Timestamp.from(now.minusSeconds(31)),"{\"status\":\"SUCCEEDED\",\"output\":42,\"final_sequence\":3,\"event_count\":3,\"dropped_count\":0,\"artifact_ids\":[]}",trial);
         evidence=new EvidenceService(new JdbcEvidenceRepository(jdbc,tx,json),Clock.fixed(now,ZoneOffset.UTC));
     }
+    @Test void frozenEvidenceReferencesConfigurationWithoutDuplicatingDatasetOrEvaluatorBodies() {
+        var frozen=evidence.freeze(actor,trial,false);
+        assertThat(frozen.manifest().has("experiment_snapshot")).isFalse();
+        assertThat(frozen.manifest().path("configuration_ref").path("content_hash").asText()).hasSize(64);
+        assertThat(frozen.manifest().path("configuration_ref").path("experiment_id").asText()).isEqualTo(sql.queryForObject("select experiment_id::text from trials where id=?",String.class,trial));
+        assertThat(evidence.load(actor,frozen.id()).contentHash()).isEqualTo(CanonicalJson.hash(frozen.manifest()));
+        assertThat(evidence.context(actor,frozen.id()).expected().asInt()).isEqualTo(42);
+    }
     @Test void freezesAfterGraceAndPreservesOldSnapshot() throws Exception {
         event(1,EventType.SPAN_STARTED); event(3,EventType.SPAN_COMPLETED);
         var first=evidence.freeze(actor,trial,false);

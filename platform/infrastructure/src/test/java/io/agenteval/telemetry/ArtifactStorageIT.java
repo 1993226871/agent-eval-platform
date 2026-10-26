@@ -17,6 +17,14 @@ class ArtifactStorageIT {
         store=new S3ArtifactStore(URI.create("http://"+s3.getHost()+":"+s3.getMappedPort(9090)),"us-east-1","test-key","test-secret","evidence");
     }
     @AfterAll static void stop() { if(store!=null) store.close(); if(s3!=null) s3.stop(); }
+    @Test void presignsPublicEndpointWhileStorageOperationsUsePrivateEndpoint() {
+        var internal=URI.create("http://"+s3.getHost()+":"+s3.getMappedPort(9090));
+        try(var configured=new S3ArtifactStore(internal,URI.create("https://evidence.example.test:9443"),"us-east-1","test-key","test-secret","evidence")) {
+            assertThat(configured.uploadUrl("staging/test",3).getHost()).isEqualTo("evidence.example.test");
+            assertThat(configured.downloadUrl("sealed/test").getPort()).isEqualTo(9443);
+            configured.deleteObject("sealed/nonexistent");
+        }
+    }
     @Test void sealsVerifiedBytesSeparatelyFromReusableUploadUrl() throws Exception {
         var content="verified report".getBytes(StandardCharsets.UTF_8); String hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
         String stage="staging/"+UUID.randomUUID(),sealed="sealed/"+UUID.randomUUID();

@@ -1,0 +1,173 @@
+name: ${COMPOSE_PROJECT_NAME:-agenteval}
+x-database: &database
+  DATABASE_URL: jdbc:postgresql://postgres:5432/agenteval
+  DATABASE_USER: agenteval
+  DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Generate deployment secrets first}
+x-platform: &platform
+  restart: unless-stopped
+  read_only: true
+  user: '10001:10001'
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs: ['/tmp:rw,noexec,nosuid,size=256m,uid=10001,gid=10001']
+  networks: [backend, outbound]
+  healthcheck:
+    test: [CMD, java, '-Dloader.main=io.agenteval.operations.DeploymentOperations', -cp, /app/app.jar, org.springframework.boot.loader.launch.PropertiesLauncher, health]
+    interval: 30s
+    timeout: 10s
+    start_period: 40s
+    retries: 3
+x-application: &application
+  <<: *database
+  SPRING_FLYWAY_ENABLED: 'false'
+  APP_STORAGE_ENABLED: 'true'
+  APP_STORAGE_ENDPOINT: http://s3:9000
+  APP_STORAGE_PUBLIC_ENDPOINT: ${PUBLIC_S3_ENDPOINT:?Set public HTTPS S3 origin}
+  APP_STORAGE_REGION: us-east-1
+  APP_STORAGE_BUCKET: evidence
+  APP_STORAGE_ACCESS_KEY: ${S3_ACCESS_KEY:?Set generated S3 access key}
+  APP_STORAGE_SECRET_KEY: ${S3_SECRET_KEY:?Set generated S3 secret}
+  MODEL_ENCRYPTION_KEY: ${MODEL_ENCRYPTION_KEY:?Set generated base64 encryption key}
+  MODEL_ENDPOINT_ORIGINS: ${MODEL_ENDPOINT_ORIGINS:-}
+  RUNNER_ENABLED: ${RUNNER_ENABLED:-false}
+  RUNNER_BASE_URL: ${RUNNER_BASE_URL:-http://host.docker.internal:8091}
+  RUNNER_INTERNAL_KEY: ${RUNNER_INTERNAL_KEY:-}
+  RUNNER_IMAGE_DIGEST: ${RUNNER_IMAGE_DIGEST:-}
+services:
+  postgres:
+    image: postgres:17.11@sha256:b8faeff7712663c2773a190181e1246e37e364b887611c04658c28b44e2408fe
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agenteval
+      POSTGRES_DB: agenteval
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set generated database password}
+    volumes: [database:/var/lib/postgresql/data]
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U agenteval -d agenteval']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 1g
+  redis:
+    image: redis:7.4-alpine@sha256:57e4255cc971b1c8d6f8a6ca283ac01bc3ecdd914273ef6bfaede87aaecd6541
+    restart: unless-stopped
+    command: [redis-server, --maxmemory, 64mb, --maxmemory-policy, allkeys-lru, --save, '', --appendonly, 'no']
+    user: '999:999'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [backend]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    mem_limit: 128m
+  s3:
+    image: rustfs/rustfs:1.0.3@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b
+    restart: unless-stopped
+    user: '10001:10001'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:?Set generated S3 access key}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?Set generated S3 secret}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: ':9000'
+      RUSTFS_CONSOLE_ENABLE: 'false'
+      RUSTFS_OBS_LOG_DIRECTORY: /logs
+      RUSTFS_OBS_LOGGER_LEVEL: warn
+    volumes: [objects:/data, object_logs:/logs]
+    networks: [backend]
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:9000/health/ready]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    mem_limit: 1g
+  storage-init:
+    build: { context: ./ops }
+    image: ${COMPOSE_PROJECT_NAME:-agenteval}-ops:0.1.0
+    command: [init]
+    environment: &storage-operations
+      S3_ENDPOINT: http://s3:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?Set generated S3 access key}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?Set generated S3 secret}
+      S3_BUCKET: evidence
+    depends_on: { s3: { condition: service_healthy } }
+    networks: [backend]
+    read_only: true
+    user: '10001:10001'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+  migrate:
+    build: { context: .., dockerfile: deploy/Dockerfile.platform, target: api }
+    image: ${COMPOSE_PROJECT_NAME:-agenteval}-api:0.1.0
+    entrypoint: [java, '-Dloader.main=io.agenteval.operations.DeploymentOperations', -cp, /app/app.jar, org.springframework.boot.loader.launch.PropertiesLauncher, migrate]
+    environment: *database
+    depends_on: { postgres: { condition: service_healthy } }
+    networks: [backend]
+    read_only: true
+    user: '10001:10001'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001']
+    mem_limit: 256m
+  api:
+    <<: *platform
+    build: { context: .., dockerfile: deploy/Dockerfile.platform, target: api }
+    image: ${COMPOSE_PROJECT_NAME:-agenteval}-api:0.1.0
+    environment:
+      <<: *application
+      SECURE_COOKIES: 'true'
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      SERVER_TOMCAT_THREADS_MAX: '80'
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '12'
+      APP_BOOTSTRAP_ENABLED: 'true'
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?Set bootstrap administrator email}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Set generated bootstrap password}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      storage-init: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    mem_limit: 1g
+  worker:
+    <<: *platform
+    extra_hosts: ['host.docker.internal:host-gateway']
+    build: { context: .., dockerfile: deploy/Dockerfile.platform, target: worker }
+    image: ${COMPOSE_PROJECT_NAME:-agenteval}-worker:0.1.0
+    environment:
+      <<: *application
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '8'
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      storage-init: { condition: service_completed_successfully }
+    mem_limit: 1g
+  web:
+    build: { context: .., dockerfile: deploy/Dockerfile.web }
+    image: ${COMPOSE_PROJECT_NAME:-agenteval}-web:0.1.0
+    restart: unless-stopped
+    user: '${WEB_UID:-101}:${WEB_GID:-101}'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m,mode=1777']
+    volumes: ['${TLS_CERT_DIR:?Provide readable TLS certificate directory}:/etc/agenteval/tls:ro']
+    ports: ['${BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-8443}:8443', '${BIND_ADDRESS:-127.0.0.1}:${S3_HTTPS_PORT:-9443}:9443']
+    networks: [backend, outbound]
+    depends_on: { api: { condition: service_healthy } }
+    healthcheck:
+      test: [CMD, wget, --quiet, --no-check-certificate, --spider, https://127.0.0.1:8443/healthz]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    mem_limit: 128m
+networks:
+  backend: { internal: true }
+  outbound: {}
+volumes:
+  database: {}
+  objects: {}
+  object_logs: {}

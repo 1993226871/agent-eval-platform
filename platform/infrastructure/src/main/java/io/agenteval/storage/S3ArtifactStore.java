@@ -19,11 +19,14 @@ public final class S3ArtifactStore implements ArtifactStore,AutoCloseable {
     private final S3Presigner signer;
     private final String bucket;
     public S3ArtifactStore(URI endpoint,String region,String accessKey,String secretKey,String bucket) {
+        this(endpoint,endpoint,region,accessKey,secretKey,bucket);
+    }
+    public S3ArtifactStore(URI endpoint,URI publicEndpoint,String region,String accessKey,String secretKey,String bucket) {
         var credentials=StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey,secretKey));
         var config=S3Configuration.builder().pathStyleAccessEnabled(true).build();
         client=S3Client.builder().region(Region.of(region)).credentialsProvider(credentials).endpointOverride(endpoint).serviceConfiguration(config)
             .httpClientBuilder(UrlConnectionHttpClient.builder().connectionTimeout(Duration.ofSeconds(5)).socketTimeout(Duration.ofSeconds(30))).overrideConfiguration(c -> c.apiCallTimeout(Duration.ofSeconds(90))).build();
-        signer=S3Presigner.builder().region(Region.of(region)).credentialsProvider(credentials).endpointOverride(endpoint).serviceConfiguration(config).build(); this.bucket=bucket;
+        signer=S3Presigner.builder().region(Region.of(region)).credentialsProvider(credentials).endpointOverride(publicEndpoint).serviceConfiguration(config).build(); this.bucket=bucket;
     }
     @Override public URI uploadUrl(String stagingKey,long sizeBytes) {
         return URI.create(signer.presignPutObject(b -> b.signatureDuration(Duration.ofMinutes(2)).putObjectRequest(r -> r.bucket(bucket).key(stagingKey).contentLength(sizeBytes).contentType("application/octet-stream"))).url().toString());

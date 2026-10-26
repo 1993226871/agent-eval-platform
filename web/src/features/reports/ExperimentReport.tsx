@@ -44,7 +44,7 @@ function ExperimentReportPage({ id }: { id: string }) {
     queryKey: [workspace_id, "experiment", id],
     queryFn: ({ signal }) =>
       request(
-        api.GET("/api/v1/experiments/{id}", {
+        api.GET("/api/v1/experiment-summaries/{id}", {
           params: { path: { id } },
           signal,
         }),
@@ -54,7 +54,7 @@ function ExperimentReportPage({ id }: { id: string }) {
     queryKey: [workspace_id, "comparison-options"],
     queryFn: ({ signal }) =>
       request(
-        api.GET("/api/v1/experiments", {
+        api.GET("/api/v1/experiment-summaries", {
           params: { query: { limit: 100 } },
           signal,
         }),

@@ -16,7 +16,8 @@ public class JdbcCatalogRepository implements CatalogRepository {
     private final JdbcClient jdbc;
     private final TransactionTemplate tx;
     private final ObjectMapper json;
-    public JdbcCatalogRepository(JdbcClient jdbc,PlatformTransactionManager manager,ObjectMapper json) { this.jdbc=jdbc; this.tx=new TransactionTemplate(manager); this.json=json; }
+    private final io.agenteval.administration.JdbcReadBudget readBudget;
+    public JdbcCatalogRepository(JdbcClient jdbc,PlatformTransactionManager manager,ObjectMapper json) { this.jdbc=jdbc; this.tx=new TransactionTemplate(manager); this.json=json; this.readBudget=new io.agenteval.administration.JdbcReadBudget(manager); }
     @Override public CatalogResource create(WorkspaceActor actor,ResourceKind kind,String name,JsonNode content) {
         return tx.execute(status -> {
             io.agenteval.administration.JdbcResourceAdmission.metadata(jdbc,actor.workspaceId(),"catalog_resources");
@@ -30,8 +31,8 @@ public class JdbcCatalogRepository implements CatalogRepository {
         return jdbc.sql("select * from catalog_resources where id=? and workspace_id=?").params(id,actor.workspaceId()).query(this::mapDraft).optional().orElseThrow(ScopeViolationException::new);
     }
     @Override public List<CatalogResource> list(WorkspaceActor actor,ResourceKind kind,int offset,int limit) {
-        return jdbc.sql("select * from catalog_resources where workspace_id=? and kind=? and archived=false order by created_at,id limit ? offset ?")
-            .params(actor.workspaceId(),kind.name(),limit,offset).query(this::mapDraft).list();
+        return readBudget.load(() -> jdbc.sql("select coalesce(sum(octet_length(content::text)),0) from (select content from catalog_resources where workspace_id=? and kind=? and not archived order by created_at,id limit ? offset ?) p").params(actor.workspaceId(),kind.name(),limit,offset).query(Long.class).single(),
+            () -> jdbc.sql("select * from catalog_resources where workspace_id=? and kind=? and archived=false order by created_at,id limit ? offset ?").params(actor.workspaceId(),kind.name(),limit,offset).query(this::mapDraft).list());
     }
     @Override public CatalogResource update(WorkspaceActor actor,UUID id,long revision,String name,JsonNode content) {
         return tx.execute(status -> {

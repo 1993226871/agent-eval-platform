@@ -8,8 +8,8 @@ import java.net.URI;
 public class ArtifactStorageConfiguration {
     @Bean(destroyMethod="close") @ConditionalOnProperty(name="app.storage.enabled",havingValue="true")
     S3ArtifactStore s3ArtifactStore(@Value("${app.storage.endpoint}") URI endpoint,@Value("${app.storage.region:us-east-1}") String region,
-        @Value("${app.storage.access-key}") String accessKey,@Value("${app.storage.secret-key}") String secretKey,@Value("${app.storage.bucket}") String bucket) {
-        return new S3ArtifactStore(endpoint,region,accessKey,secretKey,bucket);
+        @Value("${app.storage.access-key}") String accessKey,@Value("${app.storage.secret-key}") String secretKey,@Value("${app.storage.bucket}") String bucket,@Value("${app.storage.public-endpoint:${app.storage.endpoint}}") URI publicEndpoint) {
+        return new S3ArtifactStore(endpoint,publicEndpoint,region,accessKey,secretKey,bucket);
     }
     @Bean @ConditionalOnProperty(name="app.storage.enabled",havingValue="false",matchIfMissing=true)
     ArtifactStore disabledArtifactStore() { return new ArtifactStore() {

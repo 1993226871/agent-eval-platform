@@ -14,7 +14,8 @@ public class JdbcExperimentRepository implements ExperimentRepository {
     private final JdbcClient jdbc;
     private final TransactionTemplate tx;
     private final ObjectMapper json;
-    public JdbcExperimentRepository(JdbcClient jdbc,PlatformTransactionManager manager,ObjectMapper json) { this.jdbc=jdbc; this.tx=new TransactionTemplate(manager); this.json=json; }
+    private final io.agenteval.administration.JdbcReadBudget readBudget;
+    public JdbcExperimentRepository(JdbcClient jdbc,PlatformTransactionManager manager,ObjectMapper json) { this.jdbc=jdbc; this.tx=new TransactionTemplate(manager); this.json=json; readBudget=new io.agenteval.administration.JdbcReadBudget(manager); }
     @Override public Optional<UUID> replay(WorkspaceActor actor,String key,String hash) {
         return jdbc.sql("select id,request_hash from experiments where workspace_id=? and idempotency_key=?").params(actor.workspaceId(),key).query((row,n) -> {
             if(!hash.equals(row.getString("request_hash"))) throw new CatalogConflictException(); return row.getObject("id",UUID.class);
@@ -43,7 +44,10 @@ public class JdbcExperimentRepository implements ExperimentRepository {
         });
     }
     @Override public ExperimentRecord get(WorkspaceActor actor,UUID id) { return jdbc.sql("select * from experiments where id=? and workspace_id=? and status not in ('DELETING','DELETED')").params(id,actor.workspaceId()).query(this::map).optional().orElseThrow(ScopeViolationException::new); }
-    @Override public List<ExperimentRecord> list(WorkspaceActor actor,int offset,int limit) { return jdbc.sql("select * from experiments where workspace_id=? and status not in ('DELETING','DELETED') order by created_at desc,id limit ? offset ?").params(actor.workspaceId(),limit,offset).query(this::map).list(); }
+    @Override public List<ExperimentRecord> list(WorkspaceActor actor,int offset,int limit) {
+        return readBudget.load(() -> jdbc.sql("select coalesce(sum(octet_length(snapshot::text)),0) from (select snapshot from experiments where workspace_id=? and status not in ('DELETING','DELETED') order by created_at desc,id limit ? offset ?) p").params(actor.workspaceId(),limit,offset).query(Long.class).single(),
+            () -> jdbc.sql("select * from experiments where workspace_id=? and status not in ('DELETING','DELETED') order by created_at desc,id limit ? offset ?").params(actor.workspaceId(),limit,offset).query(this::map).list());
+    }
     @Override public List<TrialRecord> trials(WorkspaceActor actor,UUID experimentId) {
         return jdbc.sql("select * from trials where experiment_id=? and workspace_id=? order by case_index,attempt").params(experimentId,actor.workspaceId())
             .query((row,n) -> new TrialRecord(row.getObject("id",UUID.class),row.getObject("experiment_id",UUID.class),row.getObject("workspace_id",UUID.class),row.getInt("case_index"),row.getInt("attempt"),row.getString("trace_id"),TrialExecutionStatus.valueOf(row.getString("status")),tree(row.getString("task")))).list();

@@ -13,5 +13,12 @@ export default defineConfig({
     trace: "off",
     screenshot: "off",
     video: "off",
+    launchOptions: process.env.WEB_TLS_SPKI
+      ? {
+          args: [
+            "--ignore-certificate-errors-spki-list=" + process.env.WEB_TLS_SPKI,
+          ],
+        }
+      : undefined,
   },
 });

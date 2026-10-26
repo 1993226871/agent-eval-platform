@@ -1,0 +1,30 @@
+# Standalone deployment on the qualified dedicated Linux execution node.
+# Do not attach this trusted Docker controller to the platform database host.
+name: ${RUNNER_COMPOSE_PROJECT_NAME:-agenteval-runner}
+services:
+  runner:
+    build: { context: ../runner, dockerfile: ../deploy/Dockerfile.runner }
+    image: agenteval-runner:0.1.0
+    restart: unless-stopped
+    user: '10001:10001'
+    group_add: ['${DOCKER_GID:?Provide dedicated node Docker socket group ID}']
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001']
+    environment:
+      RUNNER_INTERNAL_KEY: ${RUNNER_INTERNAL_KEY:?Set generated internal key}
+      RUNNER_IMAGE_DIGEST: ${RUNNER_IMAGE_DIGEST:?Qualify the built guest image first}
+      RUNNER_WORK_ROOT: ${RUNNER_WORK_ROOT:?Set an absolute Linux work directory}
+      RUNNER_ARTIFACT_ORIGINS: ${RUNNER_ARTIFACT_ORIGINS:?Allow exact public S3 HTTPS origins}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Must be the same absolute path on host and controller: guest binds use host paths.
+      - '${RUNNER_WORK_ROOT:?Set absolute work directory}:${RUNNER_WORK_ROOT:?Set absolute work directory}'
+    ports: ['${RUNNER_BIND_ADDRESS:?Bind only a private address reachable by the platform}:8091:8091']
+    healthcheck:
+      test: [CMD, python, -c, 'import json,os,urllib.request; r=urllib.request.Request("http://127.0.0.1:8091/internal/v1/capabilities",headers={"Authorization":"Bearer "+os.environ["RUNNER_INTERNAL_KEY"]}); assert json.load(urllib.request.urlopen(r,timeout=3))["python_enabled"]']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 512m

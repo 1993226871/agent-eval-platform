@@ -1,0 +1,10 @@
+FROM docker:29-cli@sha256:5e6baf67325a79f64ed3bed6863954d5e05d0f3d4e57cbdb14809346814bbfdb AS dockercli
+FROM python:3.11-slim@sha256:b7a9e5f6a93d6d4a31f129bbd4bdee69efccb6ded0fb230d78aafaf37af98377
+COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
+COPY requirements-test.lock /opt/runner/requirements.lock
+RUN pip install --no-cache-dir -r /opt/runner/requirements.lock
+COPY agent_eval_runner/ /opt/runner/agent_eval_runner/
+WORKDIR /opt/runner
+ENV PYTHONDONTWRITEBYTECODE=1
+USER 10001:10001
+ENTRYPOINT ["python", "-B", "-m", "uvicorn", "agent_eval_runner.api:create_application", "--factory", "--host", "0.0.0.0", "--port", "8091", "--workers", "1", "--no-access-log"]

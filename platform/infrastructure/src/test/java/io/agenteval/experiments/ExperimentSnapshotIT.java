@@ -37,6 +37,28 @@ class ExperimentSnapshotIT {
         agents=new AgentService(new JdbcAgentRepository(jdbc,tx));
         experiments=new ExperimentService(new JdbcExperimentRepository(jdbc,tx,json),catalog,agents,Clock.systemUTC());
     }
+    @Test void lightweightListingsAreScopedAndNeverContainFrozenBodies() throws Exception {
+        var actor=actor(); UUID id=experiments.start(actor,command(actor,"summary-key"));
+        var listings=new io.agenteval.administration.JdbcWorkspaceListings(jdbc);
+        assertThat(listings.experiments(actor,0,25)).hasSize(1);
+        assertThat(listings.experiment(actor,id).id()).isEqualTo(id);
+        assertThat(json.copy().findAndRegisterModules().valueToTree(listings.experiments(actor,0,25)).toString()).doesNotContain("snapshot","cases","instruction");
+        assertThat(json.valueToTree(listings.catalog(actor,ResourceKind.DATASET,0,25)).toString()).doesNotContain("content","cases","instruction");
+        assertThat(listings.experiments(actor(),0,25)).isEmpty();
+        assertThatThrownBy(() -> listings.experiment(actor(),id)).isInstanceOf(ScopeViolationException.class);
+        assertThatThrownBy(() -> listings.experiments(actor,-1,25)).isInstanceOf(IllegalArgumentException.class);
+    }
+    @Test void legacyBodyListsRejectOversizedPagesBeforeReadingBodies() throws Exception {
+        var actor=actor();
+        var content=json.createObjectNode(); var task=content.putArray("cases").addObject(); task.put("instruction","Large case"); task.putObject("input").put("value","x".repeat(700_000));
+        for(int i=0;i<13;i++) catalog.create(actor,ResourceKind.DATASET,"Dataset "+i,content);
+        assertThatThrownBy(() -> catalog.list(actor,ResourceKind.DATASET,0,100)).isInstanceOf(io.agenteval.administration.ResourceReadLimitException.class);
+        assertThat(catalog.list(actor,ResourceKind.DATASET,0,1)).hasSize(1);
+    }
+    @Test void rejectsMutationOfFrozenConfiguration() throws Exception {
+        var actor=actor(); UUID id=experiments.start(actor,command(actor,"immutable-config"));
+        assertThatThrownBy(() -> sql.update("update experiments set snapshot='{}'::jsonb where id=?",id)).isInstanceOf(org.springframework.dao.DataAccessException.class);
+    }
     @Test void expandsCasesAtomicallyAndSurvivesCatalogEdits() throws Exception {
         var actor=actor(); var command=command(actor,"stable-key");
         UUID id=experiments.start(actor,command);

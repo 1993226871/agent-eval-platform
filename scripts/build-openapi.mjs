@@ -23,6 +23,8 @@ define('CsrfToken', { header_name: text, token: text });
 define('AccountCreate', { email: { type: 'string', format: 'email' }, temporary_password: { type: 'string', format: 'password', minLength: 12 } });
 const kind = enumeration(['DATASET', 'EVALUATOR', 'SUITE']);
 define('CatalogResource', { id: uuid, kind, name: text, content: jsonValue, revision: integer, archived: bool });
+define('ResourceSummary', { id: uuid, kind, name: text, revision: integer, archived: bool });
+define('ExperimentSummary', { id: uuid, workspace_id: uuid, agent_id: uuid, agent_version: text, dataset_version_id: uuid, suite_version_id: uuid, repeat_count: integer, deadline: date, status: text });
 define('CatalogCreate', { kind, name: text, content: jsonValue });
 define('CatalogUpdate', { revision: integer, name: text, content: jsonValue });
 define('PublishedVersion', { id: uuid, resource_id: uuid, kind, name: text, content: jsonValue, content_hash: text, number: integer });
@@ -116,6 +118,9 @@ op('get', '/api/v1/experiment-deletions/{id}', 'getDeletionStatus', null, ref('D
 op('get', '/api/v1/admin/users', 'listAccounts', null, array(ref('CurrentUser')), 200, { query: page });
 op('post', '/api/v1/admin/users', 'createAccount', ref('AccountCreate'), ref('CurrentUser'), 201);
 op('get', '/api/v1/catalog', 'listResources', null, array(ref('CatalogResource')), 200, { query: [{ name: 'kind', in: 'query', required: true, schema: kind }, ...page] });
+op('get', '/api/v1/catalog-summaries', 'listResourceSummaries', null, array(ref('ResourceSummary')), 200, { query: [{ name: 'kind', in: 'query', required: true, schema: kind }, ...page] });
+op('get', '/api/v1/experiment-summaries', 'listExperimentSummaries', null, array(ref('ExperimentSummary')), 200, { query: page });
+op('get', '/api/v1/experiment-summaries/{id}', 'getExperimentSummary', null, ref('ExperimentSummary'));
 op('post', '/api/v1/catalog', 'createResource', ref('CatalogCreate'), ref('CatalogResource'), 201);
 op('get', '/api/v1/catalog/{id}', 'getResource', null, ref('CatalogResource'));
 op('put', '/api/v1/catalog/{id}', 'updateDraft', ref('CatalogUpdate'), ref('CatalogResource'));
