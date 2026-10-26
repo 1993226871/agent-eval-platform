@@ -9,7 +9,10 @@ public final class ReportService {
     private final EvaluationAggregator aggregator;
     public ReportService(ReportRepository repository,EvaluationAggregator aggregator) { this.repository=repository; this.aggregator=aggregator; }
     public ExperimentReport get(WorkspaceActor actor,UUID experimentId) {
-        var data=repository.load(actor,experimentId); int passed=0,failed=0,unknown=0,pending=0,cancelled=0,started=0,finished=0; var executions=new TreeMap<String,Integer>(); var durations=new ArrayList<Long>();
+        return render(repository.load(actor,experimentId));
+    }
+    ExperimentReport render(ReportData data) {
+        UUID experimentId=data.experimentId(); int passed=0,failed=0,unknown=0,pending=0,cancelled=0,started=0,finished=0; var executions=new TreeMap<String,Integer>(); var durations=new ArrayList<Long>();
         for(var trial:data.trials()) {
             String verdict=trial(data,trial).verdict(); switch(verdict) { case "PASS" -> passed++; case "FAIL" -> failed++; case "CANCELLED" -> cancelled++; case "PENDING" -> pending++; default -> unknown++; }
             executions.merge(trial.executionStatus().name(),1,Integer::sum); if(trial.startedAt()!=null) started++;
@@ -31,7 +34,7 @@ public final class ReportService {
         int end=Math.min(data.trials().size(),offset+limit); var items=data.trials().subList(offset,end).stream().map(row -> trial(data,row)).toList();
         String next=end<data.trials().size()?Base64.getUrlEncoder().withoutPadding().encodeToString((actor.workspaceId()+"|"+experimentId+"|"+end).getBytes(StandardCharsets.UTF_8)):null; return new Page(items,next);
     }
-    private TrialReport trial(ReportData data,ReportData.TrialEvaluation row) {
+    TrialReport trial(ReportData data,ReportData.TrialEvaluation row) {
         boolean pending=row.runId()==null || Set.of("QUEUED","PENDING","RUNNING","WAITING_QUOTA").contains(row.evaluationState()); var aggregate=aggregator.aggregate(entries(data,row),row.results(),pending);
         String verdict=row.executionStatus()==TrialExecutionStatus.CANCELLED?"CANCELLED":aggregate.verdict();
         return new TrialReport(row.trialId(),row.caseIndex(),row.attempt(),row.executionStatus(),row.runId(),row.snapshotId(),row.evaluationState(),verdict,aggregate.dimensions(),row.results().values().stream().sorted(Comparator.comparing(CriterionResult::criterionId).thenComparing(CriterionResult::evaluatorVersion)).toList(),row.durationMs(),row.suiteVersionId()==null?data.suiteVersionId():row.suiteVersionId());

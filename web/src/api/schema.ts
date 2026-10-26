@@ -612,6 +612,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/reports/comparison": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["compareExperiments"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/reports/experiments/{id}/export": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["exportReport"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/reports/experiments/{id}/trials": {
     parameters: {
       query?: never;
@@ -1444,6 +1476,61 @@ export interface components {
       };
       efficiency: components["schemas"]["Efficiency"];
       evaluation_suite_version_ids: string[];
+    };
+    ReportEvidenceScope: {
+      /** Format: uuid */
+      trial_id: string;
+      case_index: number;
+      attempt: number;
+      snapshot_id: string | null;
+      snapshot_hash: string | null;
+      completeness: string | null;
+      scope: string;
+    };
+    ReportProvenance: {
+      evaluator_versions: string[];
+      model_price_bindings: string[];
+      evidence: components["schemas"]["ReportEvidenceScope"][];
+    };
+    ComparisonReport: {
+      left: components["schemas"]["ExperimentReport"];
+      right: components["schemas"]["ExperimentReport"];
+      left_provenance: components["schemas"]["ReportProvenance"];
+      right_provenance: components["schemas"]["ReportProvenance"];
+      directly_comparable: boolean;
+      reasons: string[];
+      dimension_deltas: {
+        [key: string]: number;
+      };
+    };
+    FrozenExportEvidence: {
+      /** Format: uuid */
+      trial_id: string;
+      /** Format: uuid */
+      snapshot_id: string;
+      snapshot_hash: string;
+      completeness: string;
+      manifest: unknown;
+    };
+    ResultIdentity: {
+      /** Format: uuid */
+      result_id: string;
+      /** Format: uuid */
+      run_id: string;
+      /** Format: uuid */
+      trial_id: string;
+      /** Format: uuid */
+      evaluator_version: string;
+    };
+    ReportExport: {
+      export_version: string;
+      report: components["schemas"]["ExperimentReport"];
+      provenance: components["schemas"]["ReportProvenance"];
+      trials: components["schemas"]["TrialReport"][];
+      reviews: components["schemas"]["HumanReview"][];
+      evidence: components["schemas"]["FrozenExportEvidence"][];
+      result_identities: components["schemas"]["ResultIdentity"][];
+      source: string;
     };
   };
   responses: {
@@ -2960,6 +3047,67 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ExperimentReport"];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  compareExperiments: {
+    parameters: {
+      query: {
+        left: string;
+        right: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ComparisonReport"];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  exportReport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReportExport"];
         };
       };
       400: components["responses"]["Rejected"];

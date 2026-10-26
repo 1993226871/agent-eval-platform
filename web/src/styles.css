@@ -560,6 +560,151 @@ dialog::backdrop {
 .skip-link:focus {
   top: 10px;
 }
+.warning-notice {
+  padding: 14px 18px;
+  border-left: 3px solid #b3842f;
+  background: #fff6e3;
+  color: #775514;
+}
+.report-progress {
+  border-left: 3px solid var(--teal);
+  padding: 8px 18px;
+  margin-bottom: 22px;
+  background: white;
+}
+.report-progress p {
+  margin: 5px 0;
+}
+.coverage-row {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+}
+.coverage-row p {
+  margin: 6px 0;
+}
+.comparison-picker {
+  display: flex;
+  align-items: end;
+  gap: 15px;
+  margin: 22px 0;
+}
+.comparison-picker label {
+  flex: 1;
+  max-width: 500px;
+  margin: 0;
+}
+.button-link {
+  display: inline-block;
+  border: 1px solid var(--teal);
+  padding: 8px 13px;
+  border-radius: 4px;
+  text-decoration: none;
+  background: white;
+}
+.comparison-status {
+  background: white;
+  padding: 18px 22px;
+  border: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+.criterion {
+  padding: 20px;
+  border: 1px solid var(--line);
+  margin: 16px 0;
+  border-radius: 5px;
+}
+.criterion h3 {
+  font-size: 16px;
+  margin: 0;
+}
+.evidence-links {
+  margin: 12px 0;
+}
+.human-review {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.human-review form {
+  max-width: 580px;
+}
+.review-list {
+  list-style: none;
+  padding: 0;
+}
+.review-list li {
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  gap: 6px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.review-list small {
+  grid-column: 1 / -1;
+}
+.selected-evidence {
+  padding: 20px;
+  background: #f4f9fa;
+  border-left: 3px solid var(--teal);
+  margin: 22px 0;
+}
+.selected-evidence h3 {
+  overflow-wrap: anywhere;
+}
+.trace-tree {
+  margin-top: 30px;
+}
+.trace-tree h2 {
+  margin-bottom: 0;
+}
+.trace-tree > .hint {
+  margin-top: 10px;
+}
+.trace-tree ul {
+  padding-left: 20px;
+  list-style: none;
+}
+.trace-tree ul.trace-roots {
+  padding-left: 0;
+}
+.trace-tree li {
+  min-width: 0;
+}
+.trace-node {
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-left: 3px solid #9bbbc5;
+  margin: 8px 0;
+  background: white;
+}
+.trace-node[data-highlighted="true"] {
+  border-color: var(--teal);
+  background: var(--teal-light);
+}
+.trace-toggle {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+}
+.trace-toggle strong {
+  overflow-wrap: anywhere;
+}
+.trace-detail {
+  margin-top: 18px;
+}
+.trace-detail h3 {
+  font-size: 13px;
+  margin: 15px 0 5px;
+}
+.evidence-issues {
+  color: #825d1a;
+}
 @media (max-width: 1100px) {
   .sidebar {
     width: 185px;

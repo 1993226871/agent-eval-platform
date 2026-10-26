@@ -66,6 +66,12 @@ define('Rate', { numerator: integer, denominator: integer, value: nullable(numbe
 define('Efficiency', { observed_durations: integer, p50_duration_ms: nullable(integer), p95_duration_ms: nullable(integer), source: text });
 define('ExperimentReport', { experiment_id: uuid, dataset_version_id: uuid, suite_version_id: uuid, agent_version: text, experiment_status: text, planned_attempts: integer, started_attempts: integer, finished_attempts: integer, determinable_attempts: integer, passed_attempts: integer, failed_attempts: integer, undetermined_attempts: integer, pending_attempts: integer, cancelled_attempts: integer, pass_rate_planned: ref('Rate'), pass_rate_determinable: ref('Rate'), execution_counts: { type: 'object', additionalProperties: integer }, dimensions, efficiency: ref('Efficiency'), evaluation_suite_version_ids: array(uuid) });
 
+define('ReportEvidenceScope', { trial_id: uuid, case_index: integer, attempt: integer, snapshot_id: nullable(uuid), snapshot_hash: nullable(text), completeness: nullable(text), scope: text });
+define('ReportProvenance', { evaluator_versions: array(text), model_price_bindings: array(text), evidence: array(ref('ReportEvidenceScope')) });
+define('ComparisonReport', { left: ref('ExperimentReport'), right: ref('ExperimentReport'), left_provenance: ref('ReportProvenance'), right_provenance: ref('ReportProvenance'), directly_comparable: bool, reasons: array(text), dimension_deltas: { type: 'object', additionalProperties: number } });
+define('FrozenExportEvidence', { trial_id: uuid, snapshot_id: uuid, snapshot_hash: text, completeness: text, manifest: jsonValue });
+define('ResultIdentity', { result_id: uuid, run_id: uuid, trial_id: uuid, evaluator_version: uuid });
+define('ReportExport', { export_version: text, report: ref('ExperimentReport'), provenance: ref('ReportProvenance'), trials: array(ref('TrialReport')), reviews: array(ref('HumanReview')), evidence: array(ref('FrozenExportEvidence')), result_identities: array(ref('ResultIdentity')), source: text });
 const spec = {
   openapi: '3.1.0', info: { title: 'AgentEval Platform API', version: '0.1.0', description: 'Implemented browser and SDK HTTP contract. Session mutations require CSRF. Monetary integers use decimal strings in browser DTOs.' },
   servers: [{ url: '/' }], security: [{ session: [] }], paths: {},
@@ -136,6 +142,8 @@ op('post', '/api/v1/evaluators/{draftId}/previews', 'previewEvaluator', ref('Eva
 op('get', '/api/v1/results/{resultId}/reviews', 'listHumanReviews', null, array(ref('HumanReview')), 200, { query: [{ name: 'limit', in: 'query', schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 } }] });
 op('post', '/api/v1/results/{resultId}/reviews', 'addHumanReview', object({ score: { type: 'number', minimum: 0, maximum: 1 }, reason: text }), ref('HumanReview'));
 op('get', '/api/v1/reports/experiments/{id}', 'getExperimentReport', null, ref('ExperimentReport'));
+op('get', '/api/v1/reports/comparison', 'compareExperiments', null, ref('ComparisonReport'), 200, { query: [{ name: 'left', in: 'query', required: true, schema: uuid }, { name: 'right', in: 'query', required: true, schema: uuid }] });
+op('get', '/api/v1/reports/experiments/{id}/export', 'exportReport', null, ref('ReportExport'));
 op('get', '/api/v1/reports/experiments/{id}/trials', 'getTrialReports', null, ref('TrialReportPage'), 200, { query: cursor });
 op('get', '/api/v1/traces/{id}', 'getTrace', null, ref('TracePage'), 200, { query: cursor });
 op('get', '/api/v1/artifacts/{id}/download', 'downloadArtifact', null, object({ url: { type: 'string', format: 'uri' } }));

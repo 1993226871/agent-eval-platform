@@ -62,6 +62,16 @@ class ReportApiIT {
             assertThat(get(other,reviews).statusCode()).isEqualTo(404);
             assertThat(post(other,reviews,"{\"score\":1,\"reason\":\"Foreign\"}").statusCode()).isEqualTo(404);
             assertThat(jdbc.sql("select payload::text from evaluation_results where job_id=?").param(result).query(String.class).single()).isEqualTo(original);
+            String comparison="/api/v1/reports/comparison?left="+experiment+"&right="+experiment;
+            assertThat(get(owner,comparison).statusCode()).isEqualTo(200);
+            assertThat(json.readTree(get(owner,comparison).body()).path("directly_comparable").asBoolean()).isTrue();
+            assertThat(get(other,comparison).statusCode()).isEqualTo(404);
+            var exported=get(owner,path+"/export");
+            assertThat(exported.statusCode()).isEqualTo(200);
+            assertThat(json.readTree(exported.body()).path("reviews")).hasSize(1);
+            assertThat(json.readTree(exported.body()).path("evidence")).hasSize(1);
+            assertThat(exported.body()).doesNotContain("api_key","credential_hash","experiment_snapshot");
+            assertThat(get(other,path+"/export").statusCode()).isEqualTo(404);
             String regradePath="/api/v1/trial-evaluations/"+trial.id()+"/reevaluations";
             String command=json.writeValueAsString(Map.of("suite_version_id",bundle.suiteVersion().id(),"include_late",false,"idempotency_key","http-regrade"));
             var regrade=post(owner,regradePath,command); assertThat(regrade.statusCode()).isEqualTo(202);

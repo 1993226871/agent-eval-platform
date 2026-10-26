@@ -37,7 +37,9 @@ export function PreviewPanel({ resource }: { resource: CatalogResource }) {
         }),
       ),
     refetchInterval: (query) =>
-      ["DONE", "CANCELLED"].includes(query.state.data?.status ?? "")
+      ["COMPLETED", "PARTIAL", "CANCELLED"].includes(
+        query.state.data?.status ?? "",
+      )
         ? false
         : 3000,
   });

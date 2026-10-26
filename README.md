@@ -24,7 +24,7 @@
 </div>
 
 > [!IMPORTANT]
-> 项目正在开发：已实现双语言SDK、任务/轨迹/证据、规则与LLM评分、累计额度/模型对账、人工复核、混合调度和独立重评/草稿试运行。Python Runner已实现，强化隔离尚待Linux/runsc节点验收，默认关闭。Web界面与完整部署包仍在实施。可复现[双SDK评分闭环](docs/development/reporting.md)，更多能力见[混合评测说明](docs/development/mixed-evaluation.md)及[实施进度](docs/development/progress.md)。
+> 项目正在开发：已实现双语言SDK、自建轨迹/证据、规则与LLM评分、累计额度/模型对账、混合调度，以及私人管理工作台、报告/对比、人工复核和独立重评/草稿试运行。Python Runner已实现，强化隔离尚待Linux/runsc节点验收，默认关闭。删除清理、资源上限和完整部署包仍在实施。可复现[双SDK评分闭环](docs/development/reporting.md)，使用[Web工作台](web/README.md)，更多能力见[实施进度](docs/development/progress.md)。
 
 <a id="overview"></a>
 ## Overview
@@ -169,7 +169,7 @@ Docker Compose 组织服务，Python 代码的安全执行需要额外的强化�
 - [x] 确认实施计划，采用当前会话逐项TDD实现。
 - [x] 实现共享协议、私人工作空间与后端身份基础。
 - [x] 实现后端私人工作空间、版本化任务与持久化调度。
-- [ ] 打通 Java/Python SDK 和自建轨迹采集。
+- [x] 打通 Java/Python SDK 和自建轨迹采集。
 - [ ] 实现规则、LLM、Python 三类评测器。
 - [ ] 完成额度账本、报告、证据定位和版本比较。
 - [ ] 发布演示 Agent、基础任务集与部署指南。

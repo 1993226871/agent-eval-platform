@@ -11,6 +11,8 @@ import { AgentsPage } from "./features/agents/AgentsPage";
 import { ExperimentsPage } from "./features/experiments/ExperimentsPage";
 import { QuotaPage } from "./features/models/QuotaPage";
 import { AdminPage } from "./features/admin/AdminPage";
+import { ExperimentReport } from "./features/reports/ExperimentReport";
+import { ComparisonView } from "./features/reports/ComparisonView";
 import { ErrorNotice, Loading } from "./components/ui";
 
 function Guard() {
@@ -100,6 +102,8 @@ export function App() {
         <Route path="/change-password" element={<PasswordPage />} />
         <Route element={<Guard />}>
           <Route path="/workspace/experiments" element={<ExperimentsPage />} />
+          <Route path="/workspace/reports/:id" element={<ExperimentReport />} />
+          <Route path="/workspace/comparisons" element={<ComparisonView />} />
           <Route
             path="/workspace/datasets"
             element={<CatalogPage key="datasets" kind="DATASET" />}

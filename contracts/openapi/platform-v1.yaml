@@ -2984,6 +2984,125 @@
         ]
       }
     },
+    "/api/v1/reports/comparison": {
+      "get": {
+        "operationId": "compareExperiments",
+        "tags": [
+          "reports"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "401": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "403": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "404": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "409": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "413": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "429": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "503": {
+            "$ref": "#/components/responses/Rejected"
+          }
+        },
+        "parameters": [
+          {
+            "name": "left",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "right",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/reports/experiments/{id}/export": {
+      "get": {
+        "operationId": "exportReport",
+        "tags": [
+          "reports"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportExport"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "401": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "403": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "404": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "409": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "413": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "429": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "503": {
+            "$ref": "#/components/responses/Rejected"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
     "/api/v1/reports/experiments/{id}/trials": {
       "get": {
         "operationId": "getTrialReports",
@@ -6325,6 +6444,244 @@
           "dimensions",
           "efficiency",
           "evaluation_suite_version_ids"
+        ]
+      },
+      "ReportEvidenceScope": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "trial_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "case_index": {
+            "type": "integer"
+          },
+          "attempt": {
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snapshot_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completeness": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scope": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "trial_id",
+          "case_index",
+          "attempt",
+          "snapshot_id",
+          "snapshot_hash",
+          "completeness",
+          "scope"
+        ]
+      },
+      "ReportProvenance": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "evaluator_versions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model_price_bindings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportEvidenceScope"
+            }
+          }
+        },
+        "required": [
+          "evaluator_versions",
+          "model_price_bindings",
+          "evidence"
+        ]
+      },
+      "ComparisonReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "left": {
+            "$ref": "#/components/schemas/ExperimentReport"
+          },
+          "right": {
+            "$ref": "#/components/schemas/ExperimentReport"
+          },
+          "left_provenance": {
+            "$ref": "#/components/schemas/ReportProvenance"
+          },
+          "right_provenance": {
+            "$ref": "#/components/schemas/ReportProvenance"
+          },
+          "directly_comparable": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dimension_deltas": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "left",
+          "right",
+          "left_provenance",
+          "right_provenance",
+          "directly_comparable",
+          "reasons",
+          "dimension_deltas"
+        ]
+      },
+      "FrozenExportEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "trial_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snapshot_hash": {
+            "type": "string"
+          },
+          "completeness": {
+            "type": "string"
+          },
+          "manifest": {}
+        },
+        "required": [
+          "trial_id",
+          "snapshot_id",
+          "snapshot_hash",
+          "completeness",
+          "manifest"
+        ]
+      },
+      "ResultIdentity": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "result_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "trial_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evaluator_version": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "result_id",
+          "run_id",
+          "trial_id",
+          "evaluator_version"
+        ]
+      },
+      "ReportExport": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "export_version": {
+            "type": "string"
+          },
+          "report": {
+            "$ref": "#/components/schemas/ExperimentReport"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ReportProvenance"
+          },
+          "trials": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrialReport"
+            }
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HumanReview"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FrozenExportEvidence"
+            }
+          },
+          "result_identities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResultIdentity"
+            }
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "export_version",
+          "report",
+          "provenance",
+          "trials",
+          "reviews",
+          "evidence",
+          "result_identities",
+          "source"
         ]
       }
     },

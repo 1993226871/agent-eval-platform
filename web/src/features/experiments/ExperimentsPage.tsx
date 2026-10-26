@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "../../api/client";
 import type { Schema } from "../../api/types";
@@ -153,6 +154,7 @@ export function ExperimentsPage() {
               {experiments.data.map((item) => (
                 <tr key={item.id}>
                   <td>
+                    <Link to={"/workspace/reports/" + item.id}>报告</Link>{" "}
                     <button
                       className="text-button"
                       onClick={() => setSelected(item.id)}

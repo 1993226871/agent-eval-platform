@@ -145,7 +145,7 @@ def main():
                     time.sleep(0.25)
                 browser_environment = dict(os.environ, WEB_BASE_URL=web_base, WEB_TEST_EMAIL=browser_email, WEB_TEST_PASSWORD=browser_password, WEB_TEST_NEW_PASSWORD=browser_next)
                 # No traces, video or failure screenshots: the one-time secret must not be persisted.
-                subprocess.run([node, str(ROOT / "web/node_modules/@playwright/test/cli.js"), "test"], cwd=ROOT / "web", env=browser_environment, check=True, **hidden)
+                subprocess.run([node, str(ROOT / "web/node_modules/@playwright/test/cli.js"), "test", "private-workspace.spec.ts"], cwd=ROOT / "web", env=browser_environment, check=True, **hidden)
                 print("Browser session, CSRF and private resource actions verified.", flush=True)
             worker_env = {key: value for key, value in environment.items() if not key.startswith("BOOTSTRAP_ADMIN_")}
             start("worker", [java, "-Xms32m", "-Xmx256m", "-jar", worker_jars[0]], worker_env)
@@ -189,6 +189,10 @@ def main():
                     print("Waiting for remaining evidence/grading (30s terminal grace applies).", flush=True)
                     next_update = time.monotonic() + 10
                 time.sleep(0.25)
+            if args.web_smoke:
+                browser_environment = dict(os.environ, WEB_BASE_URL=web_base, WEB_REPORT_EMAIL=email, WEB_REPORT_PASSWORD=password, WEB_REPORT_IDS=",".join(item[1] for item in examples))
+                subprocess.run([node, str(ROOT / "web/node_modules/@playwright/test/cli.js"), "test", "report.spec.ts"], cwd=ROOT / "web", env=browser_environment, check=True, **hidden)
+                print("Browser report, evidence, review, export and comparison verified.", flush=True)
             result = {"verified_at": datetime.now(timezone.utc).isoformat(), "postgres": "17.11", "results": list(completed.values())}
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
