@@ -9,5 +9,5 @@ import org.springframework.context.annotation.*;
 public class AdministrationConfiguration {
     @Bean AuditService auditService(AuditService.Repository repository) { return new AuditService(repository); }
     @Bean ResourceLimitService resourceLimitService(ResourceLimitService.Repository repository) { return new ResourceLimitService(repository); }
-    @Bean ExperimentDeletionService experimentDeletionService(ExperimentDeletionRepository repository,ArtifactStore store,Clock clock) { return new ExperimentDeletionService(repository,store,clock); }
+    @Bean ExperimentDeletionService experimentDeletionService(ExperimentDeletionRepository repository,ArtifactStore store,RunnerEvidenceCleaner runner,Clock clock) { return new ExperimentDeletionService(repository,store,runner,clock); }
 }

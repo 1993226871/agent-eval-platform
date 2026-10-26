@@ -8,7 +8,7 @@ import java.util.*;
 public interface WorkspaceListings {
     record ResourceSummary(UUID id,ResourceKind kind,String name,long revision,boolean archived) {}
     record ExperimentSummary(UUID id,UUID workspaceId,UUID agentId,String agentVersion,UUID datasetVersionId,
-        UUID suiteVersionId,int repeatCount,Instant deadline,String status) {}
+        UUID suiteVersionId,int repeatCount,Instant deadline,String status,UUID sourceExperimentId) {}
     List<ResourceSummary> catalog(WorkspaceActor actor,ResourceKind kind,int offset,int limit);
     List<ExperimentSummary> experiments(WorkspaceActor actor,int offset,int limit);
     ExperimentSummary experiment(WorkspaceActor actor,UUID id);

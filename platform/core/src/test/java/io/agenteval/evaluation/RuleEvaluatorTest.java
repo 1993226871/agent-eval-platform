@@ -114,6 +114,16 @@ class RuleEvaluatorTest {
         assertThat(rules.evaluate(config,context("{}",EvidenceCompleteness.PARTIAL,correct)).status()).isEqualTo(CriterionStatus.INSUFFICIENT_EVIDENCE);
         assertThat(rules.evaluate(config,context("{}",EvidenceCompleteness.PARTIAL,wrong)).passed()).isFalse();
     }
+    @Test void exactToolSetRequiresCompleteEvidenceButObservedExtraToolsProveFailure() throws Exception {
+        var lookup=event("2".repeat(16),null,EventType.SPAN_STARTED,"lookup",1,"{\"input\":{}}");
+        var extra=event("3".repeat(16),null,EventType.SPAN_STARTED,"delete",2,"{\"input\":{}}");
+        var exact=definition("{\"operator\":\"tool_set\",\"tools\":[\"lookup\"],\"mode\":\"exact\"}");
+        assertThat(rules.evaluate(exact,context("{}",EvidenceCompleteness.PARTIAL,lookup)).status()).isEqualTo(CriterionStatus.INSUFFICIENT_EVIDENCE);
+        assertThat(rules.evaluate(exact,context("{}",EvidenceCompleteness.COMPLETE,lookup)).passed()).isTrue();
+        assertThat(rules.evaluate(exact,context("{}",EvidenceCompleteness.PARTIAL,lookup,extra)).passed()).isFalse();
+        var contains=definition("{\"operator\":\"tool_set\",\"tools\":[\"lookup\"],\"mode\":\"contains_all\"}");
+        assertThat(rules.evaluate(contains,context("{}",EvidenceCompleteness.PARTIAL,lookup)).passed()).isTrue();
+    }
     @Test void limitsSchemaEvaluationWork() throws Exception {
         var schema=definition("{\"operator\":\"schema\",\"selector\":\"/output\",\"schema\":{\"type\":\"array\",\"items\":{\"type\":\"integer\"}}}");
         String large="["+String.join(",",Collections.nCopies(5000,"1"))+"]";

@@ -16,6 +16,10 @@ public class JdbcExperimentRepository implements ExperimentRepository {
     private final ObjectMapper json;
     private final io.agenteval.administration.JdbcReadBudget readBudget;
     public JdbcExperimentRepository(JdbcClient jdbc,PlatformTransactionManager manager,ObjectMapper json) { this.jdbc=jdbc; this.tx=new TransactionTemplate(manager); this.json=json; readBudget=new io.agenteval.administration.JdbcReadBudget(manager); }
+    @Override public ModelPricing pricing(UUID modelId,UUID priceId) {
+        return jdbc.sql("select p.input_token_bound,p.max_output_tokens,v.input_rate,v.output_rate,v.denominator from model_profiles p join model_price_versions v on v.profile_id=p.id where p.id=? and v.id=?")
+            .params(modelId,priceId).query((r,n) -> new ModelPricing(r.getLong("input_token_bound"),r.getInt("max_output_tokens"),new io.agenteval.model.PriceVersion(priceId,r.getLong("input_rate"),r.getLong("output_rate"),r.getLong("denominator")))).optional().orElseThrow(ScopeViolationException::new);
+    }
     @Override public Optional<UUID> replay(WorkspaceActor actor,String key,String hash) {
         return jdbc.sql("select id,request_hash from experiments where workspace_id=? and idempotency_key=?").params(actor.workspaceId(),key).query((row,n) -> {
             if(!hash.equals(row.getString("request_hash"))) throw new CatalogConflictException(); return row.getObject("id",UUID.class);

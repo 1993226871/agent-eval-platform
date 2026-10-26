@@ -65,10 +65,11 @@ public final class EvaluationWorker implements AutoCloseable {
         var telemetry=new Telemetry(grant.trialId(),grant.traceId(),spool,secrets);
         var artifacts=new CopyOnWriteArrayList<UUID>();
         var context=new TaskContext(grant.trialId(),grant.task().instruction(),grant.task().input(),grant.task().deadline(),cancel,(path,name,media) -> { UUID id=transport.uploadArtifact(grant,path,name,media); artifacts.add(id); return id; });
-        AgentResult result=null; var status=TrialExecutionStatus.SUCCEEDED;
+        AgentResult result=null; var status=TrialExecutionStatus.FAILED;
         try(var activeScope=telemetry.activate(); var root=Telemetry.span("agent","agent.run",context.input())) {
-            try { result=Objects.requireNonNull(handler.apply(context)); root.output(result.output()); }
+            try { result=Objects.requireNonNull(handler.apply(context)); root.output(result.output()); status=TrialExecutionStatus.SUCCEEDED; }
             catch(RuntimeException failure) { root.failed(failure); status=TrialExecutionStatus.FAILED; }
+            catch(Error failure) { root.failed(failure); throw failure; }
         } finally {
             try {
                 flushPayloads(grant); flush(grant); if(cancel.isCancelled()) status=TrialExecutionStatus.CANCELLED; if(!Instant.now().isBefore(context.deadline())) status=TrialExecutionStatus.TIMED_OUT;

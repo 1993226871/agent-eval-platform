@@ -17,6 +17,10 @@ public class ExperimentController {
     @GetMapping("/agents") public List<AgentRecord> agents(Authentication auth) { return agents.list(current.require(auth)); }
     @PostMapping("/experiments") @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
     public Map<String,UUID> start(Authentication auth,@RequestBody StartExperimentCommand request) { return Map.of("id",experiments.start(current.require(auth),request)); }
+    @GetMapping("/experiments/estimate")
+    public com.fasterxml.jackson.databind.JsonNode estimate(Authentication auth,@RequestParam UUID datasetVersionId,@RequestParam UUID suiteVersionId,@RequestParam int repeatCount) {
+        return experiments.estimate(current.require(auth),datasetVersionId,suiteVersionId,repeatCount);
+    }
     @GetMapping("/experiments") public List<ExperimentRecord> list(Authentication auth,@RequestParam(defaultValue="0") int offset,@RequestParam(defaultValue="25") int limit) { return experiments.list(current.require(auth),offset,limit); }
     @GetMapping("/experiments/{id}") public ExperimentRecord get(Authentication auth,@PathVariable UUID id) { return experiments.get(current.require(auth),id); }
     @GetMapping("/experiments/{id}/trials") public List<TrialRecord> trials(Authentication auth,@PathVariable UUID id) { return experiments.trials(current.require(auth),id); }

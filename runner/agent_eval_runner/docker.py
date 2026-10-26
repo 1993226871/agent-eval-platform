@@ -67,6 +67,18 @@ class DockerDriver:
                 raise RuntimeError("Runner container ownership mismatch")
             self._command(["docker", "rm", "--force", identity])
 
+    def cleanup_job(self, job):
+        from uuid import UUID
+        job = str(UUID(job))
+        result = self._command(["docker", "ps", "--all", "--quiet", "--no-trunc", "--filter", "label=io.agenteval.runner=" + self.owner, "--filter", "label=io.agenteval.job=" + job])
+        for identity in result.stdout.decode().splitlines():
+            if not re.fullmatch(r"[0-9a-f]{64}", identity):
+                raise RuntimeError("Invalid Runner container identity")
+            inspection = self._inspect(identity)
+            if not self._owned(inspection) or inspection.get("Config", {}).get("Labels", {}).get("io.agenteval.job") != job:
+                raise RuntimeError("Runner job ownership mismatch")
+            self._command(["docker", "rm", "--force", identity])
+
     def run_sandbox(self, arguments, input_dir, timeout_seconds):
         identity = None
         attached = None

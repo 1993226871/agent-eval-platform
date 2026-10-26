@@ -66,6 +66,20 @@ class DeletionRaceIT {
         store.objects.add("staging/"+owner.workspaceId()+"/"+upload.artifactId());
         return new Fixture(owner,experiment,grant.trialId(),principal,grant.attemptToken(),upload.artifactId());
     }
+    @Test void deletionWaitsForDurableRunnerEvidenceCleanupAndNeverScrubsAnotherWorkspace() throws Exception {
+        var target=fixture(); var foreign=fixture(); UUID job=UUID.randomUUID(),other=UUID.randomUUID();
+        jdbc.sql("insert into runner_executions(job_id,experiment_id,workspace_id) values(?,?,?),(?,?,?)").params(job,target.experiment(),target.owner().workspaceId(),other,foreign.experiment(),foreign.owner().workspaceId()).update();
+        var unavailable=new java.util.concurrent.atomic.AtomicBoolean(true); var cleaned=new java.util.ArrayList<UUID>();
+        var service=new ExperimentDeletionService(new JdbcExperimentDeletionRepository(jdbc,transactions),store,id -> { cleaned.add(id); if(unavailable.get()) throw new IllegalStateException("Fixture Runner unavailable"); },clock);
+        service.deleteExperiment(target.owner(),target.experiment(),UUID.randomUUID()); clock.advance(301);
+        assertThatThrownBy(() -> service.cleanup(target.experiment())).isInstanceOf(IllegalStateException.class);
+        assertThat(state(target.experiment())).isEqualTo("DELETING");
+        assertThat(jdbc.sql("select count(*) from trials where experiment_id=?").param(target.experiment()).query(Long.class).single()).isEqualTo(1);
+        unavailable.set(false); clock.advance(31); assertThat(service.cleanup(target.experiment())).isTrue();
+        assertThat(state(target.experiment())).isEqualTo("DELETED"); assertThat(cleaned).containsExactly(job,job);
+        assertThat(jdbc.sql("select cleaned_at is not null from runner_executions where job_id=?").param(job).query(Boolean.class).single()).isTrue();
+        assertThat(jdbc.sql("select cleaned_at is null from runner_executions where job_id=?").param(other).query(Boolean.class).single()).isTrue();
+    }
     @Test void lateUploadCannotResurrectDeletedExperiment() throws Exception {
         var target=fixture(); var foreign=fixture();
         var admin=identity.createUser(UUID.randomUUID()+"@admin.local","Temporary-Password-1",true).actor();

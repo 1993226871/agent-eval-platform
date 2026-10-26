@@ -85,6 +85,17 @@ class MixedEvaluationIT {
     }
     void drain() { evaluations.schedule(100); for(int i=0;i<100 && evaluations.runNext();i++) {} }
     @AfterEach void stop() { provider.close(); server.stop(0); }
+    @Test void recordsRunnerDispatchBeforeNetworkAndFencesCancelledOrDeletedJobs() {
+        repository.schedule(100,clock.instant());
+        var rule=repository.claim(clock.instant()).orElseThrow();
+        repository.complete(rule,new RuleEvaluator().evaluate(rule.definition(),evidence.context(owner,snapshot)),clock.instant());
+        var python=repository.claim(clock.instant()).orElseThrow(); assertThat(python.definition().type()).isEqualTo("PYTHON");
+        var tracking=new io.agenteval.infrastructure.evaluation.JdbcRunnerDispatchRegistry(jdbc,tx,clock);
+        tracking.track(python); tracking.track(python);
+        assertThat(jdbc.sql("select count(*) from runner_executions where job_id=? and workspace_id=? and experiment_id=?").params(python.id(),owner.workspaceId(),experiment).query(Long.class).single()).isEqualTo(1);
+        new JdbcExperimentDeletionRepository(jdbc,tx).request(owner,experiment,UUID.randomUUID(),clock.instant());
+        assertThatThrownBy(() -> tracking.track(python)).isInstanceOf(AttemptRejectedException.class);
+    }
     @Test void resumesOnlyQuotaBlockedJobsAndPreservesEvidenceVersions() throws Exception {
         drain(); assertThat(ruleCount.get()).isEqualTo(1); assertThat(pythonCount.get()).isEqualTo(1); assertThat(providerCount.get()).isZero();
         assertThat(jdbc.sql("select count(*) from evaluation_jobs where workspace_id=? and status='WAITING_QUOTA'").param(owner.workspaceId()).query(Long.class).single()).isEqualTo(1);

@@ -14,6 +14,7 @@ import {
 import { useWorkspace } from "../auth/AuthProvider";
 import { useVersionOptions } from "../catalog/queries";
 import { DeletionControl } from "./DeletionControl";
+import { EstimateNotice, useExperimentEstimate } from "./estimate";
 
 export function ExperimentsPage() {
   const { workspace_id } = useWorkspace();
@@ -43,6 +44,7 @@ export function ExperimentsPage() {
   const [repeat, setRepeat] = useState(1);
   const [minutes, setMinutes] = useState(60);
   const [key, setKey] = useState("");
+  const estimate = useExperimentEstimate(dataset, suite, repeat, open);
   const submission = useRef<{
     fingerprint: string;
     body: Schema<"StartExperiment">;
@@ -343,10 +345,18 @@ export function ExperimentsPage() {
           <p className="hint">
             模型评审使用个人累计额度。没有在线 Worker 时，任务将等待领取。
           </p>
+          <EstimateNotice value={estimate.data} error={estimate.error} />
           <ErrorNotice error={start.error} />
           <button
             className="primary"
-            disabled={start.isPending || !agentId || !dataset || !suite}
+            disabled={
+              start.isPending ||
+              !agentId ||
+              !dataset ||
+              !suite ||
+              !estimate.data ||
+              estimate.isFetching
+            }
           >
             启动实验
           </button>

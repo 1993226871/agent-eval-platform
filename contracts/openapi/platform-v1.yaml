@@ -2293,6 +2293,80 @@
         ]
       }
     },
+    "/api/v1/experiments/estimate": {
+      "get": {
+        "operationId": "estimateExperiment",
+        "tags": [
+          "experiments"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentEstimate"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "401": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "403": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "404": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "409": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "413": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "429": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "503": {
+            "$ref": "#/components/responses/Rejected"
+          }
+        },
+        "parameters": [
+          {
+            "name": "datasetVersionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "suiteVersionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "repeatCount",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          }
+        ]
+      }
+    },
     "/api/v1/experiments/{id}": {
       "get": {
         "operationId": "getExperiment",
@@ -5544,6 +5618,17 @@
           },
           "status": {
             "type": "string"
+          },
+          "source_experiment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -5555,7 +5640,8 @@
           "suite_version_id",
           "repeat_count",
           "deadline",
-          "status"
+          "status",
+          "source_experiment_id"
         ]
       },
       "CatalogCreate": {
@@ -5917,6 +6003,17 @@
           },
           "idempotency_key": {
             "type": "string"
+          },
+          "source_experiment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -5927,6 +6024,55 @@
           "repeat_count",
           "deadline",
           "idempotency_key"
+        ]
+      },
+      "ExperimentEstimate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "planned_credits": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?[0-9]+$",
+                "description": "Exact integer decimal string; never round through a JavaScript number."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "planned_calls": {
+            "type": "integer"
+          },
+          "trial_count": {
+            "type": "integer"
+          },
+          "basis": {
+            "type": "string"
+          },
+          "assumptions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "unestimated_evaluator_versions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "planned_credits",
+          "planned_calls",
+          "trial_count",
+          "basis",
+          "assumptions",
+          "unestimated_evaluator_versions"
         ]
       },
       "Trial": {

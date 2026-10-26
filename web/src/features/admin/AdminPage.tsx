@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "../../api/client";
 import type { Schema } from "../../api/types";
@@ -97,6 +97,23 @@ export function AdminPage() {
   });
   const [model, setModel] = useState<ModelForm>(emptyModel);
   const [disableReason, setDisableReason] = useState("");
+  const testCalls = useRef(new Map<string, string>());
+  const testModel = async (profileId: string) => {
+    let callId = testCalls.current.get(profileId);
+    if (!callId) {
+      callId = crypto.randomUUID();
+      testCalls.current.set(profileId, callId);
+    }
+    const result = await request(
+      api.POST("/api/v1/admin/models/{profileId}/test", {
+        params: { path: { profileId } },
+        body: { call_id: callId },
+      }),
+    );
+    if (["SUCCEEDED", "FAILED_UNSENT", "RECONCILED"].includes(result.status))
+      testCalls.current.delete(profileId);
+    return result;
+  };
   const modelAction = useMutation({
     mutationFn: (operation: () => Promise<unknown>) => operation(),
     onSuccess: refresh,
@@ -317,6 +334,10 @@ export function AdminPage() {
       {tab === "models" && (
         <>
           <ErrorNotice error={models.error ?? modelAction.error} />
+          <p className="hint">
+            连通性测试失败或待对账时，再次点击会查询原调用。收到明确结果后，下次点击才创建新的收费测试。
+          </p>
+          {modelAction.data != null && <JsonBlock value={modelAction.data} />}
           <section className="panel">
             <h2>已配置模型</h2>
             <label>
@@ -355,17 +376,7 @@ export function AdminPage() {
                         <button
                           disabled={!item.enabled || modelAction.isPending}
                           onClick={() =>
-                            modelAction.mutate(() =>
-                              request(
-                                api.POST(
-                                  "/api/v1/admin/models/{profileId}/test",
-                                  {
-                                    params: { path: { profileId: item.id } },
-                                    body: { call_id: crypto.randomUUID() },
-                                  },
-                                ),
-                              ),
-                            )
+                            modelAction.mutate(() => testModel(item.id))
                           }
                         >
                           测试（消耗本人额度）

@@ -89,19 +89,19 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
     }
     @Override public EvidenceSnapshot load(WorkspaceActor actor,UUID id) { return jdbc.sql("select s.* from evidence_snapshots s join trials t on t.id=s.trial_id join experiments e on e.id=t.experiment_id where s.id=? and s.workspace_id=? and e.status not in ('DELETING','DELETED')").params(id,actor.workspaceId()).query(this::map).optional().orElseThrow(ScopeViolationException::new); }
     @Override public int freezeReady(int limit,Instant now) {
-        var trials=jdbc.sql("select t.id,t.workspace_id,w.owner_user_id from trials t join workspaces w on w.id=t.workspace_id join experiments e on e.id=t.experiment_id where t.completed_at<=? and e.status not in ('DELETING','DELETED') and not exists(select 1 from evidence_snapshots s where s.trial_id=t.id) order by t.completed_at,t.id limit ?")
-            .params(Timestamp.from(now.minusSeconds(30)),limit).query((r,n) -> new Candidate(r.getObject("id",UUID.class),new WorkspaceActor(r.getObject("owner_user_id",UUID.class),r.getObject("workspace_id",UUID.class),false))).list();
+        var trials=jdbc.sql("select t.id,t.workspace_id,w.owner_user_id from trials t join workspaces w on w.id=t.workspace_id join experiments e on e.id=t.experiment_id where t.completed_at<=? and t.evidence_next_attempt_at<=? and e.status not in ('DELETING','DELETED') and not exists(select 1 from evidence_snapshots s where s.trial_id=t.id) order by t.evidence_last_attempt_at,t.completed_at,t.id limit ?")
+            .params(Timestamp.from(now.minusSeconds(30)),Timestamp.from(now),limit).query((r,n) -> new Candidate(r.getObject("id",UUID.class),new WorkspaceActor(r.getObject("owner_user_id",UUID.class),r.getObject("workspace_id",UUID.class),false))).list();
         int frozen=0;
         for(var candidate:trials) {
             try { freeze(candidate.actor(),candidate.id(),false,now); frozen++; }
-            catch(io.agenteval.workers.CapacityExceededException limited) { markWait(candidate,"STORAGE_LIMIT"); }
-            catch(TelemetryLimitException limited) { markWait(candidate,"EVIDENCE_BYTE_LIMIT"); }
+            catch(io.agenteval.workers.CapacityExceededException limited) { markWait(candidate,"STORAGE_LIMIT",now); }
+            catch(TelemetryLimitException limited) { markWait(candidate,"EVIDENCE_BYTE_LIMIT",now); }
             catch(ScopeViolationException deletedDuringScan) { /* A concurrent delete wins; no new snapshot is published. */ }
         }
         return frozen;
     }
-    private void markWait(Candidate candidate,String reason) {
-        jdbc.sql("update trials set evidence_wait_reason=? where id=? and workspace_id=? and exists(select 1 from experiments e where e.id=trials.experiment_id and e.status not in ('DELETING','DELETED'))").params(reason,candidate.id(),candidate.actor().workspaceId()).update();
+    private void markWait(Candidate candidate,String reason,Instant now) {
+        jdbc.sql("update trials set evidence_wait_reason=?,evidence_last_attempt_at=?,evidence_next_attempt_at=? where id=? and workspace_id=? and exists(select 1 from experiments e where e.id=trials.experiment_id and e.status not in ('DELETING','DELETED'))").params(reason,Timestamp.from(now),Timestamp.from(now.plusSeconds(30)),candidate.id(),candidate.actor().workspaceId()).update();
     }
     private TraceEvent decode(JsonNode event) { try { return codec.decode(event.toString(),TraceEvent.class); } catch(java.io.IOException invalid) { throw new IllegalStateException(invalid); } }
     private JsonNode tree(String value) { if(value==null) return NullNode.instance; try { return json.readTree(value); } catch(java.io.IOException invalid) { throw new IllegalStateException(invalid); } }

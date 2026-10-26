@@ -9,7 +9,9 @@ public final class ExperimentDeletionService {
     private final ExperimentDeletionRepository repository;
     private final ArtifactStore store;
     private final Clock clock;
-    public ExperimentDeletionService(ExperimentDeletionRepository repository, ArtifactStore store, Clock clock) { this.repository=repository; this.store=store; this.clock=clock; }
+    private final RunnerEvidenceCleaner runner;
+    public ExperimentDeletionService(ExperimentDeletionRepository repository, ArtifactStore store, Clock clock) { this(repository,store,job -> { throw new IllegalStateException("Runner cleanup unavailable"); },clock); }
+    public ExperimentDeletionService(ExperimentDeletionRepository repository,ArtifactStore store,RunnerEvidenceCleaner runner,Clock clock) { this.repository=repository; this.store=store; this.runner=runner; this.clock=clock; }
     public void deleteExperiment(WorkspaceActor actor, UUID experiment, UUID idempotencyKey) {
         repository.request(Objects.requireNonNull(actor),Objects.requireNonNull(experiment),Objects.requireNonNull(idempotencyKey),clock.instant());
     }
@@ -23,6 +25,7 @@ public final class ExperimentDeletionService {
                 if(!object.stagingKey().equals("staging/"+suffix) || !object.sealedKey().equals("sealed/"+suffix)) throw new IllegalStateException("Untrusted cleanup object identity");
                 store.deleteObject(object.stagingKey()); store.deleteObject(object.sealedKey());
             }
+            for(var job:cleanup.runnerJobs()) runner.deleteEvidence(job);
             return repository.finish(cleanup,clock.instant());
         } catch(RuntimeException failure) { repository.failed(cleanup,clock.instant()); throw failure; }
     }

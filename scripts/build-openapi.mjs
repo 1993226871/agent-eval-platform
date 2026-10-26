@@ -24,7 +24,7 @@ define('AccountCreate', { email: { type: 'string', format: 'email' }, temporary_
 const kind = enumeration(['DATASET', 'EVALUATOR', 'SUITE']);
 define('CatalogResource', { id: uuid, kind, name: text, content: jsonValue, revision: integer, archived: bool });
 define('ResourceSummary', { id: uuid, kind, name: text, revision: integer, archived: bool });
-define('ExperimentSummary', { id: uuid, workspace_id: uuid, agent_id: uuid, agent_version: text, dataset_version_id: uuid, suite_version_id: uuid, repeat_count: integer, deadline: date, status: text });
+define('ExperimentSummary', { id: uuid, workspace_id: uuid, agent_id: uuid, agent_version: text, dataset_version_id: uuid, suite_version_id: uuid, repeat_count: integer, deadline: date, status: text, source_experiment_id: nullable(uuid) });
 define('CatalogCreate', { kind, name: text, content: jsonValue });
 define('CatalogUpdate', { revision: integer, name: text, content: jsonValue });
 define('PublishedVersion', { id: uuid, resource_id: uuid, kind, name: text, content: jsonValue, content_hash: text, number: integer });
@@ -38,6 +38,8 @@ define('IssuedCredential', { id: uuid, secret: text });
 define('WorkerRegistration', { worker_id: uuid, heartbeat_seconds: integer, lease_seconds: integer });
 define('Experiment', { id: uuid, workspace_id: uuid, agent_id: uuid, agent_version: text, dataset_version_id: uuid, suite_version_id: uuid, repeat_count: integer, deadline: date, status: text, snapshot: jsonValue });
 define('StartExperiment', { agent_id: uuid, agent_version: text, dataset_version_id: uuid, suite_version_id: uuid, repeat_count: { type: 'integer', minimum: 1, maximum: 20 }, deadline: date, idempotency_key: text });
+schemas.StartExperiment.properties.source_experiment_id = nullable(uuid);
+define('ExperimentEstimate', { planned_credits: nullable(credits), planned_calls: integer, trial_count: integer, basis: text, assumptions: array({ type: 'object', additionalProperties: true }), unestimated_evaluator_versions: array(uuid) });
 const execution = enumeration(['QUEUED', 'LEASED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'TIMED_OUT', 'CANCELLED', 'EXECUTION_UNKNOWN']);
 define('Trial', { id: uuid, experiment_id: uuid, workspace_id: uuid, case_index: integer, attempt: integer, trace_id: text, status: execution, task: jsonValue });
 define('Wallet', { workspace_id: uuid, granted: credits, consumed: credits, reserved: credits, available: credits });
@@ -141,6 +143,11 @@ op('post', '/api/v1/worker-credentials', 'issueCredential', object({ agent_ids: 
 op('delete', '/api/v1/worker-credentials/{id}', 'revokeCredential', null, null, 204);
 op('get', '/api/v1/experiments', 'listExperiments', null, array(ref('Experiment')), 200, { query: page });
 op('post', '/api/v1/experiments', 'startExperiment', ref('StartExperiment'), object({ id: uuid }), 201);
+op('get', '/api/v1/experiments/estimate', 'estimateExperiment', null, ref('ExperimentEstimate'), 200, { query: [
+  { name: 'datasetVersionId', in: 'query', required: true, schema: uuid },
+  { name: 'suiteVersionId', in: 'query', required: true, schema: uuid },
+  { name: 'repeatCount', in: 'query', required: true, schema: { type: 'integer', minimum: 1, maximum: 20 } },
+] });
 op('get', '/api/v1/experiments/{id}', 'getExperiment', null, ref('Experiment'));
 op('delete', '/api/v1/experiments/{id}', 'deleteExperiment', object({ idempotency_key: uuid }), ref('DeletionStatus'), 202);
 op('get', '/api/v1/experiments/{id}/trials', 'listTrials', null, array(ref('Trial')));

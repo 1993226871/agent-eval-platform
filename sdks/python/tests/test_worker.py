@@ -88,6 +88,22 @@ def test_rejected_started_and_restart_never_replay_handler(tmp_path):
     assert handler.call_count == 0
 
 
+def test_async_cancelled_handler_never_reports_success(tmp_path):
+    import asyncio
+    import pytest
+    transport = FakeTransport()
+    async def cancelled(context):
+        raise asyncio.CancelledError()
+    with FileSpool(tmp_path / "cancelled.sqlite") as spool:
+        worker = EvaluationWorker(transport, spool)
+        worker.register_agent("agent-one", cancelled)
+        with pytest.raises(asyncio.CancelledError):
+            worker.execute("agent-one", grant())
+        assert transport.completions[0]["status"] == "FAILED"
+        assert transport.completions[0]["output"] is None
+        assert any(event["event_type"] == "span.failed" for event in transport.events)
+
+
 def test_from_env_uses_explicit_settings_only(tmp_path):
     env = {"AGENT_EVAL_URL": "https://platform.test", "AGENT_EVAL_API_KEY": "ae_private", "AGENT_EVAL_AGENT_VERSION": "v1", "AGENT_EVAL_SPOOL": str(tmp_path / "queue.sqlite"), "DATABASE_PASSWORD": "never-send"}
     worker = EvaluationWorker.from_env(env)

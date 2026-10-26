@@ -59,6 +59,19 @@ class ExperimentSnapshotIT {
         var actor=actor(); UUID id=experiments.start(actor,command(actor,"immutable-config"));
         assertThatThrownBy(() -> sql.update("update experiments set snapshot='{}'::jsonb where id=?",id)).isInstanceOf(org.springframework.dao.DataAccessException.class);
     }
+    @Test void freezesExactPlannedModelCreditsForAllCasesAndRepetitions() throws Exception {
+        var owner=actor(); var base=command(owner,"estimate"); UUID model=UUID.randomUUID(),price=UUID.randomUUID();
+        sql.update("insert into model_profiles(id,name,endpoint,encrypted_api_key,model,input_token_bound,max_output_tokens,max_request_bytes,max_concurrent,bound_reference,created_by) values(?,?,?,?,?,1,10,4096,1,'fixture',?)",model,"Judge","http://fixture/chat/completions","unused","judge",owner.userId());
+        sql.update("insert into model_price_versions(id,profile_id,input_rate,output_rate,denominator) values(?,?,9007199254740993,0,1)",price,model);
+        var evaluator=catalog.publish(owner,catalog.create(owner,ResourceKind.EVALUATOR,"Judge",json.readTree("{\"type\":\"LLM\",\"criterion_id\":\"judge\",\"threshold\":1,\"required_evidence\":[\"output\"],\"config\":{\"model_profile_id\":\""+model+"\",\"price_version_id\":\""+price+"\",\"max_input_bytes\":100,\"max_output_tokens\":1,\"prompt_version\":\"v1\",\"rubric\":{}}}")).id());
+        var suite=catalog.publish(owner,catalog.create(owner,ResourceKind.SUITE,"Judge suite",json.readTree("{\"entries\":[{\"evaluator_version\":\""+evaluator.id()+"\",\"dimension\":\"outcome\",\"required_to_pass\":true,\"weight\":1}]}")).id());
+        var command=new StartExperimentCommand(base.agentId(),base.agentVersion(),base.datasetVersionId(),suite.id(),3,base.deadline(),"estimated-start");
+        UUID id=experiments.start(owner,command);
+        var estimate=experiments.get(owner,id).snapshot().path("cost_estimate");
+        assertThat(estimate.path("planned_credits").asText()).isEqualTo("54043195528445958");
+        assertThat(estimate.path("planned_calls").asInt()).isEqualTo(6);
+        assertThat(estimate.path("assumptions").get(0).path("price_version_id").asText()).isEqualTo(price.toString());
+    }
     @Test void expandsCasesAtomicallyAndSurvivesCatalogEdits() throws Exception {
         var actor=actor(); var command=command(actor,"stable-key");
         UUID id=experiments.start(actor,command);
@@ -82,6 +95,17 @@ class ExperimentSnapshotIT {
             assertThat(sql.queryForObject("select count(*) from experiments where workspace_id=?",Integer.class,actor.workspaceId())).isZero();
             assertThat(sql.queryForObject("select count(*) from trials where workspace_id=?",Integer.class,actor.workspaceId())).isZero();
         } finally { sql.execute("drop trigger reject_trial on trials"); }
+    }
+    @Test void rerunRetainsOwnedSourceAndRejectsForeignSource() throws Exception {
+        var owner=actor(); var base=command(owner,"source"); UUID source=experiments.start(owner,base);
+        var mapper=json.copy().findAndRegisterModules().disable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        var body=mapper.valueToTree(base); ((com.fasterxml.jackson.databind.node.ObjectNode)body).put("idempotencyKey","rerun").put("sourceExperimentId",source.toString());
+        var rerun=mapper.treeToValue(body,StartExperimentCommand.class); UUID id=experiments.start(owner,rerun);
+        assertThat(experiments.get(owner,id).snapshot().path("source_experiment_id").asText()).isEqualTo(source.toString());
+        var other=actor(); UUID foreign=experiments.start(other,command(other,"unused"));
+        ((com.fasterxml.jackson.databind.node.ObjectNode)body).put("idempotencyKey","foreign-rerun").put("sourceExperimentId",foreign.toString());
+        var invalid=mapper.treeToValue(body,StartExperimentCommand.class);
+        assertThatThrownBy(() -> experiments.start(owner,invalid)).isInstanceOf(ScopeViolationException.class);
     }
     @Test void stateMachineRefusesTerminalResurrection() {
         var states=new TrialStateMachine();

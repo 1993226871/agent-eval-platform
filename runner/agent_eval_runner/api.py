@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
+from uuid import UUID
 from .executor import RunnerExecutor, RunnerSettings
 from .validation import RunnerValidationError
 
@@ -62,6 +63,13 @@ def create_app(engine, internal_key, service_lock=None):
             return JSONResponse({"code": failure.code}, status_code=409 if failure.code == "RUN_KEY_CONFLICT" else 422)
         status = {"UNAVAILABLE": 503, "BUSY": 429, "IN_PROGRESS": 202}.get(result["state"], 200)
         return JSONResponse(result, status_code=status)
+
+    @app.delete("/internal/v1/evaluations/{job_id}/evidence", status_code=204)
+    def scrub(job_id: UUID):
+        try:
+            engine.scrub(str(job_id))
+        except (RuntimeError, OSError):
+            return JSONResponse({"code": "CLEANUP_UNAVAILABLE"}, status_code=503)
     return app
 
 
@@ -76,9 +84,12 @@ def create_application():
     lock = ServiceLock(engine.root / ".service.lock")
     try:
         # File lock makes this cleanup safe: no other live process owns this registry.
-        if engine.capabilities()["python_enabled"]:
-            engine.docker.cleanup_owned()
-        engine.registry.recover_unknown()
+        try:
+            engine.recover_abandoned()
+        except (RuntimeError, OSError):
+            # Keep cached outcomes available during daemon outage; deletion cannot acknowledge
+            # until the same guarded cleanup can terminate orphan containers and remove inputs.
+            engine.registry.recover_unknown()
         return create_app(engine, key, lock)
     except BaseException:
         lock.close()

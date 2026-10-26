@@ -122,7 +122,7 @@ class EvaluationWorker:
         with self._lock:
             self._heartbeat_threads.add(thread)
         thread.start()
-        output, state = None, "SUCCEEDED"
+        output, state = None, "FAILED"
         try:
             with session.activate():
                 with span("agent", "agent.run", context.input) as root:
@@ -135,6 +135,7 @@ class EvaluationWorker:
                     encode(output)
                     artifacts.extend(result.artifact_ids)
                     root.output = output
+            state = "SUCCEEDED"
         except Exception:
             # Agent exceptions are recorded by the root span using type only, never raw messages.
             state = "FAILED"

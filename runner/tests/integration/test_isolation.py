@@ -108,3 +108,15 @@ def test_host_artifact_symlink_denied(engine, tmp_path):
     (root / identity).symlink_to(outside)
     with pytest.raises(RunnerValidationError):
         safe_artifact_file(root, identity)
+
+
+def test_deleted_private_result_is_scrubbed_and_cannot_replay(engine):
+    from uuid import uuid4
+    marker = "private-evidence-" + uuid4().hex
+    payload = request('def evaluate(context):\n    print(' + repr(marker) + ')\n    return {"status":"SCORED","score":1,"reason":"Checked","evidence_refs":["output"]}\n')
+    payload["image_digest"] = engine.settings.image_digest
+    response = engine.execute(payload)
+    assert response["state"] == "COMPLETED" and marker in response["stdout"]
+    engine.scrub(payload["job_id"])
+    assert engine.execute(payload)["code"] == "EVIDENCE_DELETED"
+    assert marker.encode() not in engine.registry.path.read_bytes()

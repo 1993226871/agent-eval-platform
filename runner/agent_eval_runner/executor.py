@@ -1,5 +1,7 @@
 import hashlib
 import os
+import re
+import shutil
 from pathlib import Path
 import sys
 import tempfile
@@ -47,6 +49,8 @@ class RunnerExecutor:
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.jobs = self.root / "jobs"
         self.jobs.mkdir(exist_ok=True, mode=0o700)
+        if self.jobs.is_symlink() or not self.jobs.resolve().is_relative_to(self.root):
+            raise ValueError("Invalid Runner jobs directory")
         self.registry = RunRegistry(self.root / "runs.sqlite")
         os.chmod(self.root / "runs.sqlite", 0o600)
         if docker is None:
@@ -55,6 +59,8 @@ class RunnerExecutor:
         self.docker = docker
         self.host_is_linux = host_is_linux or (lambda: sys.platform.startswith("linux"))
         self.slots = threading.BoundedSemaphore(settings.max_concurrency)
+        self.activity = threading.Condition()
+        self.active_jobs = set()
 
     def capabilities(self):
         enabled, reason = False, "A Linux execution node is required"
@@ -88,14 +94,53 @@ class RunnerExecutor:
             return {"job_id": payload.get("job_id") if isinstance(payload, dict) else None, "state": "UNAVAILABLE", "code": "CAPABILITY_UNAVAILABLE", "result": None}
         if not self.slots.acquire(blocking=False):
             return {"job_id": identity, "state": "BUSY", "code": "CAPACITY_REACHED", "result": None}
+        reserved = False
         try:
-            if not self.registry.reserve(identity, digest):
-                return self.registry.lookup(identity, digest)
+            with self.activity:
+                if not self.registry.reserve(identity, digest):
+                    return self.registry.lookup(identity, digest)
+                self.active_jobs.add(identity)
+                reserved = True
             response = self._execute_reserved(identity, payload)
             self.registry.complete(identity, response)
-            return response
+            return self.registry.lookup(identity, digest)
         finally:
+            if reserved:
+                with self.activity:
+                    self.active_jobs.discard(identity)
+                    self.activity.notify_all()
             self.slots.release()
+
+    def _remove_inputs(self, identity=None):
+        prefix = UUID(identity).hex + "-" if identity is not None else None
+        for path in self.jobs.iterdir():
+            if not re.fullmatch(r"[0-9a-f]{32}-[A-Za-z0-9_-]+", path.name) or (prefix is not None and not path.name.startswith(prefix)):
+                continue
+            if path.parent.resolve() != self.jobs.resolve():
+                raise RuntimeError("Invalid Runner cleanup identity")
+            if path.is_symlink() or path.is_file():
+                path.unlink()
+            elif path.is_dir():
+                shutil.rmtree(path)
+
+    def scrub(self, identity):
+        identity = str(UUID(identity))
+        with self.activity:
+            self.registry.scrub(identity)
+            if not self.activity.wait_for(lambda: identity not in self.active_jobs, timeout=60):
+                raise RuntimeError("Runner deletion waits for active input cleanup")
+            # No new execution of this identity can reserve after the durable tombstone.
+            self.docker.cleanup_job(identity)
+            self._remove_inputs(identity)
+
+    def recover_abandoned(self):
+        # Called only while the service-wide lock is held, before accepting requests.
+        with self.activity:
+            if self.active_jobs:
+                raise RuntimeError("Cannot recover a live Runner")
+            self.docker.cleanup_owned()
+            self._remove_inputs()
+            self.registry.recover_unknown()
 
     def _execute_reserved(self, identity, payload):
         try:

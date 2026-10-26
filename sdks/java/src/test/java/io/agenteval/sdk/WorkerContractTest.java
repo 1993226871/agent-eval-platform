@@ -86,4 +86,14 @@ class WorkerContractTest {
             assertThat(observed.get()).isTrue(); assertThat(transport.completions).isEmpty(); assertThat(worker.activeHeartbeatCount()).isZero();
         }
     }
+    @Test void assertionErrorRemainsFailureAndMarksRootSpanFailed() {
+        var transport=new FakeTransport(); var agent=UUID.randomUUID();
+        try(var spool=new FileSpool(directory.resolve("assertion.sqlite")); var worker=new EvaluationWorker(transport,spool)) {
+            worker.registerAgent(agent.toString(),context -> { throw new AssertionError("private message"); });
+            assertThatThrownBy(() -> worker.execute(agent,grant())).isInstanceOf(AssertionError.class);
+            assertThat(transport.completions.getFirst().status()).isEqualTo(TrialExecutionStatus.FAILED);
+            assertThat(transport.completions.getFirst().output().isNull()).isTrue();
+            assertThat(transport.events).anyMatch(event -> event.eventType()==EventType.SPAN_FAILED);
+        }
+    }
 }

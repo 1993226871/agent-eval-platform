@@ -452,6 +452,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/experiments/estimate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["estimateExperiment"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/experiments/{id}": {
     parameters: {
       query?: never;
@@ -1206,6 +1222,7 @@ export interface components {
       /** Format: date-time */
       deadline: string;
       status: string;
+      source_experiment_id: string | null;
     };
     CatalogCreate: {
       /** @enum {string} */
@@ -1313,6 +1330,17 @@ export interface components {
       /** Format: date-time */
       deadline: string;
       idempotency_key: string;
+      source_experiment_id?: string | null;
+    };
+    ExperimentEstimate: {
+      planned_credits: string | null;
+      planned_calls: number;
+      trial_count: number;
+      basis: string;
+      assumptions: {
+        [key: string]: unknown;
+      }[];
+      unestimated_evaluator_versions: string[];
     };
     Trial: {
       /** Format: uuid */
@@ -2908,6 +2936,38 @@ export interface operations {
             /** Format: uuid */
             id: string;
           };
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  estimateExperiment: {
+    parameters: {
+      query: {
+        datasetVersionId: string;
+        suiteVersionId: string;
+        repeatCount: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExperimentEstimate"];
         };
       };
       400: components["responses"]["Rejected"];

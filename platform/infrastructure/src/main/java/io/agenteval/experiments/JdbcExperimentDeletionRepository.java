@@ -51,9 +51,11 @@ public class JdbcExperimentDeletionRepository implements ExperimentDeletionRepos
             if(row.isEmpty()) return Optional.empty();
             UUID token=UUID.randomUUID();
             jdbc.sql("update experiment_deletions set cleanup_token=?,lease_until=? where experiment_id=?").params(token,Timestamp.from(now.plusSeconds(900)),experiment).update();
-            var targets=jdbc.sql("select artifact_id,staging_key,sealed_key from deleted_artifact_objects where experiment_id=? and workspace_id=? order by cleaned_at nulls first,artifact_id limit 4")
+            var targets=jdbc.sql("select artifact_id,staging_key,sealed_key from deleted_artifact_objects where experiment_id=? and workspace_id=? order by cleaned_at nulls first,artifact_id limit 3")
                 .params(experiment,row.get().getKey()).query((r,n) -> new ObjectTarget(r.getObject("artifact_id",UUID.class),r.getString("staging_key"),r.getString("sealed_key"))).list();
-            return Optional.of(new Cleanup(experiment,row.get().getKey(),row.get().getValue(),token,targets));
+            var jobs=jdbc.sql("select job_id from runner_executions where experiment_id=? and workspace_id=? order by cleaned_at nulls first,job_id limit 2")
+                .params(experiment,row.get().getKey()).query(UUID.class).list();
+            return Optional.of(new Cleanup(experiment,row.get().getKey(),row.get().getValue(),token,targets,jobs));
         });
     }
     private boolean current(Cleanup cleanup,Instant now) {
@@ -67,7 +69,9 @@ public class JdbcExperimentDeletionRepository implements ExperimentDeletionRepos
             if(!current(cleanup,now)) return false;
             for(var object:cleanup.objects()) jdbc.sql("update deleted_artifact_objects set cleaned_at=? where experiment_id=? and workspace_id=? and artifact_id=?")
                 .params(Timestamp.from(now),cleanup.experimentId(),cleanup.workspaceId(),object.artifactId()).update();
-            boolean remaining=jdbc.sql("select exists(select 1 from deleted_artifact_objects where experiment_id=? and cleaned_at is null)").param(cleanup.experimentId()).query(Boolean.class).single();
+            for(var job:cleanup.runnerJobs()) jdbc.sql("update runner_executions set cleaned_at=? where job_id=? and experiment_id=? and workspace_id=?")
+                .params(Timestamp.from(now),job,cleanup.experimentId(),cleanup.workspaceId()).update();
+            boolean remaining=jdbc.sql("select exists(select 1 from deleted_artifact_objects where experiment_id=? and cleaned_at is null) or exists(select 1 from runner_executions where experiment_id=? and cleaned_at is null)").params(cleanup.experimentId(),cleanup.experimentId()).query(Boolean.class).single();
             if(!remaining) purge(cleanup,now);
             jdbc.sql("update experiment_deletions set cleanup_token=null,lease_until=null,next_cleanup_at=?,completed_at=case when ? then completed_at else coalesce(completed_at,?) end where experiment_id=?")
                 .params(Timestamp.from(remaining?now:now.plusSeconds(3600)),remaining,Timestamp.from(now),cleanup.experimentId()).update();

@@ -12,7 +12,8 @@ public interface ExperimentDeletionRepository {
     void failed(Cleanup cleanup, Instant now);
     List<UUID> ready(Instant now, int limit);
     record ObjectTarget(UUID artifactId, String stagingKey, String sealedKey) {}
-    record Cleanup(UUID experimentId, UUID workspaceId, UUID generation, UUID token, List<ObjectTarget> objects) {
-        public Cleanup { objects=List.copyOf(objects); }
+    record Cleanup(UUID experimentId, UUID workspaceId, UUID generation, UUID token, List<ObjectTarget> objects,List<UUID> runnerJobs) {
+        public Cleanup { objects=List.copyOf(objects); runnerJobs=List.copyOf(runnerJobs); }
+        public Cleanup(UUID experimentId,UUID workspaceId,UUID generation,UUID token,List<ObjectTarget> objects) { this(experimentId,workspaceId,generation,token,objects,List.of()); }
     }
 }

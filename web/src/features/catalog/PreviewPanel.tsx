@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { z } from "zod";
@@ -12,21 +12,28 @@ export function PreviewPanel({ resource }: { resource: CatalogResource }) {
   const { workspace_id } = useWorkspace();
   const [trial, setTrial] = useState("");
   const [runId, setRunId] = useState("");
+  const pending = useRef<{ fingerprint: string; key: string } | null>(null);
   const preview = useMutation({
     mutationFn: async () => {
       const id = z.uuid().parse(trial.trim());
+      const fingerprint = JSON.stringify([resource.id, resource.revision, id]);
+      if (pending.current?.fingerprint !== fingerprint)
+        pending.current = { fingerprint, key: crypto.randomUUID() };
       return request(
         api.POST("/api/v1/evaluators/{draftId}/previews", {
           params: { path: { draftId: resource.id } },
           body: {
             trial_id: id,
             revision: resource.revision,
-            idempotency_key: crypto.randomUUID(),
+            idempotency_key: pending.current.key,
           },
         }),
       );
     },
-    onSuccess: (run) => setRunId(run.run_id),
+    onSuccess: (run) => {
+      pending.current = null;
+      setRunId(run.run_id);
+    },
   });
   const run = useQuery({
     queryKey: [workspace_id, "preview", runId],

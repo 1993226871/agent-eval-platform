@@ -10,17 +10,22 @@ class RunRegistry:
         self.path = Path(path)
         with closing(self._connection()) as db:
             db.execute("CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,request_hash TEXT NOT NULL,state TEXT NOT NULL,response TEXT)")
+            if "evidence_deleted" not in {row[1] for row in db.execute("PRAGMA table_info(runs)")}:
+                db.execute("ALTER TABLE runs ADD COLUMN evidence_deleted INTEGER NOT NULL DEFAULT 0")
 
     def _connection(self):
         db = sqlite3.connect(self.path, isolation_level=None, timeout=5)
         db.execute("PRAGMA synchronous=FULL")
+        db.execute("PRAGMA secure_delete=ON")
         return db
 
     def lookup(self, identity, digest):
         with closing(self._connection()) as db:
-            row = db.execute("SELECT request_hash,state,response FROM runs WHERE id=?", (identity,)).fetchone()
+            row = db.execute("SELECT request_hash,state,response,evidence_deleted FROM runs WHERE id=?", (identity,)).fetchone()
         if row is None:
             return None
+        if row[3]:
+            return {"job_id": identity, "state": "ERROR", "code": "EVIDENCE_DELETED", "result": None}
         if row[0] != digest:
             raise RunnerValidationError("RUN_KEY_CONFLICT")
         if row[2] is not None:
@@ -33,7 +38,11 @@ class RunRegistry:
 
     def complete(self, identity, response):
         with closing(self._connection()) as db:
-            db.execute("UPDATE runs SET state='COMPLETED',response=? WHERE id=? AND state='RUNNING'", (json.dumps(response, ensure_ascii=False, allow_nan=False), identity))
+            db.execute("UPDATE runs SET state='COMPLETED',response=? WHERE id=? AND state='RUNNING' AND evidence_deleted=0", (json.dumps(response, ensure_ascii=False, allow_nan=False), identity))
+
+    def scrub(self, identity):
+        with closing(self._connection()) as db:
+            db.execute("INSERT INTO runs(id,request_hash,state,response,evidence_deleted) VALUES(?,'','DELETED',NULL,1) ON CONFLICT(id) DO UPDATE SET state='DELETED',response=NULL,evidence_deleted=1", (identity,))
 
     def recover_unknown(self):
         with closing(self._connection()) as db:

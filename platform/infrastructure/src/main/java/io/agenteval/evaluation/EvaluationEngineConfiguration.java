@@ -20,6 +20,14 @@ public class EvaluationEngineConfiguration {
     SandboxClient disabledSandboxClient() {
         return (job,context)->new CriterionResult(job.definition().criterionId(),CriterionStatus.SKIPPED,null,null,"CAPABILITY_UNAVAILABLE",List.of(),job.definition().evaluatorVersion());
     }
+    @Bean @Primary @ConditionalOnProperty(name="app.runner.enabled",havingValue="true")
+    SandboxClient trackedSandboxClient(RunnerSandboxClient runner,io.agenteval.infrastructure.evaluation.JdbcRunnerDispatchRegistry registry) {
+        return (job,context) -> { registry.track(job); return runner.evaluate(job,context); };
+    }
+    @Bean @ConditionalOnProperty(name="app.runner.enabled",havingValue="false",matchIfMissing=true)
+    io.agenteval.experiments.RunnerEvidenceCleaner unavailableRunnerCleaner() {
+        return job -> { throw new IllegalStateException("Runner cleanup unavailable"); };
+    }
     @Bean EvaluationOrchestrator evaluationOrchestrator(EvaluationRepository repository,EvidenceService evidence,SandboxClient sandbox,ModelGateway models,Clock clock) {
         return new EvaluationOrchestrator(repository,evidence,Map.of("RULE",new RuleEvaluator(),"PYTHON",new PythonEvaluator(sandbox),"LLM",new LlmEvaluator(models)),clock);
     }

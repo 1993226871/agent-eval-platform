@@ -98,8 +98,9 @@ public final class RuleEvaluator implements Evaluator {
         String mode=text(config,"mode");
         if(mode.equals("absent")) { if(actual.stream().anyMatch(wanted::contains)) return false; requireComplete(context); return true; }
         if(!Set.of("exact","contains_all").contains(mode)) throw new IllegalArgumentException("Invalid tool-set mode");
+        if(mode.equals("exact") && !wanted.containsAll(actual)) return false;
         if(calls.isEmpty()) throw new MissingEvidence(); boolean matches=mode.equals("exact")?actual.equals(wanted):actual.containsAll(wanted);
-        if(!matches) requireComplete(context); return matches;
+        if(mode.equals("exact") || !matches) requireComplete(context); return matches;
     }
     private boolean arguments(EvaluationContext context,JsonNode config,Set<String> refs) {
         var calls=selector.tools(context,text(config,"tool")); var results=new ArrayList<Boolean>(); var expected=expected(context,config,refs); String pointer=text(config,"selector"); String comparison=text(config,"comparison");

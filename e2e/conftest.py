@@ -162,7 +162,7 @@ class Platform:
         resource = self.request(self.user, "POST", "/catalog", {"kind": kind, "name": name, "content": content})
         return self.request(self.user, "POST", f"/catalog/{resource['id']}/versions")["id"]
 
-    def resources(self, name, types=("RULE", "LLM", "PYTHON"), repeat=1, model_name="fixture-judge"):
+    def resources(self, name, types=("RULE", "LLM", "PYTHON"), repeat=1, model_name="fixture-judge", python_code=None):
         agent = self.request(self.user, "POST", "/agents", {"name": name, "version": "v1"})["id"]
         credential = self.request(self.user, "POST", "/worker-credentials", {"agent_ids": [agent]})
         dataset = self.publish("DATASET", name, {"cases": [{"instruction": "Find order A and report its amount and status", "input": {"order_id": "A"}, "expected": {"amount": 100, "status": "paid"}}]})
@@ -171,6 +171,7 @@ class Platform:
             config = {"operator": "eq", "selector": "/output/amount", "expected": 100}
             if kind == "PYTHON":
                 config = {"code": 'def evaluate(context):\n    return {"status":"SCORED","score":1 if context["output"].get("amount")==100 else 0,"reason":"Custom amount check","evidence_refs":["output"]}\n'}
+                if python_code is not None: config["code"] = python_code
             elif kind == "LLM":
                 model = self.model(model_name)
                 config = {"model_profile_id": model["id"], "price_version_id": model["price"]["id"], "prompt_version": "rubric-v1", "max_input_bytes": 16384, "max_output_tokens": 50,

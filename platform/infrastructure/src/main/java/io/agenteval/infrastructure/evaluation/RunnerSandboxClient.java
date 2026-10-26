@@ -13,7 +13,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /** Internal transport only. Never executes user code in the Java service. */
-public final class RunnerSandboxClient implements SandboxClient, AutoCloseable {
+public final class RunnerSandboxClient implements SandboxClient, io.agenteval.experiments.RunnerEvidenceCleaner, AutoCloseable {
     public record ArtifactDownload(UUID artifactId, String url) {}
     @FunctionalInterface public interface ArtifactResolver {
         // Resolve ONLY artifacts of this owner/trial/frozen snapshot; URLs are short lived.
@@ -91,6 +91,13 @@ public final class RunnerSandboxClient implements SandboxClient, AutoCloseable {
     }
     private CriterionResult unscored(EvaluatorJob job, CriterionStatus status, String reason) {
         return new CriterionResult(job.definition().criterionId(),status,null,null,reason,List.of(),job.definition().evaluatorVersion());
+    }
+    @Override public void deleteEvidence(UUID job) {
+        var request=HttpRequest.newBuilder(URI.create(endpoint.toString()+"/"+job+"/evidence")).timeout(Duration.ofSeconds(90))
+            .header("Authorization","Bearer "+key).DELETE().build();
+        var future=http.sendAsync(request,info -> new LimitedBodySubscriber(4096));
+        try { if(future.get(90,TimeUnit.SECONDS).statusCode()!=204) throw new IllegalStateException("Runner cleanup rejected"); }
+        catch(Exception unavailable) { future.cancel(true); if(unavailable instanceof InterruptedException) Thread.currentThread().interrupt(); throw new IllegalStateException("Runner cleanup unavailable"); }
     }
     @Override public void close() { http.shutdownNow(); }
 }

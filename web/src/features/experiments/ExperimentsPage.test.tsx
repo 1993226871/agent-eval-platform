@@ -28,6 +28,14 @@ describe("experiment submission recovery", () => {
         let status = 200;
         if (path.endsWith("/auth/csrf"))
           body = { header_name: "X-CSRF-TOKEN", token: "csrf" };
+        if (path.endsWith("/experiments/estimate"))
+          body = {
+            planned_credits: "54043195528445958",
+            planned_calls: 6,
+            trial_count: 6,
+            basis: "FIRST_ATTEMPT_RESERVATION_BOUND",
+            assumptions: [],
+          };
         if (path.endsWith("/agents"))
           body = [
             {
@@ -72,6 +80,9 @@ describe("experiment submission recovery", () => {
     );
     await user.selectOptions(screen.getByLabelText("任务集版本"), "DATASET");
     await user.selectOptions(screen.getByLabelText("套件版本"), "SUITE");
+    expect(
+      await screen.findByText(/54,043,195,528,445,958 credits/),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "启动实验" }));
     await screen.findByRole("alert");
     vi.mocked(Date.now).mockReturnValue(1792962030000);

@@ -17,6 +17,7 @@ import {
 } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
 import { TrialEvidence } from "./TrialEvidence";
+import { EstimateNotice, useExperimentEstimate } from "../experiments/estimate";
 
 export function ExperimentReport() {
   const { id = "" } = useParams();
@@ -29,6 +30,12 @@ function ExperimentReportPage({ id }: { id: string }) {
   const [selected, setSelected] = useState<Schema<"TrialReport">>();
   const [compareId, setCompareId] = useState("");
   const [rerunBody, setRerunBody] = useState<Schema<"StartExperiment">>();
+  const estimate = useExperimentEstimate(
+    rerunBody?.dataset_version_id ?? "",
+    rerunBody?.suite_version_id ?? "",
+    rerunBody?.repeat_count ?? 1,
+    !!rerunBody,
+  );
   const report = useQuery({
     queryKey: [workspace_id, "report", id],
     queryFn: ({ signal }) =>
@@ -128,6 +135,7 @@ function ExperimentReportPage({ id }: { id: string }) {
               dataset_version_id: source.dataset_version_id,
               suite_version_id: source.suite_version_id,
               repeat_count: source.repeat_count,
+              source_experiment_id: id,
               deadline: new Date(Date.now() + 3600000).toISOString(),
               idempotency_key: crypto.randomUUID(),
             });
@@ -136,6 +144,16 @@ function ExperimentReportPage({ id }: { id: string }) {
           重跑 Agent
         </button>
       </PageHeading>
+      {experiment.data?.source_experiment_id && (
+        <p>
+          重跑来源：
+          <Link
+            to={"/workspace/reports/" + experiment.data.source_experiment_id}
+          >
+            {experiment.data.source_experiment_id}
+          </Link>
+        </p>
+      )}
       <ErrorNotice
         error={
           report.error ??
@@ -412,9 +430,10 @@ function ExperimentReportPage({ id }: { id: string }) {
           使用适合重复运行的任务环境。
         </p>
         <ErrorNotice error={rerun.error} />
+        <EstimateNotice value={estimate.data} error={estimate.error} />
         <button
           className="primary"
-          disabled={rerun.isPending}
+          disabled={rerun.isPending || !estimate.data || estimate.isFetching}
           onClick={() => rerun.mutate()}
         >
           确认创建新实验
