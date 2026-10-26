@@ -59,12 +59,17 @@ def test_memory_limit(engine):
 
 def test_network_filesystem_process_and_secret_boundaries(engine):
     code = '''def evaluate(context):
-    import os, socket, subprocess
+    import os, socket, subprocess, resource, errno
     leaked = [key for key in os.environ if key.startswith(("RUNNER_", "AWS_", "DATABASE_", "PLATFORM_"))]
     assert leaked == []
     assert os.getuid() == 10001
     assert not os.path.exists("/var/run/docker.sock")
     assert not os.path.exists("/run/containerd/containerd.sock")
+    assert resource.getrlimit(resource.RLIMIT_NPROC) == (32, 32)
+    try:
+        resource.setrlimit(resource.RLIMIT_NPROC, (33, 33))
+        raise AssertionError("user process hard limit can be raised")
+    except (ValueError, OSError): pass
     try:
         socket.create_connection(("1.1.1.1", 443), timeout=1)
         raise AssertionError("network accessible")
@@ -87,9 +92,11 @@ def test_network_filesystem_process_and_secret_boundaries(engine):
     children = []
     try:
         for _ in range(40):
-            children.append(subprocess.Popen(["/usr/local/bin/python", "-I", "-c", "import time;time.sleep(15)"]))
+            children.append(subprocess.Popen(["/bin/sleep", "15"]))
         raise AssertionError("process limit missing")
-    except OSError: pass
+    except OSError as failure:
+        assert failure.errno == errno.EAGAIN
+        assert 20 <= len(children) < 32
     finally:
         for child in children: child.kill()
         for child in children: child.wait()

@@ -97,7 +97,7 @@ def test_pinned_hardened_command_and_idempotent_run_key(tmp_path):
     assert first["result"]["score"] == 1
     assert len(docker.calls) == 1
     arguments = docker.calls[0]
-    for flag in ("--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--network=none", "--runtime=runsc", "--pids-limit=32", "--memory=256m", "--memory-swap=256m", "--user=10001:10001", "--log-driver=none"):
+    for flag in ("--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--network=none", "--runtime=runsc", "--pids-limit=256", "--ulimit=nproc=32:32", "--memory=256m", "--memory-swap=256m", "--user=10001:10001", "--log-driver=none"):
         assert flag in arguments
     assert "--privileged" not in arguments
     assert IMAGE in arguments

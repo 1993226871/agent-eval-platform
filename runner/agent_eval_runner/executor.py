@@ -177,7 +177,9 @@ class RunnerExecutor:
         return ["docker", "create", "--name", "aev-" + owner + "-" + UUID(identity).hex,
                 "--label", "io.agenteval.runner=" + owner, "--label", "io.agenteval.job=" + identity,
                 "--runtime=runsc", "--read-only", "--network=none", "--cap-drop=ALL", "--security-opt=no-new-privileges",
-                "--user=10001:10001", "--pids-limit=" + str(limits["processes"]), "--memory=" + str(limits["memory_mb"]) + "m", "--memory-swap=" + str(limits["memory_mb"]) + "m", "--cpus=1", "--shm-size=16m", "--log-driver=none", "--pull=never",
+                # gVisor's own threads/stubs also consume host cgroup PIDs. Keep
+                # a bounded runtime allowance and enforce the user limit inside it.
+                "--user=10001:10001", "--pids-limit=256", "--ulimit=nproc=" + str(limits["processes"]) + ":" + str(limits["processes"]), "--memory=" + str(limits["memory_mb"]) + "m", "--memory-swap=" + str(limits["memory_mb"]) + "m", "--cpus=1", "--shm-size=16m", "--log-driver=none", "--pull=never",
                 "--mount", "type=bind,src=" + str(inputs) + ",dst=/input,readonly",
                 "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=" + str(limits["tmp_mb"]) + "m,mode=1777",
                 "--tmpfs", "/output:rw,noexec,nosuid,nodev,size=1m,mode=0700,uid=10001,gid=10001",
