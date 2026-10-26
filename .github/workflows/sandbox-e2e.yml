@@ -39,9 +39,12 @@ jobs:
           python -m pytest runner/tests -q
           # A prior boundary probe returned NO_RESULT once. Repeat the actual
           # process/network/filesystem probe; any failure blocks acceptance.
-          for attempt in $(seq 1 10); do
+          for attempt in $(seq 1 100); do
             python -m pytest runner/tests/integration/test_isolation.py -q -k network_filesystem_process_and_secret_boundaries
           done
+      - name: Bounded runtime panic classification on failure
+        if: failure()
+        run: sudo find /tmp/agenteval-runsc-panic -maxdepth 1 -type f -exec grep -E -m 5 'newosproc|failed to create new OS thread|fatal error|panic:|resource temporarily unavailable' {} + || true
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

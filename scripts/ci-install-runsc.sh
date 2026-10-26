@@ -13,6 +13,16 @@ curl --fail --location --retry 3 --max-time 180 \
 printf '%s  %s\n' '7cbc2aeeee809dcccfb40e612504a1b76f2c119790cee59e482f7b35428cccc4f71705e7e322442d07d1f7d29b5d9e72e31319fc3088d6dcbec9fc7c1f0d8881' "$task_download/gvisor.tar.bz2" | sha512sum --check
 sudo tar -xjf "$task_download/gvisor.tar.bz2" -C /usr/local/bin
 sudo /usr/local/bin/runsc install
+sudo mkdir -p /tmp/agenteval-runsc-panic
+sudo python3 - <<'PY'
+import json
+from pathlib import Path
+path = Path('/etc/docker/daemon.json')
+config = json.loads(path.read_text())
+runtime = config['runtimes']['runsc']
+runtime['runtimeArgs'] = runtime.get('runtimeArgs', []) + ['--panic-log=/tmp/agenteval-runsc-panic/']
+path.write_text(json.dumps(config))
+PY
 sudo systemctl restart docker
 /usr/local/bin/runsc --version
 docker info --format '{{json .Runtimes}}'
