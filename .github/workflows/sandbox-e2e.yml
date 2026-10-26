@@ -1,0 +1,33 @@
+name: Linux sandbox acceptance
+on:
+  push:
+    branches: [codex/platform-implementation, main]
+    paths:
+      - 'runner/**'
+      - 'e2e/**'
+      - 'deploy/**'
+      - 'scripts/ci-install-runsc.sh'
+      - '.github/workflows/sandbox-e2e.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hardened-isolation:
+    # Dedicated ephemeral VM, no pull_request trigger and no repository secrets.
+    if: github.repository == '1993226871/agent-eval-platform' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/platform-implementation')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Provision fixed hardened runtime on this disposable VM
+        run: bash scripts/ci-install-runsc.sh
+      - run: python -m pip install -r runner/requirements-test.lock
+      - run: docker build --tag agent-eval-sandbox:acceptance runner/sandbox
+      - name: Execute real runtime acceptance (no skip or fallback)
+        shell: bash
+        run: |
+          export RUNNER_TEST_IMAGE="$(docker image inspect --format '{{.Id}}' agent-eval-sandbox:acceptance)"
+          python -m pytest runner/tests -q
