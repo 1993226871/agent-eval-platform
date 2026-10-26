@@ -101,6 +101,21 @@ public class JdbcQuotaRepository implements QuotaRepository {
             return new Reservation(callId,workspace,upper,next,actual);
         });
     }
+    public Reservation approveOverage(UUID callId,long actual,UUID administrator,String reason,UUID key) {
+        return transactions.execute(status -> {
+            UUID workspace=find(callId,false).orElseThrow(QuotaConflictException::new).workspaceId();
+            var wallet=loadWallet(workspace,true); var reservation=find(callId,true).orElseThrow(QuotaConflictException::new);
+            if(!reservation.state().equals("RECONCILIATION")) throw new QuotaConflictException();
+            if(actual<=reservation.upperCredits()) return reservation;
+            long extra=actual-reservation.upperCredits();
+            if(wallet.available()<extra) throw new InsufficientQuotaException();
+            if(jdbc.sql("select count(*) from quota_ledger where id=?").param(key).query(Long.class).single()!=0) throw new QuotaConflictException();
+            jdbc.sql("update quota_wallets set reserved=? where workspace_id=?").params(Math.addExact(wallet.reserved(),extra),workspace).update();
+            jdbc.sql("update quota_reservations set upper_credits=? where call_id=?").params(actual,callId).update();
+            append(key,workspace,null,"ADJUST",0,0,extra,"Approved overage; reconciliation "+key+"; call "+callId,administrator);
+            return new Reservation(callId,workspace,actual,reservation.state(),null);
+        });
+    }
     private void append(UUID id,UUID workspace,UUID call,String type,long granted,long consumed,long reserved,String reason,UUID actor) {
         jdbc.sql("insert into quota_ledger(id,workspace_id,call_id,entry_type,granted_delta,consumed_delta,reserved_delta,reason,actor_user_id) values(?,?,?,?,?,?,?,?,?)")
             .param(1,id).param(2,workspace).param(3,call,Types.OTHER).param(4,type).param(5,granted).param(6,consumed).param(7,reserved).param(8,reason).param(9,actor,Types.OTHER).update();

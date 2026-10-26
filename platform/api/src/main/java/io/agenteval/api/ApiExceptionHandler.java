@@ -16,6 +16,8 @@ public class ApiExceptionHandler {
     }
     @ExceptionHandler(DuplicateKeyException.class) ResponseEntity<ProblemDetail> duplicate() { return problem(409,"CONFLICT"); }
     @ExceptionHandler(io.agenteval.quota.QuotaConflictException.class) ResponseEntity<ProblemDetail> quotaConflict() { return problem(409,"QUOTA_CONFLICT"); }
+    @ExceptionHandler(io.agenteval.model.ModelCallConflictException.class) ResponseEntity<ProblemDetail> modelConflict() { return problem(409,"MODEL_CALL_CONFLICT"); }
+    @ExceptionHandler(io.agenteval.model.ModelUnavailableException.class) ResponseEntity<ProblemDetail> modelUnavailable() { return problem(503,"MODEL_UNAVAILABLE"); }
     @ExceptionHandler(io.agenteval.quota.InsufficientQuotaException.class) ResponseEntity<ProblemDetail> insufficientQuota() { return problem(409,"INSUFFICIENT_QUOTA"); }
     @ExceptionHandler(io.agenteval.catalog.CatalogConflictException.class) ResponseEntity<ProblemDetail> conflict() { return problem(409,"CONFLICT"); }
     @ExceptionHandler(io.agenteval.experiments.AttemptRejectedException.class) ResponseEntity<ProblemDetail> attempt() { return problem(409,"ATTEMPT_REJECTED"); }

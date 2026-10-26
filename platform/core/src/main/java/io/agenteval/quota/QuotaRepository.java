@@ -6,4 +6,5 @@ public interface QuotaRepository {
     QuotaWallet adjust(UUID workspaceId,long credits,String reason,UUID key,UUID adminId);
     Reservation reserve(UUID workspaceId,UUID callId,long upperCredits);
     Reservation transition(UUID callId,String operation,Long actualCredits);
+    Reservation approveOverage(UUID callId,long actualCredits,UUID administrator,String reason,UUID key);
 }

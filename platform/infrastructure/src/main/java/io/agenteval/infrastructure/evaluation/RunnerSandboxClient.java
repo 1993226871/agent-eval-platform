@@ -3,6 +3,7 @@ package io.agenteval.infrastructure.evaluation;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.agenteval.evaluation.*;
 import io.agenteval.protocol.*;
+import io.agenteval.http.LimitedBodySubscriber;
 import java.net.URI;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
@@ -52,7 +53,7 @@ public final class RunnerSandboxClient implements SandboxClient, AutoCloseable {
             if(body.getBytes(StandardCharsets.UTF_8).length>3*1024*1024) return unscored(job,CriterionStatus.ERROR,"RUNNER_REQUEST_LIMIT");
             var request=HttpRequest.newBuilder(endpoint).timeout(Duration.ofSeconds(58)).header("Authorization","Bearer "+key)
                 .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build();
-            var future=http.sendAsync(request, info -> new RunnerBodySubscriber(2*1024*1024));
+            var future=http.sendAsync(request, info -> new LimitedBodySubscriber(2*1024*1024));
             HttpResponse<byte[]> response;
             try { response=future.get(58,TimeUnit.SECONDS); }
             catch(Exception failure) { future.cancel(true); if(failure instanceof InterruptedException) Thread.currentThread().interrupt(); throw new RetryableException("Runner response unavailable; query using the same job ID"); }

@@ -28,4 +28,9 @@ public final class QuotaService {
     public Reservation releaseUnsent(UUID callId) { return repository.transition(Objects.requireNonNull(callId),"RELEASE",null); }
     public Reservation markSendIntent(UUID callId) { return repository.transition(Objects.requireNonNull(callId),"SEND_INTENT",null); }
     public Reservation markReconciliation(UUID callId) { return repository.transition(Objects.requireNonNull(callId),"RECONCILIATION",null); }
+    public Reservation approveOverage(WorkspaceActor admin,UUID callId,long actualCredits,String reason,UUID key) {
+        if(!admin.admin()) throw new ScopeViolationException();
+        if(callId==null || key==null || actualCredits<0 || reason==null || reason.isBlank() || reason.length()>500) throw new IllegalArgumentException("Invalid overage confirmation");
+        return repository.approveOverage(callId,actualCredits,admin.userId(),reason,key);
+    }
 }
