@@ -43,6 +43,10 @@ class QuotaApiIT {
             assertThat(json.readTree(get(management,"/api/v1/quota").body()).path("available").asLong()).isZero();
             assertThat(json.readTree(get(user,"/api/v1/quota/ledger").body())).hasSize(1);
             assertThat(json.readTree(get(management,"/api/v1/quota/ledger").body())).hasSize(0);
+            var precise=json.writeValueAsString(Map.of("credits","9007199254740993","reason","Exact integer budget","idempotency_key",UUID.randomUUID()));
+            assertThat(post(management,path,precise,true).statusCode()).isEqualTo(200);
+            var wallet=json.readTree(get(user,"/api/v1/quota").body());
+            assertThat(wallet.path("available").isTextual()).isTrue(); assertThat(wallet.path("available").asText()).isEqualTo("9007199254741093");
         }
     }
     URI uri(String path) { return URI.create("http://localhost:"+port+path); }

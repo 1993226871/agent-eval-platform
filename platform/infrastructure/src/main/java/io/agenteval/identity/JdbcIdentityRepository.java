@@ -8,6 +8,10 @@ import java.util.UUID;
 
 @Repository
 public class JdbcIdentityRepository implements IdentityRepository {
+    @Override public java.util.List<AccountSummary> list(int offset,int limit) {
+        return jdbc.sql("select u.id user_id,w.id workspace_id,u.email,u.admin,u.must_change_password from users u join workspaces w on w.owner_user_id=u.id order by u.created_at,u.id limit ? offset ?").params(limit,offset)
+            .query((row,index)->new AccountSummary(row.getObject("user_id",UUID.class),row.getObject("workspace_id",UUID.class),row.getString("email"),row.getBoolean("admin"),row.getBoolean("must_change_password"))).list();
+    }
     private static final String SELECT="select u.id user_id,w.id workspace_id,u.email,u.password_hash,u.must_change_password,u.admin from users u join workspaces w on w.owner_user_id=u.id ";
     private final JdbcClient jdbc;
     private final TransactionTemplate transactions;

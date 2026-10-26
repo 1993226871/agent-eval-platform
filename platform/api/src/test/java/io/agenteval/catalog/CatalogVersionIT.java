@@ -35,6 +35,8 @@ class CatalogVersionIT {
         catalog.update(a,draft.id(),draft.revision(),"退款案例新版",edited);
         var v2=catalog.publish(a,draft.id());
         assertThat(v2.id()).isNotEqualTo(v1.id());
+        assertThat(catalog.versions(a,draft.id(),0,25).stream().map(PublishedVersionSummary::id)).containsExactly(v2.id(),v1.id());
+        assertThatThrownBy(()->catalog.versions(b,draft.id(),0,25)).isInstanceOf(ScopeViolationException.class);
         assertThat(catalog.version(a,v1.id()).content().at("/cases/0/input/amount").asInt()).isEqualTo(100);
         assertThat(catalog.version(a,v1.id()).contentHash()).isEqualTo(v1.contentHash());
         assertThat(catalog.publish(a,draft.id()).id()).isEqualTo(v2.id());

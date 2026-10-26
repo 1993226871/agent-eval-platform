@@ -9,6 +9,10 @@ import java.util.*;
 
 @Repository
 public class JdbcCatalogRepository implements CatalogRepository {
+    @Override public List<PublishedVersionSummary> versions(WorkspaceActor actor,UUID resourceId,int offset,int limit) {
+        return jdbc.sql("select id,number,draft_revision,content_hash from catalog_versions where resource_id=? and workspace_id=? order by number desc limit ? offset ?").params(resourceId,actor.workspaceId(),limit,offset)
+            .query((row,index)->new PublishedVersionSummary(row.getObject("id",UUID.class),row.getInt("number"),row.getLong("draft_revision"),row.getString("content_hash"))).list();
+    }
     private final JdbcClient jdbc;
     private final TransactionTemplate tx;
     private final ObjectMapper json;

@@ -14,8 +14,11 @@ public final class DatasetService {
         var tasks=json.createArrayNode(); String[] lines=source.split("\\R",-1);
         for(int i=0;i<lines.length;i++) {
             if(lines[i].isBlank()) continue;
-            try { tasks.add(json.reader().with(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(lines[i])); }
-            catch(java.io.IOException invalid) { throw new IllegalArgumentException("Invalid JSONL at line "+(i+1)); }
+            try {
+                var task=json.reader().with(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(lines[i]);
+                var single=json.createObjectNode(); single.putArray("cases").add(task); CatalogService.validateDataset(single);
+                tasks.add(task);
+            } catch(java.io.IOException | IllegalArgumentException invalid) { throw new DatasetImportException(i+1); }
         }
         var content=json.createObjectNode().set("cases",tasks); CatalogService.validateDataset(content);
         return catalog.update(actor,id,revision,draft.name(),content);

@@ -10,8 +10,8 @@ public class ModelController {
     private final ModelProfileService profiles;
     private final CurrentActor current;
     public ModelController(ModelProfileService profiles,CurrentActor current) { this.profiles=profiles; this.current=current; }
-    public record Choice(UUID id,String name,String model,long inputTokenBound,int maxOutputTokens,PriceVersion price) {}
+    public record Choice(UUID id,String name,String model,long inputTokenBound,int maxOutputTokens,ModelViews.Price price) {}
     @GetMapping public List<Choice> choices(Authentication auth) {
-        return profiles.list(current.require(auth)).stream().filter(ModelProfile::enabled).map(profile -> new Choice(profile.id(),profile.name(),profile.model(),profile.inputTokenBound(),profile.maxOutputTokens(),profile.price())).toList();
+        return profiles.list(current.require(auth)).stream().filter(ModelProfile::enabled).map(profile -> new Choice(profile.id(),profile.name(),profile.model(),profile.inputTokenBound(),profile.maxOutputTokens(),ModelViews.Price.of(profile.price()))).toList();
     }
 }

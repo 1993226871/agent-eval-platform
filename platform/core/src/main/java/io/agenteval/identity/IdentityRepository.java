@@ -6,4 +6,5 @@ public interface IdentityRepository {
     Optional<UserAccount> findByEmail(String email);
     Optional<UserAccount> findById(UUID userId);
     boolean changePassword(UUID userId,String previousHash,String nextHash);
+    java.util.List<AccountSummary> list(int offset,int limit);
 }

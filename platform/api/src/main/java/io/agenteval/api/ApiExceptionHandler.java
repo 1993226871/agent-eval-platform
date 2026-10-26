@@ -7,6 +7,11 @@ import java.util.UUID;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(io.agenteval.catalog.DatasetImportException.class) ResponseEntity<ProblemDetail> jsonl(io.agenteval.catalog.DatasetImportException failure) {
+        var body=ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,"Invalid JSONL at line "+failure.line());
+        body.setProperty("code","INVALID_JSONL"); body.setProperty("line",failure.line()); body.setProperty("request_id",UUID.randomUUID());
+        return ResponseEntity.badRequest().contentType(MediaType.APPLICATION_PROBLEM_JSON).body(body);
+    }
     @ExceptionHandler(ScopeViolationException.class) ResponseEntity<ProblemDetail> scope() { return problem(404,"NOT_FOUND"); }
     @ExceptionHandler(IdentityService.InvalidPasswordException.class) ResponseEntity<ProblemDetail> password() { return problem(400,"INVALID_PASSWORD"); }
     @ExceptionHandler({IllegalArgumentException.class,org.springframework.http.converter.HttpMessageNotReadableException.class}) ResponseEntity<ProblemDetail> invalid(Exception failure) {

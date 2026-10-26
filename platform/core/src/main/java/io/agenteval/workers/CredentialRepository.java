@@ -5,4 +5,5 @@ public interface CredentialRepository {
     void issue(WorkspaceActor actor,UUID id,String secretHash,Set<UUID> agentIds);
     WorkerPrincipal authenticate(String secretHash);
     void revoke(WorkspaceActor actor,UUID id);
+    List<CredentialSummary> list(WorkspaceActor actor,int offset,int limit);
 }

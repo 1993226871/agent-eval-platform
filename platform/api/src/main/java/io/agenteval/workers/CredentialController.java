@@ -10,6 +10,7 @@ public class CredentialController {
     private final CurrentActor current;
     public CredentialController(WorkerCredentialService credentials,CurrentActor current) { this.credentials=credentials; this.current=current; }
     public record IssueRequest(Set<UUID> agentIds) {}
+    @GetMapping public List<CredentialSummary> list(Authentication auth,@RequestParam(defaultValue="0") int offset,@RequestParam(defaultValue="25") int limit) { return credentials.list(current.require(auth),offset,limit); }
     @PostMapping @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
     public IssuedCredential issue(Authentication auth,@RequestBody IssueRequest request) { return credentials.issue(current.require(auth),request.agentIds()); }
     @DeleteMapping("/{id}") @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)

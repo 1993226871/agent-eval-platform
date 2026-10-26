@@ -13,6 +13,13 @@ import java.util.*;
 
 @Repository
 public class JdbcWorkerRepository implements CredentialRepository,WorkerRegistry.Repository {
+    @Override public List<CredentialSummary> list(WorkspaceActor actor,int offset,int limit) {
+        return jdbc.sql("select c.id,c.revoked,c.created_at,array_agg(a.agent_id) filter(where a.agent_id is not null) agent_ids from worker_credentials c left join worker_credential_agents a on a.credential_id=c.id and a.workspace_id=c.workspace_id where c.workspace_id=? group by c.id order by c.created_at desc,c.id desc limit ? offset ?")
+            .params(actor.workspaceId(),limit,offset).query((row,index)->{
+                var scope=new HashSet<UUID>(); var ids=row.getArray("agent_ids"); if(ids!=null) for(Object id:(Object[])ids.getArray()) scope.add((UUID)id);
+                return new CredentialSummary(row.getObject("id",UUID.class),scope,row.getBoolean("revoked"),row.getTimestamp("created_at").toInstant());
+            }).list();
+    }
     private final JdbcClient jdbc;
     private final TransactionTemplate tx;
     public JdbcWorkerRepository(JdbcClient jdbc,PlatformTransactionManager manager) { this.jdbc=jdbc; tx=new TransactionTemplate(manager); }

@@ -35,6 +35,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--maven-repo", type=Path, default=Path.home() / ".m2/repository")
     parser.add_argument("--output", type=Path, default=ROOT / ".tools/phase-b-demo-result.json")
+    parser.add_argument("--web-smoke", action="store_true", help="Also verify the browser with a disposable ordinary account")
     args = parser.parse_args()
     java = Path(os.environ["JAVA_HOME"]) / "bin" / ("java.exe" if os.name == "nt" else "java") if os.environ.get("JAVA_HOME") else shutil.which("java")
     if not java or not shutil.which("docker"):
@@ -121,6 +122,31 @@ def main():
                     raise DemoFailure("Generated administrator could not log in")
                 time.sleep(0.25)
             request("POST", "/api/v1/auth/password", {"current_password": temporary_password, "new_password": password})
+            if args.web_smoke:
+                node = shutil.which("node")
+                if not node:
+                    raise DemoFailure("Node.js is required for browser verification")
+                web_port = available_port()
+                browser_email = "web-smoke@test.local"
+                browser_password, browser_next = secrets.token_urlsafe(24), secrets.token_urlsafe(24)
+                request("POST", "/api/v1/admin/users", {"email": browser_email, "temporary_password": browser_password})
+                web_environment = dict(os.environ, API_TARGET=base)
+                start("web", [node, ROOT / "web/node_modules/vite/bin/vite.js", str(ROOT / "web"), "--host", "127.0.0.1", "--port", str(web_port), "--strictPort"], web_environment)
+                web_base = "http://127.0.0.1:" + str(web_port)
+                ready_until = time.monotonic() + 30
+                while True:
+                    try:
+                        if httpx.get(web_base, trust_env=False).status_code == 200:
+                            break
+                    except httpx.HTTPError:
+                        pass
+                    if time.monotonic() > ready_until:
+                        raise DemoFailure("Web startup timeout")
+                    time.sleep(0.25)
+                browser_environment = dict(os.environ, WEB_BASE_URL=web_base, WEB_TEST_EMAIL=browser_email, WEB_TEST_PASSWORD=browser_password, WEB_TEST_NEW_PASSWORD=browser_next)
+                # No traces, video or failure screenshots: the one-time secret must not be persisted.
+                subprocess.run([node, str(ROOT / "web/node_modules/@playwright/test/cli.js"), "test"], cwd=ROOT / "web", env=browser_environment, check=True, **hidden)
+                print("Browser session, CSRF and private resource actions verified.", flush=True)
             worker_env = {key: value for key, value in environment.items() if not key.startswith("BOOTSTRAP_ADMIN_")}
             start("worker", [java, "-Xms32m", "-Xmx256m", "-jar", worker_jars[0]], worker_env)
             examples = []

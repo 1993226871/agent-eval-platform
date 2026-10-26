@@ -25,6 +25,7 @@ public class CatalogController {
     public void archive(Authentication auth,@PathVariable UUID id) { catalog.archive(current.require(auth),id); }
     @PostMapping("/catalog/{id}/versions") public PublishedVersion publish(Authentication auth,@PathVariable UUID id) { return catalog.publish(current.require(auth),id); }
     @GetMapping("/catalog/versions/{id}") public PublishedVersion version(Authentication auth,@PathVariable UUID id) { return catalog.version(current.require(auth),id); }
+    @GetMapping("/catalog/{id}/versions") public List<PublishedVersionSummary> versions(Authentication auth,@PathVariable UUID id,@RequestParam(defaultValue="0") int offset,@RequestParam(defaultValue="25") int limit) { return catalog.versions(current.require(auth),id,offset,limit); }
     @PostMapping("/catalog/{id}/import") public CatalogResource importJsonl(Authentication auth,@PathVariable UUID id,@RequestBody ImportRequest request) { return datasets.importJsonl(current.require(auth),id,request.revision(),request.jsonl()); }
     @GetMapping("/templates") public List<TemplateService.Template> templates() { return templates.list(); }
     @PostMapping("/templates/{id}/copy") public CatalogResource copy(Authentication auth,@PathVariable String id) { return templates.copy(current.require(auth),id); }

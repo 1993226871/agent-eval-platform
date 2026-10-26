@@ -4,6 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.*;
 
 public final class CatalogService {
+    public java.util.List<PublishedVersionSummary> versions(WorkspaceActor actor,UUID resourceId,int offset,int limit) {
+        if(offset<0 || limit<1 || limit>100) throw new IllegalArgumentException("Invalid version page");
+        repository.draft(actor,resourceId);
+        return repository.versions(actor,resourceId,offset,limit);
+    }
     private final CatalogRepository repository;
     public CatalogService(CatalogRepository repository) { this.repository=repository; }
     public CatalogResource create(WorkspaceActor actor,ResourceKind kind,String name,JsonNode content) {

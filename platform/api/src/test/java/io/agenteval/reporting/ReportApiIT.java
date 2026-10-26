@@ -43,6 +43,10 @@ class ReportApiIT {
             var response=get(owner,path); assertThat(response.statusCode()).isEqualTo(200);
             var body=json.readTree(response.body()); assertThat(body.path("planned_attempts").asInt()).isEqualTo(1); assertThat(body.path("determinable_attempts").asInt()).isZero();
             assertThat(get(other,path).statusCode()).isEqualTo(404);
+            var datasetDraft=catalog.draft(actor,bundle.datasetVersion().resourceId());
+            var invalidImport=post(owner,"/api/v1/catalog/"+datasetDraft.id()+"/import",json.writeValueAsString(Map.of("revision",datasetDraft.revision(),"jsonl","{\"instruction\":\"valid\",\"input\":{}}\ninvalid")));
+            assertThat(invalidImport.statusCode()).isEqualTo(400); assertThat(json.readTree(invalidImport.body()).path("line").asInt()).isEqualTo(2);
+            assertThat(catalog.draft(actor,datasetDraft.id()).revision()).isEqualTo(datasetDraft.revision());
             var page=get(owner,path+"/trials?limit=1"); assertThat(page.statusCode()).isEqualTo(200); assertThat(json.readTree(page.body()).path("items")).hasSize(1);
             assertThat(page.body()).doesNotContain("instruction","expected","order_id");
             var trial=experiments.trials(actor,experiment).getFirst();

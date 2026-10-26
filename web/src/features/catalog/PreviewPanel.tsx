@@ -1,0 +1,78 @@
+import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { z } from "zod";
+import { api, request } from "../../api/client";
+import type { CatalogResource } from "../../api/types";
+import { ErrorNotice, JsonBlock } from "../../components/ui";
+import { useWorkspace } from "../auth/AuthProvider";
+
+export function PreviewPanel({ resource }: { resource: CatalogResource }) {
+  const { workspace_id } = useWorkspace();
+  const [trial, setTrial] = useState("");
+  const [runId, setRunId] = useState("");
+  const preview = useMutation({
+    mutationFn: async () => {
+      const id = z.uuid().parse(trial.trim());
+      return request(
+        api.POST("/api/v1/evaluators/{draftId}/previews", {
+          params: { path: { draftId: resource.id } },
+          body: {
+            trial_id: id,
+            revision: resource.revision,
+            idempotency_key: crypto.randomUUID(),
+          },
+        }),
+      );
+    },
+    onSuccess: (run) => setRunId(run.run_id),
+  });
+  const run = useQuery({
+    queryKey: [workspace_id, "preview", runId],
+    enabled: !!runId,
+    queryFn: () =>
+      request(
+        api.GET("/api/v1/evaluation-runs/{runId}", {
+          params: { path: { runId } },
+        }),
+      ),
+    refetchInterval: (query) =>
+      ["DONE", "CANCELLED"].includes(query.state.data?.status ?? "")
+        ? false
+        : 3000,
+  });
+  return (
+    <details className="preview-panel">
+      <summary>用已有任务证据试运行</summary>
+      <p>
+        选择一个已结束任务的 Trial
+        ID。试运行使用当前已保存草稿，不改变正式结果；模型评审会消耗个人额度。
+      </p>
+      <label>
+        试运行 Trial ID
+        <input
+          value={trial}
+          onChange={(event) => setTrial(event.target.value)}
+        />
+      </label>
+      <button
+        disabled={preview.isPending || !trial.trim()}
+        onClick={() => preview.mutate()}
+      >
+        提交试运行
+      </button>
+      <ErrorNotice error={preview.error ?? run.error} />
+      {run.data && (
+        <>
+          <p>
+            状态：{run.data.status} · {run.data.purpose}
+          </p>
+          {run.data.status === "WAITING_QUOTA" && (
+            <Link to="/workspace/quota">额度不足，查看账户额度</Link>
+          )}
+          <JsonBlock value={run.data.criteria} />
+        </>
+      )}
+    </details>
+  );
+}

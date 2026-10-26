@@ -11,8 +11,9 @@ public class QuotaAdminController {
     private final QuotaService quota;
     private final CurrentActor current;
     public QuotaAdminController(QuotaService quota,CurrentActor current) { this.quota=quota; this.current=current; }
-    public record Adjustment(long credits,String reason,UUID idempotencyKey) {}
+    public record Adjustment(String credits,String reason,UUID idempotencyKey) {}
     @PostMapping("/adjustments") public QuotaController.WalletView adjust(Authentication auth,@PathVariable UUID workspaceId,@RequestBody Adjustment body) {
-        return QuotaController.WalletView.of(quota.grant(current.require(auth),workspaceId,body.credits(),body.reason(),body.idempotencyKey()));
+        if(body.credits()==null || !body.credits().matches("-?(0|[1-9][0-9]{0,18})")) throw new IllegalArgumentException("Integer credit amount required");
+        return QuotaController.WalletView.of(quota.grant(current.require(auth),workspaceId,Long.parseLong(body.credits()),body.reason(),body.idempotencyKey()));
     }
 }

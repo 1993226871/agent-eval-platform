@@ -16,4 +16,8 @@ public final class WorkerCredentialService {
         return repository.authenticate(TokenSecrets.hash(secret));
     }
     public void revoke(WorkspaceActor actor,UUID id) { repository.revoke(actor,id); }
+    public List<CredentialSummary> list(WorkspaceActor actor,int offset,int limit) {
+        if(offset<0 || limit<1 || limit>100) throw new IllegalArgumentException("Invalid credential page");
+        return repository.list(actor,offset,limit);
+    }
 }

@@ -1,0 +1,10 @@
+:root {
+  --sky: #f4f8fb;
+  --ink: #20394c;
+  --muted: #627b8c;
+  --teal: #116772;
+  --teal-light: #eaf4f5;
+  --critical: #ad452f;
+  --line: #dce6ed;
+  color-scheme: light;
+}

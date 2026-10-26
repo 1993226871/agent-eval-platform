@@ -10,5 +10,6 @@ public interface CatalogRepository {
     CatalogResource update(WorkspaceActor actor,UUID id,long revision,String name,JsonNode content);
     PublishedVersion publish(WorkspaceActor actor,CatalogResource expected,String hash);
     PublishedVersion version(WorkspaceActor actor,UUID versionId);
+    List<PublishedVersionSummary> versions(WorkspaceActor actor,UUID resourceId,int offset,int limit);
     void archive(WorkspaceActor actor,UUID id);
 }
