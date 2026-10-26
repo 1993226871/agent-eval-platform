@@ -52,3 +52,5 @@ docker compose --env-file /private/runner.env -f deploy/compose.sandbox.yaml up 
 控制服务拥有 Docker 管理权限，应运行在独立执行节点，不能与平台数据库宿主混放。API/Worker 不挂载 Docker socket。只允许平台 Worker 访问 8091；跨主机使用 TLS 隧道或可信加密网格。生产附件证书须受信任，若使用私有 CA，需为 Runner 配置受控信任根。
 
 在平台 env 中配置 `RUNNER_ENABLED=true`、私网 `RUNNER_BASE_URL`、相同内部密钥和镜像 ID，再重新创建 API/Worker。资源预算不足会等待，提高预算不代表绕过沙箱能力检查。默认每作业 30 秒、256 MiB、32 进程、64 MiB 临时目录、无网络、只读输入及根文件系统；详见 [Runner 协议](../development/python-runner.md)。
+
+32为同real UID用户任务（进程/线程，含guest入口和结果读取）的软/硬限制，不保证32个额外子进程；包含gVisor线程和stub的宿主cgroup另设256 PID上限。不要把整个cgroup改回32，否则可能耗尽运行时自身的线程预算。生产节点必须使用当前验收测试重新确认这两层限制。

@@ -191,3 +191,9 @@
 - 最终回归：176 Java、48 Python SDK、18前端，26 Runner（含6项真实runsc）及8 Compose E2E全部通过；综合隔离额外连续10次通过。wheel实际构建且10份schema一致。
 - 最终代码/验收提交3489ebc；[普通CI](https://github.com/1993226871/agent-eval-platform/actions/runs/40343977092)与[Linux验收](https://github.com/1993226871/agent-eval-platform/actions/runs/40343977053)均成功。后续文档变更不修改运行代码；最终记录替代以上历史阶段状态。
 - 最终容量测量见[验收记录](acceptance.md)；每条裁定、审阅范围及未纳入生产保证的能力见[审阅记录](final-review.md)。
+
+## main后Runner运行时修复（2026-10-27）
+
+- 已确认并修复把用户PID预算应用到gVisor宿主cgroup造成的newosproc退出；保留用户任务硬限制，并单独限制运行时开销。
+- 专项审阅通过；26Runner、100次真实隔离重复检查、8E2E及全部普通CI通过。浏览器验证采用预装Chrome，保留实际测试并限制作业时长。
+- [根因、测试证据、限制语义与裁定](runner-resource-incident.md)。最新记录替代此前未复现/未定位状态。

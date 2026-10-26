@@ -110,3 +110,11 @@
 - Final: Ruling: Preserve the first Linux NO_RESULT failure, add bounded failure diagnostics and10 repeated boundary probes without weakening limits or assertions — no stable reproduction; two subsequent independent26Runner/8E2E runs pass — cost if wrong: intermittent runtime exits remain a documented deployment observation and require diagnosis if they recur.
 
 - Final: acceptance passed at3489ebc; Linux40343977053 and Verify40343977092 successful; Pythonwheel rebuilt/10schemas verified. Main integration is explicitly authorized after this gate; no public packages, paid provider or public deployment.
+
+## main后运行时资源缺陷（2026-10-27）
+
+- Ruling: gVisor panic确认宿主32PID预算耗尽；用户real UID任务采用4..32的RLIMIT_NPROC软硬限制，整个运行时cgroup单独限制256PID。内存、CPU和并发限制继续生效 — 保留用户硬限制并给Sentry/stub有界空间 — 代价：部署节点必须把运行时PID开销纳入容量规划。
+- Ruling: 进程压力使用轻量子进程、要求EAGAIN、20..31个子进程及正常SCORED返回；内存压力单独测试 — 不能把任何崩溃当作隔离通过 — 代价：Python解释器内存压力由独立测试覆盖。
+- Ruling: 保留100次真实重复检查和合成CI节点的有界panic分类 — 十次抽样曾漏掉复发 — 代价：节点验收更长；生产节点仍需重新验收。
+- Ruling: 普通浏览器安装异常停留超过十分钟，改用固定Ubuntu24.04 VM的真实Chrome并输出版本，两个浏览器场景保留，25分钟作业时限 — 与已验证的Linux浏览器路径一致 — 代价：VM浏览器版本变化需要重新验收。
+- 专项审阅通过，文档小项已修复。Linux40381313430通过26Runner+100重复检查+8E2E，普通CI40383234543全部成功；详见[事件与原始失败证据](runner-resource-incident.md)。

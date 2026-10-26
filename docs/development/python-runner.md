@@ -45,6 +45,10 @@ def evaluate(context):
 
 stdout/stderr各保留最多64KiB并标记截断，结果通过独立文件和独立读取通道传输，最多64KiB。guest non-root、只读根目录/输入、无网络、drop ALL、no-new-privileges，256MiB内存且无额外swap、32进程、64MiB tmpfs、1MiB输出tmpfs。超时终止且仅清理具有本服务标签和runsc身份的容器。
 
+进程预算分为两层：用户real UID10001的任务使用`RLIMIT_NPROC`软/硬上限（默认32，协议允许4..32），包含进程及线程，也包含guest入口和同UID结果读取进程，不保证可再启动32个子进程。通过固定OCI `--ulimit=nproc=N:N`设置，guest不能提高硬上限；容器宿主cgroup另外限制为256个PID，为gVisor自身线程和地址空间stub保留有界运行开销。256不是用户可创建的进程数。内存、CPU和并发限制仍共同约束整个沙箱。部署节点需要为运行时开销做容量规划。
+
+此前把用户32进程预算直接用作整个宿主cgroup上限，进程压力会使Sentry发生`newosproc`崩溃，随后出现`WaitPID EOF`和`NO_RESULT`。合格节点验收必须检查guest上限不可提升、创建进程在EAGAIN处被拒绝，并确认沙箱仍可正常返回结果；不能把任意运行失败当作进程隔离通过。背景见[gVisor资源模型](https://gvisor.dev/docs/architecture_guide/resources/)。
+
 ## 合格节点启动
 
 服务直接部署于专用Linux节点，独占所需Docker控制权限；平台API不挂载socket。环境变量由部署系统注入，不进guest：`RUNNER_INTERNAL_KEY`、`RUNNER_IMAGE_DIGEST`、`RUNNER_WORK_ROOT`、可选`RUNNER_ARTIFACT_ORIGINS`（逗号分隔精确origin）。使用单进程：
