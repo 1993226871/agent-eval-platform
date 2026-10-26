@@ -19,6 +19,21 @@ def engine(tmp_path_factory):
     executor = RunnerExecutor(RunnerSettings(tmp_path_factory.mktemp("runner-isolation"), image))
     if not executor.capabilities()["python_enabled"]:
         pytest.fail("NOT VERIFIED: " + executor.capabilities()["reason"])
+    # Synthetic fixtures only: retain bounded control metadata, never context or result bodies.
+    from collections import deque
+    executor.control_diagnostics = deque(maxlen=20)
+    command, inspect = executor.docker._command, executor.docker._inspect
+    def traced_command(arguments, **kwargs):
+        result = command(arguments, **kwargs)
+        if arguments[:2] == ["docker", "exec"]:
+            executor.control_diagnostics.append({"reader_exit": result.returncode, "output_bytes": len(result.stdout), "control_error": result.stderr[:512].decode(errors="replace")})
+        return result
+    def traced_inspect(identity):
+        result = inspect(identity)
+        state = result.get("State", {})
+        executor.control_diagnostics.append({key: state.get(key) for key in ("Status", "ExitCode", "OOMKilled", "Error")})
+        return result
+    executor.docker._command, executor.docker._inspect = traced_command, traced_inspect
     return executor
 
 
@@ -81,7 +96,7 @@ def test_network_filesystem_process_and_secret_boundaries(engine):
     return {"status":"SCORED", "score":1, "reason":"Isolation boundaries checked", "evidence_refs":["output"]}
 '''
     result = run(engine, code)
-    assert result["state"] == "COMPLETED", json.dumps(result, ensure_ascii=False)
+    assert result["state"] == "COMPLETED", json.dumps({"result": result, "control": list(engine.control_diagnostics)}, ensure_ascii=False)
     assert result["result"]["score"] == 1
 
 
