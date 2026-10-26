@@ -277,13 +277,17 @@ class Platform:
             with ThreadPoolExecutor(max_workers=20) as pool: list(pool.map(send, assignments))
         accepted = int(self.sql("select count(*) from trace_events v join trials t on t.id=v.trial_id where t.experiment_id='" + resources["experiment"] + "'"))
         elapsed = time.monotonic() - started
+        graded = wait_for(lambda: self.request(self.user, "GET", "/reports/experiments/" + resources["experiment"]), lambda report: report["passed_attempts"] == 20)
+        assert graded["determinable_attempts"] == 20 and graded["efficiency"]["observed_durations"] == 20
+        complete = int(self.sql("select count(*) from evidence_snapshots s join trials t on t.id=s.trial_id where t.experiment_id='" + resources["experiment"] + "' and s.completeness='COMPLETE'"))
+        assert complete == 20
         for _ in range(10):
             start = time.monotonic(); self.request(self.user, "GET", "/reports/experiments/" + resources["experiment"])
             report_timings.append((time.monotonic() - start) * 1000)
         identities = subprocess.check_output(self.command("ps", "--quiet"), cwd=ROOT, text=True).splitlines()
         memory = subprocess.check_output(["docker", "stats", "--no-stream", "--format", "{{.Name}} {{.MemUsage}}", *identities], text=True)
         percentile = lambda values: round(sorted(values)[max(0, int(len(values) * .95) - 1)], 2)
-        result = {"online_workers": online, "running_trials": running, "accepted_events": accepted, "unexpected_errors": 0,
+        result = {"online_workers": online, "running_trials": running, "accepted_events": accepted, "unexpected_errors": 0, "fully_graded_attempts": 20, "complete_snapshots": complete,
             "batch_p95_ms": percentile(timings), "report_p95_ms": percentile(report_timings), "event_ingest_seconds": round(elapsed, 2), "memory_snapshot": memory,
             "limits": "Single fixture, small events, no paid provider; not a sustained throughput or peak RSS guarantee"}
         (self.root / "capacity-result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")

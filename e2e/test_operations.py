@@ -11,3 +11,5 @@ def test_capacity_fifty_workers_twenty_trials_ten_thousand_events(platform):
     assert outcome["running_trials"] == 20
     assert outcome["accepted_events"] == 10000
     assert outcome["unexpected_errors"] == 0
+    assert outcome["fully_graded_attempts"] == 20
+    assert outcome["complete_snapshots"] == 20
