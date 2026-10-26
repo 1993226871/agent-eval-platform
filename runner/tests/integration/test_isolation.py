@@ -26,7 +26,7 @@ def engine(tmp_path_factory):
     def traced_command(arguments, **kwargs):
         result = command(arguments, **kwargs)
         if arguments[:2] == ["docker", "exec"]:
-            executor.control_diagnostics.append({"reader_exit": result.returncode, "output_bytes": len(result.stdout), "control_error": result.stderr[:512].decode(errors="replace")})
+            executor.control_diagnostics.append({"reader_exit": result.returncode, "output_bytes": len(result.stdout), "control_error": result.stderr[:512].decode(errors="replace"), "fixture_control_output": result.stdout[:512].decode(errors="replace") if result.returncode else "result omitted"})
         return result
     def traced_inspect(identity):
         result = inspect(identity)
