@@ -13,6 +13,7 @@ export default defineConfig({
     trace: "off",
     screenshot: "off",
     video: "off",
+    channel: process.env.E2E_BROWSER_CHANNEL,
     launchOptions: process.env.WEB_TLS_SPKI
       ? {
           args: [

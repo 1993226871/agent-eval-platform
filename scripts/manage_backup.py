@@ -20,7 +20,7 @@ def manage(mode, env_file, directory, extra_files=()):
     if mode not in {"backup", "restore"}:
         raise ValueError("Unknown backup operation")
     # This requires an explicit operator maintenance operation; no automatic restart hides partial failure.
-    run("stop", "api", "worker")
+    run("stop", "web", "api", "worker")
     if mode == "backup":
         directory.mkdir(mode=0o700, parents=True, exist_ok=False)
         with (directory / "database.dump").open("xb") as output:
@@ -51,4 +51,4 @@ if __name__ == "__main__":
     parser.add_argument("--directory", type=Path, required=True)
     args = parser.parse_args()
     manage(args.mode, args.env_file, args.directory)
-    print("Operation complete. API and Worker remain stopped; verify data before explicitly starting them.")
+    print("Operation complete. Web, API and Worker remain stopped; verify data before explicitly starting them.")

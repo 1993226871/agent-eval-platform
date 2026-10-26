@@ -24,7 +24,7 @@
 </div>
 
 > [!IMPORTANT]
-> 项目正在开发：已实现双语言SDK、自建轨迹/证据、规则与LLM评分、累计额度/模型对账、混合调度，以及私人管理工作台、报告/对比、人工复核和独立重评/草稿试运行。Python Runner已实现，强化隔离尚待Linux/runsc节点验收，默认关闭。删除清理、资源上限和完整部署包仍在实施。可复现[双SDK评分闭环](docs/development/reporting.md)，使用[Web工作台](web/README.md)，更多能力见[实施进度](docs/development/progress.md)。
+> 项目正在开发：已实现双语言SDK、自建轨迹/证据、规则与LLM评分、累计额度/对账、混合调度、私人工作台、报告/对比、重评、删除清理、资源预算和审计。真实Linux/runsc隔离测试已通过，生产节点需重新验收。HTTPS Compose、备份恢复与浏览器完整流程已验证，双SDK三类评测的Linux联测正在进行。参阅[快速开始](docs/guides/quickstart.md)与[实施进度](docs/development/progress.md)。
 
 <a id="overview"></a>
 ## Overview
@@ -158,7 +158,7 @@ Docker Compose 组织服务，Python 代码的安全执行需要额外的强化�
 
 参阅[分阶段实施计划](docs/superpowers/plans/2026-10-25-agent-evaluation-platform.md)：20 项 TDD 任务，覆盖文件布局、共享接口、测试命令和阶段验收。实现状态与本地验证记录见[实施进度](docs/development/progress.md)。
 
-接入、缓存和关闭行为见[Python指南](sdks/python/README.md)及[Java指南](sdks/java/README.md)；后端构建与启动见[运行说明](docs/development/backend.md)。完整平台部署指南将在部署验收后提供。
+从[快速开始](docs/guides/quickstart.md)启动源码构建的HTTPS平台，按[Python接入](docs/guides/python-sdk.md)或[Java接入](docs/guides/java-sdk.md)连接自定义Agent；配置[评测器](docs/guides/custom-evaluators.md)，并参阅[运维与恢复](docs/guides/operations.md)。详细缓存与关闭行为见两套SDK目录说明。
 
 <a id="roadmap"></a>
 ## Roadmap

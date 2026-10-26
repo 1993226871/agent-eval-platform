@@ -23,6 +23,7 @@ const actions: Record<string, string> = {
   MODEL_CREATED: "添加模型",
   MODEL_DISABLED: "停用模型",
   MODEL_RECONCILED: "模型费用对账",
+  MODEL_MASTER_KEY_ROTATED: "模型主密钥轮换",
   RESOURCE_LIMITS_CONFIGURED: "调整资源限制",
 };
 export function AuditPage() {

@@ -46,6 +46,7 @@ class Platform:
         self.root = ROOT / ".tools/deployment-e2e" / self.project
         self.root.mkdir(mode=0o700, parents=True)
         self.children, self.logs, self.restore_projects = [], [], []
+        self.runner_container = None
         self.https_port, self.s3_port = port(), port()
         openssl = os.environ.get("OPENSSL_BINARY") or shutil.which("openssl")
         if not openssl and os.name == "nt": openssl = "D:/Git/usr/bin/openssl.exe"
@@ -98,10 +99,22 @@ class Platform:
             if sys.platform != "linux": raise AssertionError("Real runsc acceptance requires a qualified Linux VM")
             gateway = subprocess.check_output(["docker", "network", "inspect", "bridge", "--format", "{{(index .IPAM.Config 0).Gateway}}"], text=True).strip()
             runner_port = port()
-            runner_env = dict(os.environ, RUNNER_IMAGE_DIGEST=self.runner_image, RUNNER_WORK_ROOT=str(self.root / "runner"),
+            runner_root = self.root / "runner"
+            runner_root.mkdir(mode=0o700)
+            runner_env = dict(os.environ, RUNNER_IMAGE_DIGEST=self.runner_image, RUNNER_WORK_ROOT=str(runner_root),
                               RUNNER_INTERNAL_KEY=self.env["RUNNER_INTERNAL_KEY"], PYTHONPATH=str(ROOT / "runner"),
-                              RUNNER_ARTIFACT_ORIGINS=f"https://localhost:{self.s3_port}", SSL_CERT_FILE=str(self.ca))
-            self.start_child("runner", [sys.executable, "-m", "uvicorn", "agent_eval_runner.api:create_application", "--factory", "--host", gateway, "--port", str(runner_port), "--workers", "1", "--no-access-log"], runner_env)
+                              RUNNER_ARTIFACT_ORIGINS=f"https://localhost:{self.s3_port}", SSL_CERT_FILE="/etc/agenteval-ca.crt")
+            with (self.root / "runner-build.log").open("wb") as output:
+                subprocess.run(["docker", "build", "-f", str(ROOT / "deploy/Dockerfile.runner"), "-t", self.project + "-runner:0.1.0", str(ROOT / "runner")], check=True, stdout=output, stderr=subprocess.STDOUT, timeout=300)
+                subprocess.run(["docker", "run", "--rm", "--user", "0:0", "--mount", "type=bind,src=" + str(runner_root) + ",dst=/state", "python:3.11-slim@sha256:b7a9e5f6a93d6d4a31f129bbd4bdee69efccb6ded0fb230d78aafaf37af98377", "python", "-c", "import os;os.chown('/state',10001,10001)"], check=True, stdout=output, stderr=subprocess.STDOUT, timeout=30)
+            command = ["docker", "run", "--detach", "--label", "io.agenteval.e2e=" + self.project, "--network", "host", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--user", "10001:10001",
+                "--group-add", str(os.stat("/var/run/docker.sock").st_gid), "--memory", "512m", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001",
+                "--mount", "type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock", "--mount", "type=bind,src=" + str(runner_root) + ",dst=" + str(runner_root),
+                "--mount", "type=bind,src=" + str(self.ca) + ",dst=/etc/agenteval-ca.crt,readonly"]
+            for key in ("RUNNER_IMAGE_DIGEST", "RUNNER_WORK_ROOT", "RUNNER_INTERNAL_KEY", "RUNNER_ARTIFACT_ORIGINS", "SSL_CERT_FILE"): command += ["--env", key]
+            command += ["--entrypoint", "python", self.project + "-runner:0.1.0", "-B", "-m", "uvicorn", "agent_eval_runner.api:create_application", "--factory", "--host", gateway, "--port", str(runner_port), "--workers", "1", "--no-access-log"]
+            self.runner_container = subprocess.check_output(command, env=runner_env, text=True).strip()
+            assert len(self.runner_container) == 64 and all(char in "0123456789abcdef" for char in self.runner_container)
             self.env.update(RUNNER_ENABLED="true", RUNNER_BASE_URL=f"http://host.docker.internal:{runner_port}", RUNNER_IMAGE_DIGEST=self.runner_image)
         self.write_env()
         self.compose("build")
@@ -372,7 +385,7 @@ worker.stop()
         # Repeat restore must refuse the populated database; never drop existing private data.
         with pytest.raises(ValueError, match="database must be empty"):
             manage("restore", restored / ".env", backup_dir, (restored / "acceptance.json",))
-        self.compose("up", "-d", "--wait", "api", "worker")
+        self.compose("up", "-d", "--wait", "api", "worker", "web")
         result = {"database_rows_equal": before == after, "object_bytes_equal": equal_bytes, "private_data_restored": detail["id"] == resources["experiment"]}
         (self.root / "restore-result.json").write_text(json.dumps(result), encoding="utf-8")
         print("Database and private object backup restored into a fresh owned deployment.", flush=True)
@@ -388,6 +401,13 @@ worker.stop()
                 try: child.wait(timeout=10)
                 except subprocess.TimeoutExpired: child.kill(); child.wait(timeout=5)
         for log in self.logs: log.close()
+        if self.runner_container:
+            owner = subprocess.check_output(["docker", "inspect", "--format", '{{index .Config.Labels "io.agenteval.e2e"}}', self.runner_container], text=True).strip()
+            if owner != self.project: raise AssertionError("Refusing to remove an unowned Runner")
+            with (self.root / "runner-final.log").open("wb") as output:
+                subprocess.run(["docker", "logs", "--tail", "100", self.runner_container], stdout=output, stderr=subprocess.STDOUT, timeout=10)
+            subprocess.run(["docker", "stop", "--time", "15", self.runner_container], check=True, stdout=subprocess.DEVNULL, timeout=25)
+            subprocess.run(["docker", "rm", self.runner_container], check=True, stdout=subprocess.DEVNULL, timeout=10)
         for directory in [*self.restore_projects, self.root]:
             env_file = directory / ".env"
             if not env_file.exists(): continue

@@ -7,6 +7,7 @@ test("HTTPS administrator provisions credits and a private user evaluates, compa
   page,
 }) => {
   test.setTimeout(180000);
+  page.setDefaultTimeout(15000);
   const admin = process.env.WEB_ACCEPTANCE_ADMIN;
   const password = process.env.WEB_ACCEPTANCE_PASSWORD;
   const root = process.env.WEB_ACCEPTANCE_ROOT;
@@ -29,7 +30,7 @@ test("HTTPS administrator provisions credits and a private user evaluates, compa
   await page.getByRole("button", { name: "创建账户", exact: true }).click();
   await expect(page.getByText("账户已创建。", { exact: true })).toBeVisible();
   await page
-    .getByLabel("用户工作空间", { exact: true })
+    .getByRole("combobox", { name: "用户工作空间", exact: true })
     .selectOption({ label: email });
   await page.getByLabel("调整 credits", { exact: true }).fill("10000");
   await page
@@ -71,6 +72,8 @@ test("HTTPS administrator provisions credits and a private user evaluates, compa
   await page.getByRole("button", { name: "注册", exact: true }).click();
   const agent = (await (await created).json()) as { id: string };
   await page.getByRole("button", { name: "创建接入凭证", exact: true }).click();
+  await expect(page.getByLabel("本次接入密钥")).toBeVisible();
+  await expect(page.getByLabel("本次接入密钥")).not.toBeEmpty();
   const secret = (await page.getByLabel("本次接入密钥").textContent())?.trim();
   if (!secret) throw new Error("One-time fixture credential missing");
   await page.getByRole("button", { name: "我已保存", exact: true }).click();
@@ -96,12 +99,14 @@ test("HTTPS administrator provisions credits and a private user evaluates, compa
   try {
     await page.getByRole("link", { name: "实验", exact: true }).click();
     await page.getByRole("button", { name: "新建实验", exact: true }).click();
-    await page.getByLabel("Agent", { exact: true }).selectOption(agent.id);
     await page
-      .getByLabel("任务集版本", { exact: true })
+      .getByRole("combobox", { name: "Agent", exact: true })
+      .selectOption(agent.id);
+    await page
+      .getByRole("combobox", { name: "任务集版本", exact: true })
       .selectOption({ index: 1 });
     await page
-      .getByLabel("套件版本", { exact: true })
+      .getByRole("combobox", { name: "套件版本", exact: true })
       .selectOption({ index: 1 });
     const started = page.waitForResponse(
       (response) =>

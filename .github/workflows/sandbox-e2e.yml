@@ -6,6 +6,12 @@ on:
       - 'runner/**'
       - 'e2e/**'
       - 'deploy/**'
+      - 'platform/**'
+      - 'sdks/**'
+      - 'web/**'
+      - 'contracts/**'
+      - 'pom.xml'
+      - 'scripts/**'
       - 'scripts/ci-install-runsc.sh'
       - '.github/workflows/sandbox-e2e.yml'
   workflow_dispatch:
@@ -44,13 +50,14 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci && npm run build
         working-directory: web
-      - run: npx playwright install --with-deps chromium
-        working-directory: web
+      - name: Verify the real browser supplied by the dedicated VM image
+        run: google-chrome --version
       - run: python -m pip install -r sdks/python/requirements-test.lock
       - name: Real Compose HTTPS, SDK, mixed evaluator and recovery acceptance
         shell: bash
         run: |
           export RUNNER_TEST_IMAGE="$(docker image inspect --format '{{.Id}}' agent-eval-sandbox:acceptance)"
+          export E2E_BROWSER_CHANNEL=chrome
           python -m pytest e2e -q -s -x
       - uses: actions/upload-artifact@v4
         if: always()

@@ -17,7 +17,11 @@ public final class DeploymentOperations {
         String url=required("DATABASE_URL"),user=required("DATABASE_USER"),password=required("DATABASE_PASSWORD");
         if(args.length==1 && args[0].equals("migrate")) { migrate(url,user,password); return; }
         if(args.length==1 && args[0].equals("health")) { if(!healthy(url,user,password)) System.exit(1); return; }
-        throw new IllegalArgumentException("Expected migrate or health");
+        if(args.length==1 && args[0].equals("rotate-model-key")) {
+            io.agenteval.model.ModelKeyRotation.rotate(new org.springframework.jdbc.datasource.DriverManagerDataSource(url,user,password),
+                java.util.Base64.getDecoder().decode(required("MODEL_ENCRYPTION_KEY")),java.util.Base64.getDecoder().decode(required("NEW_MODEL_ENCRYPTION_KEY"))); return;
+        }
+        throw new IllegalArgumentException("Expected migrate, health or rotate-model-key");
     }
     private static String required(String name) {
         var value=System.getenv(name); if(value==null || value.isBlank()) throw new IllegalArgumentException("Missing deployment configuration: "+name); return value;

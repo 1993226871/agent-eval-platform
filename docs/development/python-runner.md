@@ -1,12 +1,14 @@
 # Python 评测 Runner
 
-Runner 是单独部署的内部服务。平台只通过鉴权 HTTP 调用它，不在 API/Worker 进程中执行用户 Python。当前调度仍只启用 RULE；PYTHON 接入混合调度在任务16完成。
+Runner 是单独部署的内部服务。平台只通过鉴权 HTTP 调用它，不在 API/Worker 进程中执行用户 Python。混合调度已接入 RULE、PYTHON 和 LLM；部署默认关闭 Python，合格节点配置完成后显式开启。
 
 ## 能力与验收状态
 
 必须满足 Linux 主机、Linux Docker daemon、已注册的 `runsc` 和固定镜像摘要。缺任一条件返回 `CAPABILITY_UNAVAILABLE`，不回退宿主解释器或普通容器。
 
-本地 Windows/Docker Desktop 环境只有 runc 等运行时，**隔离验收未验证**。控制层测试使用替身，仅证明鉴权、校验、幂等和命令策略。集成测试在缺少合格节点时明确失败，不能用跳过表示通过。GitHub `Hardened Runner acceptance` 手动工作流需要专用 `agent-eval-runsc` 节点；普通 CI 只执行控制测试、构建镜像。
+本地 Windows/Docker Desktop 环境没有 runsc。独立临时 Ubuntu24.04 VM 使用固定 gVisor20261019.0 完整发行包及 SHA512，已实际通过全部21项 Runner测试（含5项真实隔离），见[验收运行](https://github.com/1993226871/agent-eval-platform/actions/runs/40314323679)。这不自动赋予生产节点资格：更换主机、运行时或镜像后须重新验收。
+
+控制层测试只证明鉴权、校验、幂等和命令策略，不能替代上述隔离测试。集成测试在缺少合格节点时明确失败，不能用跳过表示通过。`Linux sandbox acceptance` 在可信分支提交后启动独立VM；`Hardened Runner acceptance` 手动工作流保留给专用 `agent-eval-runsc` 运维节点；普通CI仍仅验证控制层。
 
 ## 内部协议
 
