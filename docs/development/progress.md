@@ -184,3 +184,10 @@
 - 独立Ubuntu24.04/runsc节点通过21项Runner测试和7个实际Compose E2E：两语言SDK均得到三类SCORED结果、完整浏览器流程、崩溃不重执行业务、未知模型不重发/不重复计费、真实数据库和附件恢复、50 Worker/20 Trial/10000事件与20份完整冻结评分。
 - 最终Linux单轮批量写入P95约1503毫秒、全部评分后报告读取P95约19.64毫秒，意外错误0；详见[验收记录](acceptance.md)。这些测量不代表持续吞吐、峰值RSS或生产SLA。
 - 20项实施任务均已完成，整分支独立审阅随后进行；main尚未合并。指南见[快速开始](../guides/quickstart.md)、[自定义评测器](../guides/custom-evaluators.md)及[运维恢复](../guides/operations.md)。
+
+## 最终整分支审阅与修复
+
+- 独立审阅完成：无确认的Critical，六项Important及一项Minor全部修复。范围含Runner隐私删除、冻结公平性、部分轨迹exact判断、启动费用预估、付费操作重试身份、双SDK异常退出及重跑来源。
+- 最终回归：176 Java、48 Python SDK、18前端，26 Runner（含6项真实runsc）及8 Compose E2E全部通过；综合隔离额外连续10次通过。wheel实际构建且10份schema一致。
+- 最终代码/验收提交3489ebc；[普通CI](https://github.com/1993226871/agent-eval-platform/actions/runs/40343977092)与[Linux验收](https://github.com/1993226871/agent-eval-platform/actions/runs/40343977053)均成功。后续文档变更不修改运行代码；最终记录替代以上历史阶段状态。
+- 最终容量测量见[验收记录](acceptance.md)；每条裁定、审阅范围及未纳入生产保证的能力见[审阅记录](final-review.md)。

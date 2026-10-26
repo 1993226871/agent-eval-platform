@@ -7,7 +7,7 @@
 面向自定义 Agent 的评测平台，连接任务、执行轨迹与质量证据。
 
 <p>
-  <img src="https://img.shields.io/badge/status-in_development-f59e0b?style=flat-square" alt="Status: in development" />
+  <img src="https://img.shields.io/badge/status-source_preview-0f766e?style=flat-square" alt="Status: source preview" />
   <img src="https://img.shields.io/badge/backend-Java_21-007396?style=flat-square" alt="Backend target: Java 21" />
   <img src="https://img.shields.io/badge/SDKs-Java_%2B_Python-3776AB?style=flat-square" alt="Planned SDKs: Java and Python" />
   <img src="https://img.shields.io/badge/evaluation-rules_%2B_LLM_%2B_code-0f766e?style=flat-square" alt="Planned evaluation methods: rules, LLM and code" />
@@ -174,6 +174,7 @@ Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界�
 - [x] 完成额度账本、报告、证据定位和版本比较。
 - [x] 实现实验删除、资源预算、审计记录和私人工作台。
 - [x] 提供演示 Agent、基础任务集、部署与恢复指南。
+- [x] 完成独立整分支审阅、全部修复和最终验收；[审阅与裁定](docs/development/final-review.md)。
 
 ## Development
 

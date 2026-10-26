@@ -66,3 +66,47 @@
 - 容量报告最终采用20项任务全部评分、20份COMPLETE证据后的测量；早期pending报告计时不作为最终指标。
 - 删除先阻断平台新访问；之前签发的S3 URL可保留到两分钟期限，DELETED才表示后台对象与私人历史清理完成。
 - 全部实施任务完成，最终独立审阅及其裁定在下一节追加。当前保留实现分支，尚未合并main。
+
+## 最终审阅裁定与修复（替代前述历史待审阅状态）
+
+独立审阅及全部修复完成，最终验收通过。下列完整追加本轮账本的裁定和修复记录；未延期任何已确认问题。
+
+- Final review: Ruling: Resume the same reviewer after quota interruption, finish its remaining whole-branch passes, and apply one consolidated fix pass — preserves independent review rather than treating a partial report as approval — cost if wrong: integration remains blocked until six Important findings and one Minor are verified. Formal report and every declined-to-judge decision recorded in docs/development/final-review.md. User now explicitly authorizes merge to main after successful fixes/review/acceptance.
+
+- Final review: Ruling: Durable Runner dispatch mappings + tombstone cleanup acknowledge privacy deletion; conservative V020 historical backfill may require Runner for old unavailable Python calls; cleanup batch3 artifact pairs +2 Runner jobs fits900s lease. RED registry/races/platform cleanup, GREEN focused tests; qualified Linux final gate pending.
+
+- Final review: Ruling: Durable30s evidence retry backoff plus last-attempt ordering prevents200 blocked trials starving other workspaces; resource changes reset retry eligibility. RED expected1 healthy freeze/actual0; GREEN same scenario and recovery200.
+
+- Final review: Ruling: Partial evidence can prove an observed extra tool but cannot prove exact equality; only valid handler completion sets SDK success; Java Error/Python BaseException propagate after failure evidence. RED exact false pass and both SDK SUCCEEDED exits; GREEN targeted rules/Java SDK/Python48.
+
+- Final review: Ruling: Freeze per-call integer ceilings times cases/repeats in experiment estimate, expose before launch and rerun, no spending cap. Unconfigured/unavailable bindings yield null and warning, preserving existing skipped/error semantics; full regression revealed legacy invalid bindings. Retain paid-request identity through uncertain preview/connectivity responses; preserve tenant-checked rerun origin in immutable snapshot. RED missing estimate/source and changing retry IDs; targeted GREEN followed by full regression pending.
+
+- Final: fixed Runner privacy deletion — registry scrub/late-response races and DeletionRaceIT RED→GREEN; final176 Java,26 Runner including real runsc,8 Compose E2E green.
+
+- Final: fixed global evidence starvation — EvidenceFairnessIT 200 blocked+healthy RED→GREEN; full176 Java green.
+
+- Final: fixed partial exact tool-set false pass — RuleEvaluatorTest RED→GREEN; full176 Java green.
+
+- Final: fixed missing prelaunch estimate — ExperimentSnapshotIT exact integer frozen estimate and ExperimentsPage UI RED→GREEN; full176 Java/18 web green.
+
+- Final: fixed uncertain paid preview/connectivity identities — PreviewPanel/AdminPage lost/pending response regressions RED→GREEN; full18 web green.
+
+- Final: fixed SDK fatal/nonordinary success completion — Java AssertionError/Python CancelledError RED→GREEN; Java176 and Python48 green.
+
+- Final: Ruling: Fix the source-provenance Minor too because the user explicitly requested all fixes before merge — source UUID is tenant-validated and frozen, regression RED→GREEN — cost if wrong: deleted source reports become unavailable links; no deferred Minor remains.
+
+- Final: Ruling: Production HA, arbitrary cloud S3 and sustained peak capacity are outside this single-node acceptance — provide bounded measurements only — cost if wrong: deployment needs additional qualification and capacity planning.
+
+- Final: Ruling: Stub grading verifies lifecycle/accounting, not real paid-model accuracy — no calibration dataset/provider run authorized — cost if wrong: user must calibrate production rubrics and judges.
+
+- Final: Ruling: Arbitrary Agent force-stop/reset/version authenticity remain user execution responsibilities — SDK supplies cooperative controls and declared provenance — cost if wrong: side-effect containment requires user environment controls.
+
+- Final: Ruling: Unknown business effects and unknown model requests are not automatically replayed — preserve existing uncertainty and accounting — cost if wrong: administrator reconciliation or explicit rerun is needed.
+
+- Final: Ruling: Arbitrary Python dependencies/network, full JSON Schema and optional Spring AOP remain approved first-release exclusions — explicit safe subset and wrappers work — cost if wrong: advanced integrations need later extensions.
+
+- Final: Ruling: CI sandbox qualification does not certify new production execution nodes — rerun actual isolation acceptance on deployment — cost if wrong: node-specific isolation faults remain untested.
+
+- Final: Ruling: Preserve the first Linux NO_RESULT failure, add bounded failure diagnostics and10 repeated boundary probes without weakening limits or assertions — no stable reproduction; two subsequent independent26Runner/8E2E runs pass — cost if wrong: intermittent runtime exits remain a documented deployment observation and require diagnosis if they recur.
+
+- Final: acceptance passed at3489ebc; Linux40343977053 and Verify40343977092 successful; Pythonwheel rebuilt/10schemas verified. Main integration is explicitly authorized after this gate; no public packages, paid provider or public deployment.

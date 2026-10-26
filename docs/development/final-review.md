@@ -31,4 +31,4 @@ Every behavior declined by the reviewer was checked against the approved scope:
 - Arbitrary Python dependency installation/network access, full JSON Schema support and optional Spring AOP remain documented first-version exclusions.
 - A newly deployed production sandbox node must pass its own isolation qualification; GitHub VM results are not transferable certification.
 
-Final test and integration evidence is recorded in [acceptance.md](acceptance.md). Until that final gate succeeds, this document records resolved code paths rather than merge approval.
+Final test and integration evidence is recorded in [acceptance.md](acceptance.md). The final gate succeeded at `3489ebc`: 176 Java, 48 Python SDK, 18 web, 26 Runner, ten additional boundary probes and eight real Compose E2Es passed. All six Important findings and the source-provenance Minor have been resolved. The original With fixes report is preserved rather than relabeled as an issue-free review.
