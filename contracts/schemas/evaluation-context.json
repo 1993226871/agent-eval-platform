@@ -162,6 +162,9 @@
         "PARTIAL",
         "NONE"
       ]
+    },
+    "task_instruction": {
+      "type": "string"
     }
   },
   "required": [
@@ -172,7 +175,8 @@
     "output",
     "events",
     "artifacts",
-    "completeness"
+    "completeness",
+    "task_instruction"
   ],
   "additionalProperties": false
 }

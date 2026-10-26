@@ -28,6 +28,9 @@ class ReportApiIT {
     @Autowired TemplateService templates;
     @Autowired ExperimentService experiments;
     @Autowired ObjectMapper json;
+    @Autowired org.springframework.jdbc.core.simple.JdbcClient jdbc;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
+    @Autowired io.agenteval.telemetry.EvidenceService evidence;
     @LocalServerPort int port;
     @Test void authenticatesReportsAndHidesOtherWorkspacesAndTaskReferences() throws Exception {
         var account=identities.createUser(UUID.randomUUID()+"@test.local","Temporary-Password-1",false); var actor=account.actor();
@@ -41,10 +44,27 @@ class ReportApiIT {
             assertThat(get(other,path).statusCode()).isEqualTo(404);
             var page=get(owner,path+"/trials?limit=1"); assertThat(page.statusCode()).isEqualTo(200); assertThat(json.readTree(page.body()).path("items")).hasSize(1);
             assertThat(page.body()).doesNotContain("instruction","expected","order_id");
+            var trial=experiments.trials(actor,experiment).getFirst();
+            jdbc.sql("update trials set status='SUCCEEDED',completed_at=?,completion=cast(? as jsonb) where id=?").params(java.sql.Timestamp.from(Instant.now().minusSeconds(31)),"{\"status\":\"SUCCEEDED\",\"output\":{\"amount\":100},\"final_sequence\":0,\"event_count\":0,\"dropped_count\":0,\"artifact_ids\":[]}",trial.id()).update();
+            evidence.freeze(actor,trial.id(),false);
+            var grading=new io.agenteval.evaluation.EvaluationOrchestrator(new io.agenteval.evaluation.JdbcEvaluationRepository(jdbc,transactions,json),evidence,new io.agenteval.evaluation.RuleEvaluator(),java.time.Clock.systemUTC());
+            grading.schedule(100); assertThat(grading.runNext()).isTrue();
+            UUID result=jdbc.sql("select job_id from evaluation_results where workspace_id=?").param(actor.workspaceId()).query(UUID.class).single();
+            String original=jdbc.sql("select payload::text from evaluation_results where job_id=?").param(result).query(String.class).single();
+            String reviews="/api/v1/results/"+result+"/reviews";
+            assertThat(post(owner,reviews,"{\"score\":0,\"reason\":\"Manual calibration disagreement\"}").statusCode()).isEqualTo(200);
+            assertThat(json.readTree(get(owner,reviews).body())).hasSize(1);
+            assertThat(get(other,reviews).statusCode()).isEqualTo(404);
+            assertThat(post(other,reviews,"{\"score\":1,\"reason\":\"Foreign\"}").statusCode()).isEqualTo(404);
+            assertThat(jdbc.sql("select payload::text from evaluation_results where job_id=?").param(result).query(String.class).single()).isEqualTo(original);
         }
     }
     URI uri(String path) { return URI.create("http://localhost:"+port+path); }
     HttpResponse<String> get(HttpClient client,String path) throws Exception { return client.send(HttpRequest.newBuilder(uri(path)).GET().build(),HttpResponse.BodyHandlers.ofString()); }
+    HttpResponse<String> post(HttpClient client,String path,String body) throws Exception {
+        var csrf=json.readTree(get(client,"/api/v1/auth/csrf").body());
+        return client.send(HttpRequest.newBuilder(uri(path)).header("Content-Type","application/json").header(csrf.path("header_name").asText(),csrf.path("token").asText()).POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());
+    }
     HttpClient login(String email) throws Exception {
         var client=HttpClient.newBuilder().cookieHandler(new CookieManager(null,CookiePolicy.ACCEPT_ALL)).build();
         var csrf=json.readTree(get(client,"/api/v1/auth/csrf").body());

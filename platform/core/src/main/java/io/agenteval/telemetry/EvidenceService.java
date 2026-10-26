@@ -18,6 +18,6 @@ public final class EvidenceService {
             for(var event:m.path("events")) events.add(codec.decode(event.toString(),TraceEvent.class));
             for(var artifact:m.path("artifacts")) artifacts.add(codec.decode(artifact.toString(),ArtifactRef.class));
         } catch(java.io.IOException invalid) { throw new IllegalStateException("Invalid stored evidence",invalid); }
-        return new EvaluationContext(snapshot.trialId(),id,m.path("task").path("input"),m.path("task").path("expected"),m.path("completion").path("output"),events,artifacts,snapshot.completeness());
+        return new EvaluationContext(snapshot.trialId(),id,m.path("task").path("input"),m.path("task").path("expected"),m.path("completion").path("output"),events,artifacts,snapshot.completeness(),m.path("task").path("instruction").asText(""));
     }
 }

@@ -1,0 +1,10 @@
+{
+  "template_id":"content-coverage",
+  "task_instruction":"Report order A amount, currency and status.",
+  "task_input":{"order_id":"A"},
+  "expected":{"amount":100,"currency":"CNY","status":"paid"},
+  "output":{"amount":100,"status":"paid"},
+  "human_score":0.75,
+  "human_reason":"Core amount and status are correct; currency is omitted.",
+  "simulated_judge_response":{"status":"SCORED","grade":3,"reason":"Most requirements covered; currency missing.","evidence_refs":["expected","output"]}
+}

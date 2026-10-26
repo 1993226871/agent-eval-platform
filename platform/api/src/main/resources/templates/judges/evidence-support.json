@@ -1,0 +1,11 @@
+{
+  "id":"evidence-support", "name":"回答证据支持", "criterion_id":"evidence_support",
+  "required_evidence":["expected","output"],
+  "rubric":{"metric":"将expected作为提供的参考材料，判断回答关键主张是否有依据；引用真实但不支持主张也不能算支持。","levels":[
+    {"grade":0,"description":"核心主张与材料矛盾，或主要内容无依据。"},
+    {"grade":1,"description":"只有少量主张有支持，主要结论缺乏依据。"},
+    {"grade":2,"description":"部分关键主张有依据，其余有明显推断跳跃。"},
+    {"grade":3,"description":"大部分关键主张有明确依据，少量细节支持不足。"},
+    {"grade":4,"description":"全部关键主张均被材料支持，限制和不确定性表达准确。"}
+  ]}
+}

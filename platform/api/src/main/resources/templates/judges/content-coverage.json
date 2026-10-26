@@ -1,0 +1,11 @@
+{
+  "id":"content-coverage", "name":"回答内容覆盖", "criterion_id":"content_coverage",
+  "required_evidence":["task_instruction","expected","output"],
+  "rubric":{"metric":"对照任务和参考要求，评价最终回答的有效内容覆盖程度；不按篇幅打分。","levels":[
+    {"grade":0,"description":"回答与任务无关或核心内容全部错误。"},
+    {"grade":1,"description":"仅覆盖少量要求，存在重大遗漏或错误。"},
+    {"grade":2,"description":"覆盖约一半关键要求，仍有明显遗漏。"},
+    {"grade":3,"description":"覆盖大部分关键要求，只有次要遗漏。"},
+    {"grade":4,"description":"准确完整覆盖全部关键要求，无实质错误。"}
+  ]}
+}

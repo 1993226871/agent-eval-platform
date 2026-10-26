@@ -38,11 +38,19 @@ class ModelAdminApiIT {
             var choices=get(user,"/api/v1/models"); assertThat(choices.statusCode()).isEqualTo(200);
             assertThat(choices.body()).doesNotContain(key,"endpoint","encrypted_api_key");
             var id=json.readTree(created.body()).path("id").asText();
+            var judgeTemplates=get(user,"/api/v1/templates/judges"); assertThat(judgeTemplates.statusCode()).isEqualTo(200);
+            assertThat(json.readTree(judgeTemplates.body())).hasSize(3);
+            String templateConfig=json.writeValueAsString(Map.of("model_profile_id",id,"price_version_id",json.readTree(created.body()).path("price").path("id").asText()));
+            var copied=post(user,"/api/v1/templates/judges/content-coverage/copy",templateConfig);
+            assertThat(copied.statusCode()).isEqualTo(200);
+            var evaluator=json.readTree(copied.body()); assertThat(evaluator.path("content").path("config").path("prompt_version").asText()).isEqualTo("rubric-v1");
+            assertThat(get(management,"/api/v1/catalog/"+evaluator.path("id").asText()).statusCode()).isEqualTo(404);
             var test=post(management,"/api/v1/admin/models/"+id+"/test",json.writeValueAsString(Map.of("call_id",UUID.randomUUID())));
             assertThat(test.statusCode()).isEqualTo(200); assertThat(json.readTree(test.body()).path("status").asText()).isEqualTo("WAITING_QUOTA");
             assertThat(get(management,"/api/v1/admin/model-calls").statusCode()).isEqualTo(200);
             assertThat(post(management,"/api/v1/admin/models/"+id+"/disable","{\"reason\":\"Maintenance\"}").statusCode()).isEqualTo(204);
             assertThat(json.readTree(get(user,"/api/v1/models").body())).hasSize(0);
+            assertThat(post(user,"/api/v1/templates/judges/content-coverage/copy",templateConfig).statusCode()).isEqualTo(400);
             assertThat(post(management,"/api/v1/admin/models",body.replace("judge.example.test","forbidden.example.test")).statusCode()).isEqualTo(400);
         }
     }

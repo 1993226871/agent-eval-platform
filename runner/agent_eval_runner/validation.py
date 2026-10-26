@@ -125,6 +125,8 @@ def validate_result(raw, context):
     if not isinstance(result["reason"], str) or not result["reason"].strip() or len(result["reason"]) > 2048:
         raise RunnerValidationError("INVALID_RESULT_REASON")
     allowed = {"output", "expected", "task_input", "snapshot:" + context["snapshot_id"]}
+    if context.get("task_instruction", "").strip():
+        allowed.add("task_instruction")
     allowed.update("event:" + event["event_id"] for event in context["events"])
     allowed.update("artifact:" + artifact["artifact_id"] for artifact in context["artifacts"])
     refs = result["evidence_refs"]

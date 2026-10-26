@@ -35,5 +35,6 @@
     }
   ],
   "artifacts": [],
-  "completeness": "COMPLETE"
+  "completeness": "COMPLETE",
+  "task_instruction": "Query order amount"
 }

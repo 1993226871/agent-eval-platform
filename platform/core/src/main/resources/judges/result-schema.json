@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "grade", "reason", "evidence_refs"],
+  "properties": {
+    "status": {"enum": ["SCORED", "INSUFFICIENT_EVIDENCE"]},
+    "grade": {"type": ["integer", "null"], "minimum": 0, "maximum": 4},
+    "reason": {"type": "string", "minLength": 1, "maxLength": 2048},
+    "evidence_refs": {"type": "array", "maxItems": 1000, "items": {"type": "string"}}
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "SCORED"}}}, "then": {"properties": {"grade": {"type": "integer"}, "evidence_refs": {"minItems": 1}}}},
+    {"if": {"properties": {"status": {"const": "INSUFFICIENT_EVIDENCE"}}}, "then": {"properties": {"grade": {"type": "null"}}}}
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id":"tool-result-use", "name":"工具结果利用", "criterion_id":"tool_result_use",
+  "required_evidence":["output","events"],
+  "rubric":{"metric":"仅依据已提供的工具调用与返回事件，判断最终回答是否正确利用结果；不将上报轨迹当作独立业务证明，关键返回缺失时判证据不足。","levels":[
+    {"grade":0,"description":"回答与已观测的关键工具结果明显矛盾。"},
+    {"grade":1,"description":"工具结果基本被忽略或严重误读。"},
+    {"grade":2,"description":"利用了部分结果，但遗漏关键约束或误用细节。"},
+    {"grade":3,"description":"正确利用大部分相关结果，仅有次要遗漏。"},
+    {"grade":4,"description":"准确利用全部相关且已提供的结果，并说明失败与不确定性。"}
+  ]}
+}

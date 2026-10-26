@@ -1,0 +1,10 @@
+{
+  "template_id":"evidence-support",
+  "task_instruction":"Answer only from the supplied order record.",
+  "task_input":{"order_id":"A"},
+  "expected":{"status":"paid","refund_requested":false},
+  "output":{"status":"refunded","refund_completed":true},
+  "human_score":0,
+  "human_reason":"Central claims contradict the supplied record.",
+  "simulated_judge_response":{"status":"SCORED","grade":0,"reason":"Refund claim contradicts the reference.","evidence_refs":["expected","output"]}
+}
