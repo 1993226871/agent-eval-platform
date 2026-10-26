@@ -60,7 +60,7 @@ class MixedEvaluationIT {
         var models=new EncryptedModelProfileRepository(jdbc,tx,new ModelSecretBox(new byte[32]),Set.of(origin));
         var model=new ModelProfileService(models).create(admin,new ModelProfileCommand("Fixture",origin+"/v1/chat/completions","test-mixed-provider-key","fixture-v1",1000,100,65536,2,"Fixture enforced bound",1,1,1));
         provider=new OpenAiCompatibleJudgeClient(models); gateway=new ModelGateway(new JdbcModelCallRepository(jdbc,tx,models,quota),provider,clock);
-        catalog=new CatalogService(new JdbcCatalogRepository(jdbc,tx,json)); var agents=new AgentService(new JdbcAgentRepository(jdbc));
+        catalog=new CatalogService(new JdbcCatalogRepository(jdbc,tx,json)); var agents=new AgentService(new JdbcAgentRepository(jdbc,tx));
         experiments=new ExperimentService(new JdbcExperimentRepository(jdbc,tx,json),catalog,agents,clock);
         evidence=new EvidenceService(new JdbcEvidenceRepository(jdbc,tx,json),clock); repository=new JdbcEvaluationRepository(jdbc,tx,json);
         var dataset=catalog.create(owner,ResourceKind.DATASET,"Orders",json.readTree("{\"cases\":[{\"instruction\":\"Check order amount\",\"input\":{},\"expected\":100}]}"));

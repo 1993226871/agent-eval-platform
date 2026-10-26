@@ -100,6 +100,70 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/resource-limits": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getResourceLimits"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/workspaces/{workspaceId}/resource-limits": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getUserResourceLimits"];
+    put?: never;
+    post: operations["configureUserResources"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/audit-events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["listAuditEvents"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/experiment-deletions/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getDeletionStatus"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/users": {
     parameters: {
       query?: never;
@@ -350,7 +414,7 @@ export interface paths {
     get: operations["getExperiment"];
     put?: never;
     post?: never;
-    delete?: never;
+    delete: operations["deleteExperiment"];
     options?: never;
     head?: never;
     patch?: never;
@@ -412,6 +476,22 @@ export interface paths {
       cookie?: never;
     };
     get: operations["getLedger"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/quota/ledger/page": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getLedgerPage"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1217,6 +1297,10 @@ export interface components {
       /** Format: uuid */
       idempotency_key: string;
     };
+    QuotaLedgerPage: {
+      items: components["schemas"]["QuotaEntry"][];
+      next_cursor: string | null;
+    };
     Price: {
       /** Format: uuid */
       id: string;
@@ -1344,6 +1428,7 @@ export interface components {
       criteria: components["schemas"]["RunCriterion"][];
       /** Format: date-time */
       created_at: string;
+      wait_reasons: string[];
     };
     HumanReview: {
       /** Format: uuid */
@@ -1432,6 +1517,7 @@ export interface components {
       reported_duration_ms: number | null;
       /** Format: uuid */
       suite_version_id: string;
+      evidence_wait_reason: string | null;
     };
     TrialReportPage: {
       items: components["schemas"]["TrialReport"][];
@@ -1531,6 +1617,61 @@ export interface components {
       evidence: components["schemas"]["FrozenExportEvidence"][];
       result_identities: components["schemas"]["ResultIdentity"][];
       source: string;
+    };
+    ResourceLimits: {
+      max_online_workers: number;
+      max_running_trials: number;
+      max_stored_bytes: number;
+      max_experiments: number;
+      max_catalog_resources: number;
+      max_published_versions: number;
+      max_trial_executions: number;
+      max_evaluation_jobs: number;
+      max_python_seconds: number;
+    };
+    ResourceUsage: {
+      trial_executions: number;
+      evaluation_jobs: number;
+      python_reserved_seconds: number;
+      artifact_bytes: number;
+      evidence_bytes: number;
+    };
+    ResourceLimitView: {
+      limits: components["schemas"]["ResourceLimits"];
+      usage: components["schemas"]["ResourceUsage"];
+    };
+    ConfigureResources: {
+      limits: components["schemas"]["ResourceLimits"];
+      reason: string;
+    };
+    AuditEvent: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      workspace_id: string;
+      actor_user_id: string | null;
+      action: string;
+      /** Format: uuid */
+      entity_id: string;
+      /** @enum {string} */
+      source: "APPLICATION" | "SYSTEM";
+      /** Format: date-time */
+      created_at: string;
+    };
+    AuditPage: {
+      items: components["schemas"]["AuditEvent"][];
+      next_cursor: string | null;
+    };
+    DeletionStatus: {
+      /** Format: uuid */
+      experiment_id: string;
+      status: string;
+      /** Format: date-time */
+      requested_at: string;
+      /** Format: date-time */
+      next_cleanup_at: string;
+      completed_at: string | null;
+      failure_count: number;
     };
   };
   responses: {
@@ -1723,6 +1864,159 @@ export interface operations {
             /** Format: uuid */
             id: string;
           };
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  getResourceLimits: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResourceLimitView"];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  getUserResourceLimits: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResourceLimitView"];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  configureUserResources: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ConfigureResources"];
+      };
+    };
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResourceLimitView"];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  listAuditEvents: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AuditPage"];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  getDeletionStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeletionStatus"];
         };
       };
       400: components["responses"]["Rejected"];
@@ -2489,6 +2783,43 @@ export interface operations {
       503: components["responses"]["Rejected"];
     };
   };
+  deleteExperiment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: uuid */
+          idempotency_key: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Success. */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeletionStatus"];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
   listTrials: {
     parameters: {
       query?: never;
@@ -2593,6 +2924,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["QuotaEntry"][];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  getLedgerPage: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuotaLedgerPage"];
         };
       };
       400: components["responses"]["Rejected"];

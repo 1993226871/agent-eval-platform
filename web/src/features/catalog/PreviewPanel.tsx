@@ -6,6 +6,7 @@ import { api, request } from "../../api/client";
 import type { CatalogResource } from "../../api/types";
 import { ErrorNotice, JsonBlock } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
+import { resourceWaitMessage } from "../administration/ResourceUsagePanel";
 
 export function PreviewPanel({ resource }: { resource: CatalogResource }) {
   const { workspace_id } = useWorkspace();
@@ -69,6 +70,14 @@ export function PreviewPanel({ resource }: { resource: CatalogResource }) {
           <p>
             状态：{run.data.status} · {run.data.purpose}
           </p>
+          {run.data.wait_reasons.length > 0 && (
+            <div className="warning-notice">
+              {run.data.wait_reasons.map((reason) => (
+                <p key={reason}>{resourceWaitMessage(reason)}</p>
+              ))}
+              <Link to="/workspace/quota">查看额度与资源预算</Link>
+            </div>
+          )}
           {run.data.status === "WAITING_QUOTA" && (
             <Link to="/workspace/quota">额度不足，查看账户额度</Link>
           )}

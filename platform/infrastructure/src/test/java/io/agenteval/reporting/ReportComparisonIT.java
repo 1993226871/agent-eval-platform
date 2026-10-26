@@ -42,7 +42,7 @@ class ReportComparisonIT {
     WorkspaceActor user() { return new IdentityService(new JdbcIdentityRepository(jdbc, transactions), new BCryptPasswordEncoder(4)).createUser(UUID.randomUUID()+"@comparison.local", "Temporary-Password-1", false).actor(); }
     @BeforeEach void setup() throws Exception {
         owner = user(); catalog = new CatalogService(new JdbcCatalogRepository(jdbc, transactions, json));
-        var agents = new AgentService(new JdbcAgentRepository(jdbc)); agent = agents.create(owner, "orders", "v1").id();
+        var agents = new AgentService(new JdbcAgentRepository(jdbc,transactions)); agent = agents.create(owner, "orders", "v1").id();
         experiments = new ExperimentService(new JdbcExperimentRepository(jdbc, transactions, json), catalog, agents, Clock.fixed(now, ZoneOffset.UTC));
         evidence = new EvidenceService(new JdbcEvidenceRepository(jdbc, transactions, json), Clock.fixed(now, ZoneOffset.UTC));
         var repository = new JdbcEvaluationRepository(jdbc, transactions, json);
@@ -114,5 +114,12 @@ class ReportComparisonIT {
             judges.add(run(dataset,suite(version)));
         }
         assertThat(comparisons.compare(owner,judges.get(0),judges.get(1)).reasons()).contains("MODEL_PRICE_VERSION_MISMATCH","NO_DETERMINABLE_DATA");
+    }
+    @Test void rejectsOversizedExportBeforeLoadingPrivateBodies() {
+        UUID experiment=run(dataset,suite);
+        var queries=new JdbcReportQueries(jdbc,transactions,json,new JdbcEvaluationRepository(jdbc,transactions,json));
+        var limited=new ReportExporter(queries,new EvaluationAggregator(),128);
+        assertThatThrownBy(() -> limited.export(owner,experiment)).isInstanceOf(ReportExportLimitException.class);
+        assertThatThrownBy(() -> limited.export(user(),experiment)).isInstanceOf(ScopeViolationException.class);
     }
 }

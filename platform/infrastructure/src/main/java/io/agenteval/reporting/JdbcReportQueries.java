@@ -43,8 +43,19 @@ public class JdbcReportQueries implements ComparisonQueries {
         ).params(experiment,actor.workspaceId()).query((row,n) -> new ReportProvenance.Evidence(row.getObject("id",UUID.class),row.getInt("case_index"),row.getInt("attempt"),row.getObject("snapshot_id",UUID.class),row.getString("content_hash"),row.getString("completeness"),row.getString("scope"))).list();
         return new Input(data,new ReportProvenance(List.copyOf(versions),List.copyOf(bindings),scopes));
     }
-    @Override public ExportInput export(WorkspaceActor actor, UUID experiment) {
+    @Override public ExportInput export(WorkspaceActor actor, UUID experiment,long byteLimit) {
         return read.execute(status -> {
+            jdbc.sql("select id from experiments where id=? and workspace_id=? and status not in ('DELETING','DELETED')").params(experiment,actor.workspaceId()).query(UUID.class).optional().orElseThrow(io.agenteval.identity.ScopeViolationException::new);
+            long bytes=jdbc.sql("""
+                with selected_trials as (select id from trials where experiment_id=? and workspace_id=?),
+                latest as (select distinct on(g.trial_id) g.id,g.snapshot_id from grading_jobs g join selected_trials t on t.id=g.trial_id where g.purpose<>'PREVIEW' order by g.trial_id,g.run_ordinal desc)
+                select 4096+(select count(*)*2048 from selected_trials)
+                    +coalesce((select sum(octet_length((s.manifest-'experiment_snapshot')::text)) from evidence_snapshots s join latest l on l.snapshot_id=s.id),0)
+                    +coalesce((select sum(octet_length(r.payload::text)+512) from evaluation_results r join latest l on l.id=r.run_id),0)
+                    +coalesce((select sum(octet_length(h.reason)*6+512) from human_reviews h join evaluation_results r on r.job_id=h.result_id join latest l on l.id=r.run_id),0)
+                """
+            ).params(experiment,actor.workspaceId()).query(Long.class).single();
+            if(bytes>byteLimit) throw new ReportExportLimitException();
             var input=input(actor,experiment);
             var reviews=jdbc.sql("""
                 with latest as (select distinct on(g.trial_id) g.id from grading_jobs g join trials t on t.id=g.trial_id where t.experiment_id=? and t.workspace_id=? and g.purpose<>'PREVIEW' order by g.trial_id,g.run_ordinal desc)

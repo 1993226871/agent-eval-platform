@@ -8,7 +8,7 @@ public final class HumanReviewService {
     private final Clock clock;
     public HumanReviewService(HumanReviewRepository repository,Clock clock) { this.repository=repository; this.clock=clock; }
     public HumanReview add(WorkspaceActor actor,UUID resultId,BigDecimal score,String reason) {
-        if(resultId==null || score==null || score.compareTo(BigDecimal.ZERO)<0 || score.compareTo(BigDecimal.ONE)>0 || score.scale()>6 || score.precision()>8 || reason==null || reason.isBlank() || reason.length()>2048)
+        if(resultId==null || score==null || score.compareTo(BigDecimal.ZERO)<0 || score.compareTo(BigDecimal.ONE)>0 || Math.abs((long)score.scale())>6 || score.precision()>8 || reason==null || reason.isBlank() || reason.length()>2048)
             throw new IllegalArgumentException("Invalid human review");
         return repository.add(actor,resultId,score,reason,clock.instant());
     }

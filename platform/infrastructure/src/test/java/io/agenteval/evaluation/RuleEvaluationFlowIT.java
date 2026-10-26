@@ -40,7 +40,7 @@ class RuleEvaluationFlowIT {
     @AfterAll static void stop() { if(postgres!=null) postgres.stop(); }
     @BeforeEach void setup() {
         actor=new IdentityService(new JdbcIdentityRepository(jdbc,tx),new BCryptPasswordEncoder(4)).createUser(UUID.randomUUID()+"@test.local","Temporary-Password-1",false).actor();
-        catalog=new CatalogService(new JdbcCatalogRepository(jdbc,tx,json)); agents=new AgentService(new JdbcAgentRepository(jdbc));
+        catalog=new CatalogService(new JdbcCatalogRepository(jdbc,tx,json)); agents=new AgentService(new JdbcAgentRepository(jdbc,tx));
         experiments=new ExperimentService(new JdbcExperimentRepository(jdbc,tx,json),catalog,agents,Clock.fixed(now,ZoneOffset.UTC));
         evidence=new EvidenceService(new JdbcEvidenceRepository(jdbc,tx,json),Clock.fixed(now,ZoneOffset.UTC)); restart(now);
     }

@@ -11,13 +11,15 @@ public class ModelAdminController {
     private final ModelProfileService profiles;
     private final ModelGateway gateway;
     private final CurrentActor current;
-    public ModelAdminController(ModelProfileService profiles,ModelGateway gateway,CurrentActor current) { this.profiles=profiles; this.gateway=gateway; this.current=current; }
+    private final io.agenteval.administration.AuditService audit;
+    public ModelAdminController(ModelProfileService profiles,ModelGateway gateway,CurrentActor current,io.agenteval.administration.AuditService audit) { this.profiles=profiles; this.gateway=gateway; this.current=current; this.audit=audit; }
     @PostMapping("/models") public ModelViews.Profile create(Authentication auth,@RequestBody ModelProfileCommand command) { return ModelViews.Profile.of(profiles.create(current.require(auth),command)); }
     @GetMapping("/models") public List<ModelViews.Profile> list(Authentication auth) { return profiles.list(current.require(auth)).stream().map(ModelViews.Profile::of).toList(); }
     @GetMapping("/model-calls") public List<ModelViews.Pending> pending(Authentication auth,@RequestParam(defaultValue="50") int limit) { return gateway.pending(current.require(auth),limit).stream().map(ModelViews.Pending::of).toList(); }
     public record Disable(String reason) {}
     @PostMapping("/models/{profileId}/disable") @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
-    public void disable(Authentication auth,@PathVariable UUID profileId,@RequestBody Disable command) { profiles.disable(current.require(auth),profileId,command.reason()); }
+    @org.springframework.transaction.annotation.Transactional
+    public void disable(Authentication auth,@PathVariable UUID profileId,@RequestBody Disable command) { var actor=current.require(auth); profiles.disable(actor,profileId,command.reason()); audit.record(actor,io.agenteval.administration.AuditAction.MODEL_DISABLED,profileId); }
     public record ConnectivityTest(UUID callId) {}
     @PostMapping("/models/{profileId}/test") public ReconciliationView test(Authentication auth,@PathVariable UUID profileId,@RequestBody ConnectivityTest command) {
         var actor=current.require(auth); if(!actor.admin()) throw new io.agenteval.identity.ScopeViolationException();

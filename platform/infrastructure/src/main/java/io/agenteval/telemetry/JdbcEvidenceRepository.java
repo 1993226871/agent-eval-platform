@@ -29,7 +29,7 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
         return tx.execute(transaction -> {
             // Same lock boundary as ingestion and completion: the manifest cannot race a committed ack.
             jdbc.sql("select id from scheduler_guard where id=1 for update").query(Integer.class).single();
-            var row=jdbc.sql("select t.status,t.task,t.completion,t.completed_at,e.snapshot,e.suite_version_id,e.status experiment_status from trials t join experiments e on e.id=t.experiment_id where t.id=? and t.workspace_id=? for update of t,e")
+            var row=jdbc.sql("select t.status,t.task,t.completion,t.completed_at,e.snapshot,e.suite_version_id,e.status experiment_status from trials t join experiments e on e.id=t.experiment_id where t.id=? and t.workspace_id=? and e.status not in ('DELETING','DELETED') for update of t,e")
                 .params(trial,actor.workspaceId()).query((r,n) -> new TrialEvidence(r.getString("status"),tree(r.getString("task")),tree(r.getString("completion")),r.getTimestamp("completed_at")==null?null:r.getTimestamp("completed_at").toInstant(),tree(r.getString("snapshot")),r.getString("experiment_status"),r.getObject("suite_version_id",UUID.class))).optional().orElseThrow(ScopeViolationException::new);
             var first=jdbc.sql("select * from evidence_snapshots where trial_id=? order by ordinal limit 1").param(trial).query(this::map).optional();
             if(first.isPresent() && !includeLate) return first.get();
@@ -79,17 +79,29 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
             var existing=jdbc.sql("select * from evidence_snapshots where trial_id=? and content_hash=?").params(trial,hash).query(this::map).optional();
             if(existing.isPresent()) return existing.get();
             UUID id=UUID.randomUUID();
-            jdbc.sql("insert into evidence_snapshots(id,workspace_id,trial_id,content_hash,completeness,manifest,created_at) values (?,?,?,?,?,cast(? as jsonb),?)").params(id,actor.workspaceId(),trial,hash,completeness.name(),manifest.toString(),Timestamp.from(now)).update();
+            long bytes=jdbc.sql("insert into evidence_snapshots(id,workspace_id,trial_id,content_hash,completeness,manifest,created_at) values (?,?,?,?,?,cast(? as jsonb),?) returning octet_length(manifest::text)").params(id,actor.workspaceId(),trial,hash,completeness.name(),manifest.toString(),Timestamp.from(now)).query(Long.class).single();
+            if(bytes>32L*1024*1024) throw new TelemetryLimitException();
+            io.agenteval.administration.JdbcResourceAdmission.evidence(jdbc,actor.workspaceId(),bytes);
+            jdbc.sql("update trials set evidence_wait_reason=null where id=? and workspace_id=?").params(trial,actor.workspaceId()).update();
             if(scheduleDefault && !row.status().equals("CANCELLED") && !row.experimentStatus().equals("CANCELLED")) jdbc.sql("insert into grading_jobs(id,workspace_id,trial_id,snapshot_id,suite_version_id,next_run_at,created_at) values (?,?,?,?,?,?,?)").params(UUID.randomUUID(),actor.workspaceId(),trial,id,row.suiteVersion(),Timestamp.from(now),Timestamp.from(now)).update();
             return new EvidenceSnapshot(id,trial,hash,completeness,manifest,now);
         });
     }
-    @Override public EvidenceSnapshot load(WorkspaceActor actor,UUID id) { return jdbc.sql("select * from evidence_snapshots where id=? and workspace_id=?").params(id,actor.workspaceId()).query(this::map).optional().orElseThrow(ScopeViolationException::new); }
+    @Override public EvidenceSnapshot load(WorkspaceActor actor,UUID id) { return jdbc.sql("select s.* from evidence_snapshots s join trials t on t.id=s.trial_id join experiments e on e.id=t.experiment_id where s.id=? and s.workspace_id=? and e.status not in ('DELETING','DELETED')").params(id,actor.workspaceId()).query(this::map).optional().orElseThrow(ScopeViolationException::new); }
     @Override public int freezeReady(int limit,Instant now) {
-        var trials=jdbc.sql("select t.id,t.workspace_id,w.owner_user_id from trials t join workspaces w on w.id=t.workspace_id where t.completed_at<=? and not exists(select 1 from evidence_snapshots s where s.trial_id=t.id) order by t.completed_at,t.id limit ?")
+        var trials=jdbc.sql("select t.id,t.workspace_id,w.owner_user_id from trials t join workspaces w on w.id=t.workspace_id join experiments e on e.id=t.experiment_id where t.completed_at<=? and e.status not in ('DELETING','DELETED') and not exists(select 1 from evidence_snapshots s where s.trial_id=t.id) order by t.completed_at,t.id limit ?")
             .params(Timestamp.from(now.minusSeconds(30)),limit).query((r,n) -> new Candidate(r.getObject("id",UUID.class),new WorkspaceActor(r.getObject("owner_user_id",UUID.class),r.getObject("workspace_id",UUID.class),false))).list();
-        for(var candidate:trials) freeze(candidate.actor(),candidate.id(),false,now);
-        return trials.size();
+        int frozen=0;
+        for(var candidate:trials) {
+            try { freeze(candidate.actor(),candidate.id(),false,now); frozen++; }
+            catch(io.agenteval.workers.CapacityExceededException limited) { markWait(candidate,"STORAGE_LIMIT"); }
+            catch(TelemetryLimitException limited) { markWait(candidate,"EVIDENCE_BYTE_LIMIT"); }
+            catch(ScopeViolationException deletedDuringScan) { /* A concurrent delete wins; no new snapshot is published. */ }
+        }
+        return frozen;
+    }
+    private void markWait(Candidate candidate,String reason) {
+        jdbc.sql("update trials set evidence_wait_reason=? where id=? and workspace_id=? and exists(select 1 from experiments e where e.id=trials.experiment_id and e.status not in ('DELETING','DELETED'))").params(reason,candidate.id(),candidate.actor().workspaceId()).update();
     }
     private TraceEvent decode(JsonNode event) { try { return codec.decode(event.toString(),TraceEvent.class); } catch(java.io.IOException invalid) { throw new IllegalStateException(invalid); } }
     private JsonNode tree(String value) { if(value==null) return NullNode.instance; try { return json.readTree(value); } catch(java.io.IOException invalid) { throw new IllegalStateException(invalid); } }

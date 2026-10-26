@@ -33,7 +33,7 @@ class HumanReviewIT {
     WorkspaceActor user(boolean admin) { return new IdentityService(new JdbcIdentityRepository(jdbc,tx),new BCryptPasswordEncoder(4)).createUser(UUID.randomUUID()+"@review.local","Temporary-Password-1",admin).actor(); }
     @BeforeEach void setup() throws Exception {
         owner=user(false); reviews=new HumanReviewService(new JdbcHumanReviewRepository(jdbc,tx),Clock.systemUTC());
-        var catalog=new CatalogService(new JdbcCatalogRepository(jdbc,tx,json)); var agents=new AgentService(new JdbcAgentRepository(jdbc));
+        var catalog=new CatalogService(new JdbcCatalogRepository(jdbc,tx,json)); var agents=new AgentService(new JdbcAgentRepository(jdbc,tx));
         var experiments=new ExperimentService(new JdbcExperimentRepository(jdbc,tx,json),catalog,agents,Clock.systemUTC());
         var dataset=catalog.create(owner,ResourceKind.DATASET,"Orders",json.readTree("{\"cases\":[{\"instruction\":\"Check order amount\",\"input\":{},\"expected\":100}]}"));
         var metric=catalog.create(owner,ResourceKind.EVALUATOR,"Amount",json.readTree("{\"type\":\"RULE\",\"criterion_id\":\"amount\",\"required_evidence\":[\"output\"],\"threshold\":1,\"config\":{\"operator\":\"eq\",\"selector\":\"/output/amount\",\"expected\":100}}"));

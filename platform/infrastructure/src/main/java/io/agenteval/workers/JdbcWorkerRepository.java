@@ -25,8 +25,10 @@ public class JdbcWorkerRepository implements CredentialRepository,WorkerRegistry
     public JdbcWorkerRepository(JdbcClient jdbc,PlatformTransactionManager manager) { this.jdbc=jdbc; tx=new TransactionTemplate(manager); }
     @Override public void issue(WorkspaceActor actor,UUID id,String hash,Set<UUID> agentIds) {
         tx.executeWithoutResult(status -> {
+            io.agenteval.administration.JdbcResourceAdmission.metadata(jdbc,actor.workspaceId(),"worker_credentials");
             jdbc.sql("insert into worker_credentials(id,workspace_id,secret_hash) values (?,?,?)").params(id,actor.workspaceId(),hash).update();
             for(var agentId:agentIds) jdbc.sql("insert into worker_credential_agents(credential_id,workspace_id,agent_id) values (?,?,?)").params(id,actor.workspaceId(),agentId).update();
+            io.agenteval.administration.JdbcAuditWriter.append(jdbc,actor,io.agenteval.administration.AuditAction.CREDENTIAL_ISSUED,id);
         });
     }
     @Override public WorkerPrincipal authenticate(String hash) {
@@ -36,7 +38,13 @@ public class JdbcWorkerRepository implements CredentialRepository,WorkerRegistry
         return new WorkerPrincipal(credential.workspaceId(),agentIds,credential.credentialId());
     }
     @Override public void revoke(WorkspaceActor actor,UUID id) {
-        if(jdbc.sql("update worker_credentials set revoked=true where id=? and workspace_id=?").params(id,actor.workspaceId()).update()==0) throw new ScopeViolationException();
+        tx.executeWithoutResult(status -> {
+            if(jdbc.sql("update worker_credentials set revoked=true where id=? and workspace_id=? and not revoked").params(id,actor.workspaceId()).update()==0) {
+                if(jdbc.sql("select id from worker_credentials where id=? and workspace_id=?").params(id,actor.workspaceId()).query(UUID.class).optional().isEmpty()) throw new ScopeViolationException();
+                return;
+            }
+            io.agenteval.administration.JdbcAuditWriter.append(jdbc,actor,io.agenteval.administration.AuditAction.CREDENTIAL_REVOKED,id);
+        });
     }
     @Override public WorkerRegistration register(WorkerPrincipal p,RegisterWorkerRequest request,Instant now) {
         return tx.execute(status -> {
@@ -47,6 +55,7 @@ public class JdbcWorkerRepository implements CredentialRepository,WorkerRegistry
             var existing=jdbc.sql("select id,agent_id,agent_version,max_concurrency from worker_instances where credential_id=? and instance_id=? for update")
                 .params(p.credentialId(),request.instanceId()).query((row,n) -> new Existing(row.getObject("id",UUID.class),row.getObject("agent_id",UUID.class),row.getString("agent_version"),row.getInt("max_concurrency"))).optional();
             UUID id=existing.map(Existing::id).orElseGet(UUID::randomUUID);
+            io.agenteval.administration.JdbcResourceAdmission.onlineWorker(jdbc,p.workspaceId(),existing.map(Existing::id).orElse(null),now);
             if(existing.isPresent()) {
                 var old=existing.get();
                 boolean changed=!old.agentId().equals(request.agentId()) || !old.version().equals(request.agentVersion()) || old.concurrency()!=request.maxConcurrency();

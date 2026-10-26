@@ -12,6 +12,7 @@ const problemSchema = z.object({
   line: z.number().int().positive().optional(),
 });
 const messages: Record<string, string> = {
+  EXPORT_TOO_LARGE: "导出内容超过大小限制，请在报告中按任务查看证据。",
   INVALID_CREDENTIALS: "邮箱或密码不正确。",
   INVALID_PASSWORD: "当前密码不正确，或新密码不符合要求。",
   INVALID_REQUEST: "请检查填写的内容。",
@@ -20,7 +21,7 @@ const messages: Record<string, string> = {
   INSUFFICIENT_QUOTA: "可用额度不足，或调减后不足以覆盖已消费和预留额度。",
   FORBIDDEN: "当前账户不能执行此操作。",
   NOT_FOUND: "当前资源不存在或不可访问。",
-  CAPACITY_REACHED: "当前运行数量已达上限，请稍后重试。",
+  CAPACITY_REACHED: "当前资源或并发请求已达上限，请查看资源预算或稍后重试。",
   MODEL_UNAVAILABLE: "模型服务尚未配置完成，请联系管理员。",
   STORAGE_UNAVAILABLE: "附件存储暂时不可用，请稍后重试。",
   PASSWORD_CHANGE_REQUIRED: "请先设置新密码。",

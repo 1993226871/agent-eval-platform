@@ -21,6 +21,7 @@ public class JdbcIdentityRepository implements IdentityRepository {
             UUID userId=UUID.randomUUID(),workspaceId=UUID.randomUUID();
             jdbc.sql("insert into users(id,email,password_hash,must_change_password,admin) values (?,?,?,true,?)").params(userId,email,passwordHash,admin).update();
             jdbc.sql("insert into workspaces(id,owner_user_id) values (?,?)").params(workspaceId,userId).update();
+            io.agenteval.administration.JdbcAuditWriter.system(jdbc,workspaceId,io.agenteval.administration.AuditAction.ACCOUNT_CREATED,userId);
             return new UserAccount(userId,workspaceId,email,passwordHash,true,admin);
         });
     }

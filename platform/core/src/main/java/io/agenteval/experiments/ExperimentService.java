@@ -22,12 +22,17 @@ public final class ExperimentService {
         agents.get(actor,command.agentId());
         var dataset=catalog.version(actor,command.datasetVersionId()); var suite=catalog.version(actor,command.suiteVersionId());
         if(dataset.kind()!=ResourceKind.DATASET || suite.kind()!=ResourceKind.SUITE) throw new IllegalArgumentException("Dataset/suite published versions required");
-        if((long)dataset.content().path("cases").size()*command.repeatCount()>1000) throw new IllegalArgumentException("Experiment exceeds 1000 trials");
-        var snapshot=JsonNodeFactory.instance.objectNode(); snapshot.set("dataset",dataset.content()); snapshot.set("suite",suite.content());
+        var datasetContent=dataset.content(); var suiteContent=suite.content();
+        if((long)datasetContent.path("cases").size()*command.repeatCount()>1000) throw new IllegalArgumentException("Experiment exceeds 1000 trials");
+        long bytes=datasetContent.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length+(long)suiteContent.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length+128;
+        if(bytes>8*1024*1024) throw new IllegalArgumentException("Frozen experiment configuration exceeds limit");
+        var snapshot=JsonNodeFactory.instance.objectNode(); snapshot.set("dataset",datasetContent); snapshot.set("suite",suiteContent);
         var evaluators=snapshot.putArray("evaluators");
         for(var entry:suite.content().path("entries")) {
             var version=catalog.version(actor,UUID.fromString(entry.path("evaluator_version").asText()));
-            var item=evaluators.addObject(); item.put("id",version.id().toString()); item.set("content",version.content());
+            var content=version.content(); bytes+=content.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length+128L;
+            if(bytes>8*1024*1024) throw new IllegalArgumentException("Frozen experiment configuration exceeds limit");
+            var item=evaluators.addObject(); item.put("id",version.id().toString()); item.set("content",content);
         }
         return repository.start(actor,command,hash,snapshot,clock.instant());
     }

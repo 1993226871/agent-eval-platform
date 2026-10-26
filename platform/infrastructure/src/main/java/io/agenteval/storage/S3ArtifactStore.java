@@ -52,4 +52,8 @@ public final class S3ArtifactStore implements ArtifactStore,AutoCloseable {
         return URI.create(signer.presignGetObject(b -> b.signatureDuration(Duration.ofMinutes(2)).getObjectRequest(r -> r.bucket(bucket).key(objectKey).responseContentDisposition("attachment").responseContentType("application/octet-stream"))).url().toString());
     }
     @Override public void close() { signer.close(); client.close(); }
+    @Override public void deleteObject(String objectKey) {
+        try { client.deleteObject(request -> request.bucket(bucket).key(objectKey)); }
+        catch(RuntimeException failure) { throw new io.agenteval.telemetry.StorageUnavailableException(); }
+    }
 }

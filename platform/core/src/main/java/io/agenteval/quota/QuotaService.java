@@ -11,6 +11,9 @@ public final class QuotaService {
         if(limit<1 || limit>100) throw new IllegalArgumentException("Invalid ledger limit");
         return repository.entries(actor.workspaceId(),limit);
     }
+    public QuotaLedgerPage page(WorkspaceActor actor,String cursor,int limit) {
+        if(limit<1 || limit>100) throw new IllegalArgumentException("Invalid ledger page"); return repository.page(actor.workspaceId(),cursor,limit);
+    }
     public QuotaWallet grant(WorkspaceActor admin,UUID workspaceId,long credits,String reason,UUID idempotencyKey) {
         if(!admin.admin()) throw new ScopeViolationException();
         if(workspaceId==null || idempotencyKey==null || credits==0 || reason==null || reason.isBlank() || reason.length()>500)

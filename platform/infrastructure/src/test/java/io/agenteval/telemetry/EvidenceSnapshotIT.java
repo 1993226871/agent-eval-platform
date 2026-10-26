@@ -38,7 +38,7 @@ class EvidenceSnapshotIT {
     @BeforeEach void setup() throws Exception {
         actor=new IdentityService(new JdbcIdentityRepository(jdbc,tx),new BCryptPasswordEncoder(4)).createUser(UUID.randomUUID()+"@test.local","Temporary-Password-1",false).actor();
         var catalog=new CatalogService(new JdbcCatalogRepository(jdbc,tx,json));
-        var agents=new AgentService(new JdbcAgentRepository(jdbc)); var agent=agents.create(actor,"test","v1");
+        var agents=new AgentService(new JdbcAgentRepository(jdbc,tx)); var agent=agents.create(actor,"test","v1");
         var ds=catalog.create(actor,ResourceKind.DATASET,"cases",json.readTree("{\"cases\":[{\"instruction\":\"answer\",\"input\":{},\"expected\":42}]}"));
         var ev=catalog.create(actor,ResourceKind.EVALUATOR,"rule",json.readTree("{\"type\":\"RULE\",\"criterion_id\":\"answer\",\"required_evidence\":[\"output\"],\"threshold\":1,\"config\":{}}"));
         var version=catalog.publish(actor,ev.id());

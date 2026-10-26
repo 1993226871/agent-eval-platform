@@ -26,12 +26,17 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
     @Override public int schedule(int limit,Instant now) {
         return tx.execute(transaction -> {
             guard(); cancelJobs(now);
-            var runs=jdbc.sql("select g.id,g.workspace_id,g.trial_id,g.snapshot_id,coalesce(g.run_config,s.manifest->'experiment_snapshot') configuration from grading_jobs g join evidence_snapshots s on s.id=g.snapshot_id where g.status='QUEUED' order by g.created_at,g.id limit ? for update of g skip locked")
+            var runs=jdbc.sql("select g.id,g.workspace_id,g.trial_id,g.snapshot_id,coalesce(g.run_config,s.manifest->'experiment_snapshot') configuration from grading_jobs g join evidence_snapshots s on s.id=g.snapshot_id join trials t on t.id=g.trial_id join experiments e on e.id=t.experiment_id where g.status='QUEUED' and e.status not in ('CANCELLED','DELETING','DELETED') order by g.created_at,g.id limit ? for update of g skip locked")
                 .param(limit).query((r,n) -> new PendingRun(r.getObject("id",UUID.class),r.getObject("workspace_id",UUID.class),r.getObject("trial_id",UUID.class),r.getObject("snapshot_id",UUID.class),tree(r.getString("configuration")))).list();
             for(var run:runs) {
                 var frozen=run.manifest(); var entries=entries(frozen.path("suite"));
                 if(entries.stream().noneMatch(EvaluationEntry::requiredToPass)) throw new IllegalStateException("Frozen suite lacks required criterion");
                 var definitions=new HashMap<UUID,JsonNode>(); for(var item:frozen.path("evaluators")) definitions.put(UUID.fromString(item.path("id").asText()),item.path("content"));
+                int prior=jdbc.sql("select count(*) from evaluation_jobs where run_id=?").param(run.id()).query(Integer.class).single();
+                int needed=(int)entries.stream().map(EvaluationEntry::evaluatorVersion).distinct().count()-prior;
+                if(!io.agenteval.administration.JdbcResourceAdmission.evaluationJobs(jdbc,run.workspace(),needed)) {
+                    jdbc.sql("update grading_jobs set status='WAITING_RESOURCES' where id=?").param(run.id()).update(); continue;
+                }
                 for(var version:entries.stream().map(EvaluationEntry::evaluatorVersion).distinct().toList()) {
                     var definition=definitions.get(version); if(definition==null) throw new IllegalStateException("Missing frozen evaluator");
                     jdbc.sql("insert into evaluation_jobs(id,run_id,workspace_id,trial_id,snapshot_id,evaluator_version,definition,created_at,next_run_at) values (?,?,?,?,?,?,cast(? as jsonb),?,?) on conflict(run_id,evaluator_version) do nothing")
@@ -46,8 +51,19 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
         return tx.execute(transaction -> {
             guard(); cancelJobs(now);
             jdbc.sql("update evaluation_jobs set status='QUEUED',lease_token=null,lease_expires_at=null where status='RUNNING' and lease_expires_at<=?").param(Timestamp.from(now)).update();
+            jdbc.sql("""
+                update evaluation_jobs j set status='DEFERRED',wait_reason='PYTHON_RESOURCE_LIMIT',next_run_at=?
+                from workspace_resource_limits l join workspace_resource_usage u on u.workspace_id=l.workspace_id
+                where j.workspace_id=l.workspace_id and j.definition->>'type'='PYTHON' and not j.python_budget_reserved
+                  and j.status in ('QUEUED','DEFERRED') and j.next_run_at<=? and u.python_reserved_seconds>l.max_python_seconds-30
+                """
+            ).params(Timestamp.from(now.plusSeconds(30)),Timestamp.from(now)).update();
             var candidate=jdbc.sql("select j.*,w.owner_user_id from evaluation_jobs j join workspaces w on w.id=j.workspace_id join grading_jobs g on g.id=j.run_id where j.status in ('QUEUED','WAITING_QUOTA','DEFERRED') and j.next_run_at<=? and g.status in ('RUNNING','WAITING_QUOTA') order by case j.definition->>'type' when 'RULE' then 0 when 'PYTHON' then 1 else 2 end,j.created_at,j.id limit 1 for update of j skip locked").param(Timestamp.from(now)).query(this::mapJob).optional();
-            if(candidate.isEmpty()) return Optional.empty(); var old=candidate.get(); UUID token=UUID.randomUUID(); Instant expires=now.plusSeconds(60);
+            if(candidate.isEmpty()) return Optional.empty(); var old=candidate.get();
+            if(old.job().definition().type().equals("PYTHON") && !io.agenteval.administration.JdbcResourceAdmission.pythonExecution(jdbc,old.job().owner().workspaceId(),old.job().id())) {
+                jdbc.sql("update evaluation_jobs set status='DEFERRED',wait_reason='PYTHON_RESOURCE_LIMIT',next_run_at=? where id=?").params(Timestamp.from(now.plusSeconds(30)),old.job().id()).update(); return Optional.empty();
+            }
+            UUID token=UUID.randomUUID(); Instant expires=now.plusSeconds(60);
             jdbc.sql("update evaluation_jobs set status='RUNNING',lease_token=?,lease_expires_at=?,attempts=attempts+1 where id=?").params(token,Timestamp.from(expires),old.job().id()).update();
             jdbc.sql("update grading_jobs set status='RUNNING' where id=?").param(old.job().runId()).update();
             var job=old.job(); return Optional.of(new EvaluatorJob(job.id(),job.runId(),job.trialId(),job.snapshotId(),job.owner(),job.definition(),token,expires));
@@ -100,7 +116,7 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
             """).params(Timestamp.from(now),run).update();
     }
     private void cancelJobs(Instant now) {
-        jdbc.sql("update grading_jobs g set status='CANCELLED',completed_at=? from trials t join experiments e on e.id=t.experiment_id where g.trial_id=t.id and g.status in ('QUEUED','RUNNING','WAITING_QUOTA') and (t.status='CANCELLED' or e.status='CANCELLED')").param(Timestamp.from(now)).update();
+        jdbc.sql("update grading_jobs g set status='CANCELLED',completed_at=? from trials t join experiments e on e.id=t.experiment_id where g.trial_id=t.id and g.status in ('QUEUED','RUNNING','WAITING_QUOTA','WAITING_RESOURCES') and (t.status='CANCELLED' or e.status in ('CANCELLED','DELETING','DELETED'))").param(Timestamp.from(now)).update();
         jdbc.sql("update evaluation_jobs j set status='CANCELLED',completed_at=? from grading_jobs g where j.run_id=g.id and g.status='CANCELLED' and j.status in ('QUEUED','RUNNING','WAITING_QUOTA','DEFERRED')").param(Timestamp.from(now)).update();
     }
     private void verifyReferences(JsonNode manifest,UUID snapshot,List<String> refs) {
@@ -114,7 +130,7 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
         return readTx.execute(transaction -> loadReport(actor,experimentId));
     }
     private ReportData loadReport(WorkspaceActor actor,UUID experimentId) {
-        var experiment=jdbc.sql("select dataset_version_id,suite_version_id,agent_version,status,snapshot from experiments where id=? and workspace_id=?").params(experimentId,actor.workspaceId())
+        var experiment=jdbc.sql("select dataset_version_id,suite_version_id,agent_version,status,snapshot from experiments where id=? and workspace_id=? and status not in ('DELETING','DELETED')").params(experimentId,actor.workspaceId())
             .query((r,n) -> new ExperimentSource(r.getObject("dataset_version_id",UUID.class),r.getObject("suite_version_id",UUID.class),r.getString("agent_version"),r.getString("status"),tree(r.getString("snapshot")))).optional().orElseThrow(ScopeViolationException::new);
         var scores=jdbc.sql("""
             with latest as (select distinct on (g.trial_id) g.id from grading_jobs g join trials t on t.id=g.trial_id where t.experiment_id=? and t.workspace_id=? and g.purpose<>'PREVIEW' order by g.trial_id,g.run_ordinal desc)
@@ -123,7 +139,7 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
             """).params(experimentId,actor.workspaceId()).query((r,n) -> new ResultRow(r.getObject("run_id",UUID.class),r.getObject("evaluator_version",UUID.class),decode(r.getString("payload")))).list();
         var byRun=new HashMap<UUID,Map<UUID,CriterionResult>>(); for(var score:scores) byRun.computeIfAbsent(score.run(),key -> new HashMap<>()).put(score.version(),score.result());
         var trials=jdbc.sql("""
-            select t.id,t.case_index,t.attempt,t.status,t.started_at,g.id run_id,g.snapshot_id,g.suite_version_id,g.suite_config,g.status evaluation_state,
+            select t.id,t.case_index,t.attempt,t.status,t.started_at,t.evidence_wait_reason,g.id run_id,g.snapshot_id,g.suite_version_id,g.suite_config,g.status evaluation_state,
               (select case when count(distinct value->>'span_id')=1
                 and count(*) filter(where value->>'event_type'='span.started')>=1
                 and count(*) filter(where value->>'event_type' in ('span.completed','span.failed'))=1
@@ -137,7 +153,7 @@ public class JdbcEvaluationRepository implements EvaluationRepository,ReportRepo
             """)
             .params(experimentId,actor.workspaceId()).query((r,n) -> {
                 UUID run=r.getObject("run_id",UUID.class); var start=r.getTimestamp("started_at"); String status=r.getString("evaluation_state"); if(status==null || status.equals("QUEUED")) status="PENDING";
-                return new ReportData.TrialEvaluation(r.getObject("id",UUID.class),r.getInt("case_index"),r.getInt("attempt"),TrialExecutionStatus.valueOf(r.getString("status")),start==null?null:start.toInstant(),run,r.getObject("snapshot_id",UUID.class),status,byRun.getOrDefault(run,Map.of()),duration(r.getString("duration_ms")),r.getObject("suite_version_id",UUID.class),r.getString("suite_config")==null?List.of():entries(tree(r.getString("suite_config"))));
+                return new ReportData.TrialEvaluation(r.getObject("id",UUID.class),r.getInt("case_index"),r.getInt("attempt"),TrialExecutionStatus.valueOf(r.getString("status")),start==null?null:start.toInstant(),run,r.getObject("snapshot_id",UUID.class),status,byRun.getOrDefault(run,Map.of()),duration(r.getString("duration_ms")),r.getObject("suite_version_id",UUID.class),r.getString("suite_config")==null?List.of():entries(tree(r.getString("suite_config"))),r.getString("evidence_wait_reason"));
             }).list();
         return new ReportData(experimentId,experiment.dataset(),experiment.suite(),experiment.agentVersion(),experiment.status(),entries(experiment.snapshot().path("suite")),trials);
     }

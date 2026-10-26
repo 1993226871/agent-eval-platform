@@ -39,4 +39,15 @@ class ArtifactStorageIT {
             assertThat(client.send(HttpRequest.newBuilder(store.downloadUrl(sealed)).GET().build(),HttpResponse.BodyHandlers.discarding()).statusCode()).isEqualTo(404);
         }
     }
+    @Test void deletesStagingAndSealedObjectsIdempotently() throws Exception {
+        String stage="staging/"+UUID.randomUUID(),sealed="sealed/"+UUID.randomUUID();
+        try(var client=HttpClient.newHttpClient()) {
+            var content="abc".getBytes(StandardCharsets.UTF_8);
+            assertThat(client.send(HttpRequest.newBuilder(store.uploadUrl(stage,3)).PUT(HttpRequest.BodyPublishers.ofByteArray(content)).build(),HttpResponse.BodyHandlers.discarding()).statusCode()).isEqualTo(200);
+            store.verifyAndSeal(stage,sealed,3,HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content)));
+            store.deleteObject(stage); store.deleteObject(sealed); store.deleteObject(stage); store.deleteObject(sealed);
+            assertThat(client.send(HttpRequest.newBuilder(store.downloadUrl(stage)).GET().build(),HttpResponse.BodyHandlers.discarding()).statusCode()).isEqualTo(404);
+            assertThat(client.send(HttpRequest.newBuilder(store.downloadUrl(sealed)).GET().build(),HttpResponse.BodyHandlers.discarding()).statusCode()).isEqualTo(404);
+        }
+    }
 }

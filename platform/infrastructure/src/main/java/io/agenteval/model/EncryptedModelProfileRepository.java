@@ -31,12 +31,20 @@ public final class EncryptedModelProfileRepository implements ModelProfileReposi
             jdbc.sql("insert into model_profiles(id,name,endpoint,encrypted_api_key,model,input_token_bound,max_output_tokens,max_request_bytes,max_concurrent,bound_reference,created_by) values(?,?,?,?,?,?,?,?,?,?,?)")
                 .params(id,command.name(),command.endpoint(),encrypted,command.model(),command.inputTokenBound(),command.maxOutputTokens(),command.maxRequestBytes(),command.maxConcurrent(),command.boundReference(),administrator).update();
             jdbc.sql("insert into model_price_versions(id,profile_id,input_rate,output_rate,denominator) values(?,?,?,?,?)").params(price,id,command.inputRate(),command.outputRate(),command.denominator()).update();
+              io.agenteval.administration.JdbcAuditWriter.byUser(jdbc,administrator,io.agenteval.administration.AuditAction.MODEL_CREATED,id);
             return require(id);
         });
     }
     public ModelProfile require(UUID id) { return jdbc.sql(SELECT+"where p.id=?").param(id).query(this::map).optional().orElseThrow(ScopeViolationException::new); }
     public List<ModelProfile> list() { return jdbc.sql(SELECT+"order by p.created_at desc,p.id desc limit 100").query(this::map).list(); }
-    public void disable(UUID id,String reason) { jdbc.sql("update model_profiles set enabled=false,disabled_reason=? where id=?").params(reason,id).update(); }
+    public void disable(UUID id,String reason) {
+        transactions.executeWithoutResult(status -> {
+            if(jdbc.sql("update model_profiles set enabled=false,disabled_reason=? where id=? and enabled").params(reason,id).update()==1) {
+                UUID owner=jdbc.sql("select w.id from workspaces w join model_profiles p on p.created_by=w.owner_user_id where p.id=?").param(id).query(UUID.class).single();
+                io.agenteval.administration.JdbcAuditWriter.system(jdbc,owner,io.agenteval.administration.AuditAction.MODEL_DISABLED,id);
+            }
+        });
+    }
     public String credential(UUID id) {
         var profile=require(id); endpoint(profile.endpoint());
         return secrets.decrypt(id,jdbc.sql("select encrypted_api_key from model_profiles where id=?").param(id).query(String.class).single());

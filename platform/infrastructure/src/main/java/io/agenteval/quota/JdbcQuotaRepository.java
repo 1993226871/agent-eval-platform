@@ -1,4 +1,5 @@
 package io.agenteval.quota;
+import io.agenteval.identity.WorkspaceActor;
 
 import io.agenteval.identity.ScopeViolationException;
 import java.sql.*;
@@ -22,6 +23,20 @@ public class JdbcQuotaRepository implements QuotaRepository {
     public List<QuotaEntry> entries(UUID workspaceId,int limit) {
         return jdbc.sql("select * from quota_ledger where workspace_id=? order by created_at desc,id desc limit ?").params(workspaceId,limit).query(this::entry).list();
     }
+    public QuotaLedgerPage page(UUID workspace,String cursor,int limit) {
+        java.time.Instant before=null; UUID last=null;
+        if(cursor!=null) try {
+            if(cursor.length()>512) throw new IllegalArgumentException();
+            var fields=new String(Base64.getUrlDecoder().decode(cursor),java.nio.charset.StandardCharsets.UTF_8).split("\\|",-1);
+            if(fields.length!=4 || !fields[0].equals("quota-ledger") || !fields[1].equals(workspace.toString())) throw new IllegalArgumentException();
+            before=java.time.Instant.parse(fields[2]); last=UUID.fromString(fields[3]);
+        } catch(RuntimeException invalid) { throw new IllegalArgumentException("Invalid ledger cursor"); }
+        var query=jdbc.sql("select * from quota_ledger where workspace_id=?"+(before==null?"":" and (created_at,id)<(?,?)")+" order by created_at desc,id desc limit ?");
+        query.param(workspace); if(before!=null) query.param(Timestamp.from(before)).param(last); query.param(limit+1);
+        var rows=query.query(this::entry).list(); boolean more=rows.size()>limit; var items=rows.subList(0,Math.min(limit,rows.size())); String next=null;
+        if(more) { var tail=items.getLast(); next=Base64.getUrlEncoder().withoutPadding().encodeToString(("quota-ledger|"+workspace+"|"+tail.createdAt()+"|"+tail.id()).getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
+        return new QuotaLedgerPage(items,next);
+    }
     private QuotaEntry entry(ResultSet row,int index) throws SQLException {
         return new QuotaEntry(row.getObject("id",UUID.class),row.getObject("call_id",UUID.class),row.getString("entry_type"),row.getLong("granted_delta"),row.getLong("consumed_delta"),row.getLong("reserved_delta"),row.getString("reason"),row.getObject("actor_user_id",UUID.class),row.getTimestamp("created_at").toInstant());
     }
@@ -40,6 +55,7 @@ public class JdbcQuotaRepository implements QuotaRepository {
             if(granted<0 || wallet.consumed()>granted || wallet.reserved()>granted-wallet.consumed()) throw new InsufficientQuotaException();
             jdbc.sql("update quota_wallets set granted=? where workspace_id=?").params(granted,workspaceId).update();
             append(key,workspaceId,null,"ADJUST",credits,0,0,reason,adminId);
+            io.agenteval.administration.JdbcAuditWriter.append(jdbc,new WorkspaceActor(adminId,workspaceId,true),io.agenteval.administration.AuditAction.QUOTA_ADJUSTED,key);
             return new QuotaWallet(workspaceId,granted,wallet.consumed(),wallet.reserved());
         }); } catch(DuplicateKeyException conflict) { throw new QuotaConflictException(); }
     }

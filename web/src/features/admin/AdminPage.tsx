@@ -10,6 +10,7 @@ import {
 } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
 import { formatCredits, integerCredits } from "../models/credits";
+import { ResourceAdminPanel } from "./ResourceAdminPanel";
 
 type ModelForm = Schema<"ModelCreate">;
 const emptyModel: ModelForm = {
@@ -29,9 +30,9 @@ const emptyModel: ModelForm = {
 export function AdminPage() {
   const { workspace_id } = useWorkspace();
   const cache = useQueryClient();
-  const [tab, setTab] = useState<"accounts" | "models" | "reconcile">(
-    "accounts",
-  );
+  const [tab, setTab] = useState<
+    "accounts" | "models" | "reconcile" | "resources"
+  >("accounts");
   const [offset, setOffset] = useState(0);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -149,6 +150,7 @@ export function AdminPage() {
             ["accounts", "账户与额度"],
             ["models", "模型配置"],
             ["reconcile", "待对账调用"],
+            ["resources", "资源上限"],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -613,6 +615,9 @@ export function AdminPage() {
             </form>
           </section>
         </>
+      )}
+      {tab === "resources" && (
+        <ResourceAdminPanel accounts={accounts.data ?? []} />
       )}
     </>
   );

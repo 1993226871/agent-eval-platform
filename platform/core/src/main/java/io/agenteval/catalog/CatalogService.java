@@ -43,6 +43,7 @@ public final class CatalogService {
         var cases=content.path("cases"); if(!cases.isArray() || cases.isEmpty() || cases.size()>1000) throw new IllegalArgumentException("Dataset must have 1..1000 cases");
         for(var task:cases) {
             if(!task.isObject() || !task.path("instruction").isTextual() || task.path("instruction").asText().isBlank() || !task.has("input")) throw new IllegalArgumentException("Each case requires instruction and input");
+            if(task.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length>768*1024) throw new IllegalArgumentException("Task exceeds safe SDK response size");
             if(task.has("timeout_seconds") && (!task.get("timeout_seconds").isIntegralNumber() || task.get("timeout_seconds").asLong()<1 || task.get("timeout_seconds").asLong()>3600)) throw new IllegalArgumentException("Invalid task timeout");
         }
     }

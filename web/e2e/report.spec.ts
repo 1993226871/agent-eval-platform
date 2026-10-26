@@ -76,5 +76,59 @@ test("explains real SDK results and exports linked manual reviews", async ({
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  await page.getByRole("link", { name: "个人额度", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "执行与存储预算" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/每个 Python 作业按 30 秒上界预留/),
+  ).toBeVisible();
+  await page.screenshot({
+    path: path.resolve("../.tools/web-resource-mobile.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("link", { name: "管理后台", exact: true }).click();
+  await page.getByRole("button", { name: "资源上限", exact: true }).click();
+  await page.getByLabel("选择用户空间").selectOption({ label: email });
+  await expect(page.getByLabel("累计评测作业", { exact: true })).toHaveValue(
+    "50000",
+  );
+  await page.getByLabel("累计评测作业", { exact: true }).fill("50001");
+  await page
+    .getByLabel("调整说明", { exact: true })
+    .fill("Browser resource fixture");
+  await page.getByRole("button", { name: "保存资源上限" }).click();
+  await expect(page.getByRole("status")).toHaveText(
+    "资源限制已更新，等待任务可继续调度。",
+  );
+  await page.screenshot({
+    path: path.resolve("../.tools/web-admin-resources.png"),
+    fullPage: true,
+  });
+  await page.getByRole("link", { name: "操作记录", exact: true }).click();
+  await expect(page.getByText("调整资源限制", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "实验", exact: true }).click();
+  await page
+    .getByRole("row")
+    .filter({ hasText: ids[0]!.slice(0, 8) })
+    .getByRole("button", { name: "删除实验", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("无法访问");
+  await page.getByRole("button", { name: "确认删除", exact: true }).click();
+  await page.getByRole("link", { name: "查看删除进度" }).click();
+  await expect(
+    page.getByRole("heading", { name: "实验删除进度" }),
+  ).toBeVisible();
+  await expect(page.getByText("正在清理", { exact: true })).toBeVisible();
+  expect(
+    (await page.request.get("/api/v1/reports/experiments/" + ids[0])).status(),
+  ).toBe(404);
+  await page.screenshot({
+    path: path.resolve("../.tools/web-deletion-status.png"),
+    fullPage: true,
+  });
+  await page.getByRole("link", { name: "操作记录", exact: true }).click();
+  await expect(page.getByText("请求删除实验", { exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });

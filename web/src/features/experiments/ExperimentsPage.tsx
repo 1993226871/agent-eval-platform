@@ -13,11 +13,13 @@ import {
 } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
 import { useVersionOptions } from "../catalog/queries";
+import { DeletionControl } from "./DeletionControl";
 
 export function ExperimentsPage() {
   const { workspace_id } = useWorkspace();
   const cache = useQueryClient();
   const [offset, setOffset] = useState(0);
+  const [requestedDeletion, setRequestedDeletion] = useState("");
   const experiments = useQuery({
     queryKey: [workspace_id, "experiments", offset],
     queryFn: () =>
@@ -131,6 +133,14 @@ export function ExperimentsPage() {
           新建实验
         </button>
       </PageHeading>
+      {requestedDeletion && (
+        <p className="warning-notice">
+          实验已停止访问，正在清理历史数据。
+          <Link to={"/workspace/deletions/" + requestedDeletion}>
+            查看删除进度
+          </Link>
+        </p>
+      )}
       <ErrorNotice
         error={
           experiments.error ?? agents.error ?? datasets.error ?? suites.error
@@ -172,6 +182,23 @@ export function ExperimentsPage() {
                     <button onClick={() => setSelected(item.id)}>
                       查看任务
                     </button>
+                    <DeletionControl
+                      experimentId={item.id}
+                      onDelete={(key) =>
+                        request(
+                          api.DELETE("/api/v1/experiments/{id}", {
+                            params: { path: { id: item.id } },
+                            body: { idempotency_key: key },
+                          }),
+                        )
+                      }
+                      onRequested={(status) => {
+                        setRequestedDeletion(status.experiment_id);
+                        void cache.invalidateQueries({
+                          queryKey: [workspace_id, "experiments"],
+                        });
+                      }}
+                    />
                     {!["CANCELLED", "COMPLETED", "DONE", "DELETED"].includes(
                       item.status,
                     ) && (

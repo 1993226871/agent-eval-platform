@@ -27,6 +27,9 @@ public class JdbcArtifactRepository implements ArtifactRepository {
             if(old.isPresent()) {
                 var a=old.get(); if(!a.name().equals(request.name()) || !a.mediaType().equals(request.mediaType()) || a.sizeBytes()!=request.sizeBytes() || !a.sha256().equals(request.sha256())) throw new CatalogConflictException(); return a;
             }
+            if(jdbc.sql("select count(*) from artifacts where trial_id=?").param(trial).query(Long.class).single()>=128) throw new TelemetryLimitException();
+            io.agenteval.administration.JdbcResourceAdmission.artifact(jdbc,p.workspaceId(),request.sizeBytes());
+            if(jdbc.sql("select count(*) from artifacts where workspace_id=?").param(p.workspaceId()).query(Long.class).single()>=10000) throw new io.agenteval.workers.CapacityExceededException();
             long used=jdbc.sql("select coalesce(sum(size_bytes),0) from artifacts where trial_id=?").param(trial).query(Long.class).single();
             if(used+request.sizeBytes()>104857600) throw new TelemetryLimitException();
             UUID id=UUID.randomUUID(); String stage="staging/"+p.workspaceId()+"/"+id,sealed="sealed/"+p.workspaceId()+"/"+id;
@@ -53,11 +56,12 @@ public class JdbcArtifactRepository implements ArtifactRepository {
         });
     }
     @Override public void abandonVerification(ArtifactRecord artifact) { jdbc.sql("update artifacts set status='PENDING',verification_token=null,verification_started_at=null where id=? and status='VERIFYING' and verification_token=?").params(artifact.id(),artifact.verificationToken()).update(); }
-    @Override public ArtifactRecord get(WorkspaceActor actor,UUID id) { return jdbc.sql("select * from artifacts where id=? and workspace_id=?").params(id,actor.workspaceId()).query(this::map).optional().orElseThrow(ScopeViolationException::new); }
+    @Override public ArtifactRecord get(WorkspaceActor actor,UUID id) { return jdbc.sql("select a.* from artifacts a join trials t on t.id=a.trial_id join experiments e on e.id=t.experiment_id where a.id=? and a.workspace_id=? and e.status not in ('DELETING','DELETED')").params(id,actor.workspaceId()).query(this::map).optional().orElseThrow(ScopeViolationException::new); }
     @Override public ArtifactRecord getEvidence(WorkspaceActor actor,UUID trial,UUID snapshot,UUID id) {
         return jdbc.sql("""
             select a.* from artifacts a join evidence_snapshots s on s.trial_id=a.trial_id and s.workspace_id=a.workspace_id
-            where a.id=? and a.workspace_id=? and a.trial_id=? and s.id=? and a.status='AVAILABLE'
+              join trials t on t.id=a.trial_id join experiments e on e.id=t.experiment_id
+            where a.id=? and a.workspace_id=? and a.trial_id=? and s.id=? and a.status='AVAILABLE' and e.status not in ('DELETING','DELETED')
               and exists(select 1 from jsonb_array_elements(s.manifest->'artifacts') v where v->>'artifact_id'=a.id::text
                 and v->>'sha256'=a.sha256 and (v->>'size_bytes')::bigint=a.size_bytes and v->>'name'=a.name and v->>'media_type'=a.media_type)
             """).params(id,actor.workspaceId(),trial,snapshot).query(this::map).optional().orElseThrow(ScopeViolationException::new);

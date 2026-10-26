@@ -25,7 +25,10 @@ class QuotaConcurrencyIT {
         var ds=new DriverManagerDataSource(postgres.getJdbcUrl(),postgres.getUsername(),postgres.getPassword());
         Flyway.configure().dataSource(ds).target("7").load().migrate();
         jdbc=JdbcClient.create(ds); sql=new JdbcTemplate(ds); tx=new DataSourceTransactionManager(ds);
-        legacyWorkspace=create(false).workspaceId();
+        // Seed the historical schema directly: current user provisioning also requires newer audit tables.
+        UUID legacyUser=UUID.randomUUID(); legacyWorkspace=UUID.randomUUID();
+        jdbc.sql("insert into users(id,email,password_hash,must_change_password,admin) values(?,?,?,true,false)").params(legacyUser,"legacy-"+legacyUser+"@quota.local","unused-legacy-fixture-hash").update();
+        jdbc.sql("insert into workspaces(id,owner_user_id) values(?,?)").params(legacyWorkspace,legacyUser).update();
         Flyway.configure().dataSource(ds).load().migrate();
     }
     @AfterAll static void stop() { if(postgres!=null) postgres.stop(); }
@@ -63,6 +66,13 @@ class QuotaConcurrencyIT {
         assertThatThrownBy(() -> quota.reserve(second.workspaceId(),call,90)).isInstanceOf(QuotaConflictException.class);
         assertThatThrownBy(() -> quota.grant(admin,second.workspaceId(),-41,"Too low",UUID.randomUUID())).isInstanceOf(InsufficientQuotaException.class);
         assertThatThrownBy(() -> quota.grant(user,user.workspaceId(),10,"Self grant",UUID.randomUUID())).isInstanceOf(ScopeViolationException.class);
+    }
+    @Test void pagesFullLedgerWithWorkspaceBoundCursors() {
+        for(int i=0;i<3;i++) quota.grant(admin,user.workspaceId(),10,"Budget "+i,UUID.randomUUID());
+        var first=quota.page(user,null,2); assertThat(first.items()).hasSize(2); assertThat(first.nextCursor()).isNotNull();
+        var second=quota.page(user,first.nextCursor(),2); assertThat(second.items()).hasSize(1); assertThat(second.nextCursor()).isNull();
+        assertThat(first.items()).doesNotContainAnyElementsOf(second.items());
+        assertThatThrownBy(() -> quota.page(create(false),first.nextCursor(),2)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test void uncertainSendCannotReleaseAndAdjustmentsAreIdempotent() {

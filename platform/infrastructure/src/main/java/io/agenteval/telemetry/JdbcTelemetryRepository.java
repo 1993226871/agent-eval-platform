@@ -35,11 +35,15 @@ public class JdbcTelemetryRepository implements TelemetryRepository {
                 var old=existingHash(p.workspaceId(),event.eventId());
                 if(old.isPresent()) { if(!old.get().equals(hash)) throw new TelemetryConflictException(); accepted.add(event.eventId()); continue; }
                 if(count>=10000) throw new TelemetryLimitException();
-                int inserted=jdbc.sql("insert into trace_events(workspace_id,trial_id,event_id,sequence,event_json,content_hash,received_at) values (?,?,?,?,cast(? as jsonb),?,?) on conflict do nothing")
-                    .params(p.workspaceId(),trialId,event.eventId(),event.sequence(),payload.toString(),hash,Timestamp.from(now)).update();
-                if(inserted==0) {
+                var inserted=jdbc.sql("insert into trace_events(workspace_id,trial_id,event_id,sequence,event_json,content_hash,received_at) values (?,?,?,?,cast(? as jsonb),?,?) on conflict do nothing returning octet_length(event_json::text)")
+                    .params(p.workspaceId(),trialId,event.eventId(),event.sequence(),payload.toString(),hash,Timestamp.from(now)).query(Long.class).optional();
+                if(inserted.isEmpty()) {
                     if(!existingHash(p.workspaceId(),event.eventId()).map(hash::equals).orElse(false)) throw new TelemetryConflictException();
                 } else {
+                    long bytes=inserted.get();
+                    if(jdbc.sql("update trial_evidence_usage set event_bytes=event_bytes+? where trial_id=? and workspace_id=? and event_bytes<=16777216-?").params(bytes,trialId,p.workspaceId(),bytes).update()!=1) throw new TelemetryLimitException();
+                    // Includes a conservative allowance for the materialized Span projection.
+                    io.agenteval.administration.JdbcResourceAdmission.evidence(jdbc,p.workspaceId(),Math.multiplyExact(bytes,2));
                     count++; project(p.workspaceId(),trialId,event);
                 }
                 accepted.add(event.eventId());
@@ -58,7 +62,7 @@ public class JdbcTelemetryRepository implements TelemetryRepository {
             .params(next.status(),timestamp(next.startedAt()),timestamp(next.endedAt()),next.input().toString(),next.output().toString(),next.durationMs(),next.id()).update();
     }
     @Override public TracePage query(WorkspaceActor actor,UUID trialId,String cursor,int limit) {
-        if(jdbc.sql("select id from trials where id=? and workspace_id=?").params(trialId,actor.workspaceId()).query(UUID.class).optional().isEmpty()) throw new ScopeViolationException();
+        if(jdbc.sql("select t.id from trials t join experiments e on e.id=t.experiment_id where t.id=? and t.workspace_id=? and e.status not in ('DELETING','DELETED')").params(trialId,actor.workspaceId()).query(UUID.class).optional().isEmpty()) throw new ScopeViolationException();
         long last=0,upper;
         if(cursor==null || cursor.isBlank()) {
             upper=jdbc.sql("select coalesce(max(id),0) from spans where workspace_id=? and trial_id=?").params(actor.workspaceId(),trialId).query(Long.class).single();

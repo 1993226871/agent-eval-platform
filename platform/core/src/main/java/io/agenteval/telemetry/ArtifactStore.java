@@ -5,4 +5,5 @@ public interface ArtifactStore {
     URI uploadUrl(String stagingKey,long sizeBytes);
     void verifyAndSeal(String stagingKey,String objectKey,long sizeBytes,String sha256);
     URI downloadUrl(String objectKey);
+    default void deleteObject(String objectKey) { throw new StorageUnavailableException(); }
 }

@@ -89,7 +89,7 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
     private boolean evaluationActive(UUID jobId,UUID workspace,Instant now) {
         if(jobId==null) return true; // Internal administrator connectivity checks have no evaluation job.
         jdbc.sql("select id from scheduler_guard where id=1 for update").query(Integer.class).single();
-        return jdbc.sql("select count(*) from evaluation_jobs j join trials t on t.id=j.trial_id join experiments e on e.id=t.experiment_id where j.id=? and j.workspace_id=? and j.status='RUNNING' and j.lease_expires_at>? and t.status<>'CANCELLED' and e.status<>'CANCELLED'").params(jobId,workspace,Timestamp.from(now)).query(Long.class).single()==1;
+        return jdbc.sql("select count(*) from evaluation_jobs j join trials t on t.id=j.trial_id join experiments e on e.id=t.experiment_id where j.id=? and j.workspace_id=? and j.status='RUNNING' and j.lease_expires_at>? and t.status<>'CANCELLED' and e.status not in ('CANCELLED','DELETING','DELETED')").params(jobId,workspace,Timestamp.from(now)).query(Long.class).single()==1;
     }
     public JudgeResponse failUnsent(ModelDispatch dispatch,Instant now) {
         return locked(() -> { var stored=requireDispatch(dispatch,now,"RESERVED"); quota.releaseUnsent(stored.request().callId()); var result=empty(stored.request(),"FAILED_UNSENT","PROVIDER_PREPARATION_FAILED"); update(stored,"FAILED_UNSENT",result,now); return result; });
@@ -150,6 +150,7 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
             if(credits>stored.upper()) quota.approveOverage(admin,callId,credits,reason,key);
             quota.settle(callId,credits);
             jdbc.sql("insert into model_reconciliations(idempotency_key,call_id,administrator,input_tokens,output_tokens,credits,reason,created_at) values(?,?,?,?,?,?,?,?)").params(key,callId,admin.userId(),input,output,credits,reason,Timestamp.from(now)).update();
+            io.agenteval.administration.JdbcAuditWriter.append(jdbc,new WorkspaceActor(admin.userId(),stored.request().workspaceId(),true),io.agenteval.administration.AuditAction.MODEL_RECONCILED,callId);
             var previous=stored.response();
             var result=new JudgeResponse(callId,"RECONCILED",previous.content(),input,output,credits,previous.profileId(),previous.priceVersionId(),previous.providerModel(),previous.finishReason(),previous.providerResponseId(),"ADMINISTRATOR_RECONCILED",previous.rawResponse(),credits);
             update(stored,"RECONCILED",result,now); return result;

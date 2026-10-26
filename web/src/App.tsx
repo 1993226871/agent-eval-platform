@@ -11,6 +11,8 @@ import { AgentsPage } from "./features/agents/AgentsPage";
 import { ExperimentsPage } from "./features/experiments/ExperimentsPage";
 import { QuotaPage } from "./features/models/QuotaPage";
 import { AdminPage } from "./features/admin/AdminPage";
+import { AuditPage } from "./features/administration/AuditPage";
+import { DeletionStatusPage } from "./features/administration/DeletionStatusPage";
 import { ExperimentReport } from "./features/reports/ExperimentReport";
 import { ComparisonView } from "./features/reports/ComparisonView";
 import { ErrorNotice, Loading } from "./components/ui";
@@ -42,6 +44,7 @@ function Layout() {
     ["suites", "评分套件"],
     ["agents", "Agent 接入"],
     ["quota", "个人额度"],
+    ["audit", "操作记录"],
   ] as const;
   return (
     <div className="app-shell">
@@ -118,6 +121,11 @@ export function App() {
           />
           <Route path="/workspace/agents" element={<AgentsPage />} />
           <Route path="/workspace/quota" element={<QuotaPage />} />
+          <Route path="/workspace/audit" element={<AuditPage />} />
+          <Route
+            path="/workspace/deletions/:id"
+            element={<DeletionStatusPage />}
+          />
           <Route path="/admin" element={<AdminGuard />} />
         </Route>
         <Route

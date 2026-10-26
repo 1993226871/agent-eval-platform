@@ -7,9 +7,14 @@ import java.util.*;
 public final class ReportExporter {
     private final ComparisonQueries queries;
     private final ReportService reports;
-    public ReportExporter(ComparisonQueries queries, EvaluationAggregator aggregator) { this.queries=queries; reports=new ReportService(queries::load,aggregator); }
+    private final long byteLimit;
+    public ReportExporter(ComparisonQueries queries, EvaluationAggregator aggregator) { this(queries,aggregator,16L*1024*1024); }
+    public ReportExporter(ComparisonQueries queries,EvaluationAggregator aggregator,long byteLimit) {
+        if(byteLimit<1 || byteLimit>16L*1024*1024) throw new IllegalArgumentException("Invalid export budget");
+        this.queries=queries; this.byteLimit=byteLimit; reports=new ReportService(queries::load,aggregator);
+    }
     public Export export(WorkspaceActor actor, UUID experiment) {
-        var input=queries.export(actor,experiment); var data=input.input().data();
+        var input=queries.export(actor,experiment,byteLimit); var data=input.input().data();
         return new Export("1",reports.render(data),input.input().provenance(),data.trials().stream().map(row -> reports.trial(data,row)).toList(),input.reviews(),input.evidence(),input.resultIdentities(),"worker_reported; automatic scores and appended human reviews are separate");
     }
     public record Export(String exportVersion, ExperimentReport report, ReportProvenance provenance, List<TrialReport> trials,

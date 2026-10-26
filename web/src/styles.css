@@ -560,6 +560,35 @@ dialog::backdrop {
 .skip-link:focus {
   top: 10px;
 }
+.limits-definition {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+.limits-definition > div {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.limits-definition dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.limits-definition dd {
+  margin: 5px 0 0;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.resource-fields {
+  border: 1px solid var(--line);
+  padding: 0 18px 16px;
+}
+.resource-fields legend {
+  grid-column: 1 / -1;
+  padding: 0 7px;
+}
+.tabs {
+  flex-wrap: wrap;
+}
 .warning-notice {
   padding: 14px 18px;
   border-left: 3px solid #b3842f;

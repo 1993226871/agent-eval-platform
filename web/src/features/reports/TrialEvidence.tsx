@@ -14,6 +14,7 @@ import { objectValue } from "../catalog/validation";
 import { useVersionOptions } from "../catalog/queries";
 import { TraceTree } from "./TraceTree";
 import { HumanReviewPanel } from "./HumanReviewPanel";
+import { resourceWaitMessage } from "../administration/ResourceUsagePanel";
 
 export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
   const { workspace_id } = useWorkspace();
@@ -161,7 +162,12 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
           <code>{run.data?.suite_version_id ?? trial.suite_version_id}</code>
         </p>
       ) : (
-        <p>尚未冻结证据，任务结束后等待收集完成。</p>
+        <p>
+          {trial.evidence_wait_reason
+            ? resourceWaitMessage(trial.evidence_wait_reason)
+            : "尚未冻结证据，任务结束后等待收集完成。"}{" "}
+          <Link to="/workspace/quota">查看额度与资源预算</Link>
+        </p>
       )}
       {run.isPending && runId ? (
         <Loading />
@@ -171,6 +177,14 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
             <p>
               评测状态：<Badge>{run.data.status}</Badge> · {run.data.purpose}
             </p>
+            {run.data.wait_reasons.length > 0 && (
+              <div className="warning-notice">
+                {run.data.wait_reasons.map((reason) => (
+                  <p key={reason}>{resourceWaitMessage(reason)}</p>
+                ))}
+                <Link to="/workspace/quota">查看额度与资源预算</Link>
+              </div>
+            )}
             {run.data.status === "WAITING_QUOTA" && (
               <Link to="/workspace/quota">额度不足，查看个人额度</Link>
             )}

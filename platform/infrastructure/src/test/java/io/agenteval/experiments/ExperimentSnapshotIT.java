@@ -34,7 +34,7 @@ class ExperimentSnapshotIT {
     @BeforeEach void services() {
         identities=new IdentityService(new JdbcIdentityRepository(jdbc,tx),new BCryptPasswordEncoder(4));
         catalog=new CatalogService(new JdbcCatalogRepository(jdbc,tx,json));
-        agents=new AgentService(new JdbcAgentRepository(jdbc));
+        agents=new AgentService(new JdbcAgentRepository(jdbc,tx));
         experiments=new ExperimentService(new JdbcExperimentRepository(jdbc,tx,json),catalog,agents,Clock.systemUTC());
     }
     @Test void expandsCasesAtomicallyAndSurvivesCatalogEdits() throws Exception {

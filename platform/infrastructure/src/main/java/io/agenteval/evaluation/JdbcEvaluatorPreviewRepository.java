@@ -31,6 +31,13 @@ public class JdbcEvaluatorPreviewRepository implements EvaluatorPreviewRepositor
                 where t.id=? and t.workspace_id=? and not exists(select 1 from grading_jobs g where g.trial_id=t.id and g.purpose<>'PREVIEW')
                 """).params(UUID.randomUUID(),Timestamp.from(now),Timestamp.from(now),trial,actor.workspaceId()).update();
             jdbc.sql("insert into evaluator_previews(run_id,workspace_id,trial_id,draft_id,draft_revision,idempotency_key,request_hash,created_at) values(?,?,?,?,?,?,?,?)").params(id,actor.workspaceId(),trial,draft,revision,key,hash,Timestamp.from(now)).update();
+            jdbc.sql("""
+                insert into ephemeral_catalog_resources(resource_id,workspace_id,resource_kind,origin_experiment_id)
+                select r.id,r.workspace_id,r.kind,t.experiment_id from grading_jobs g join trials t on t.id=g.trial_id
+                join catalog_versions v on v.workspace_id=g.workspace_id and (v.id=g.suite_version_id or exists(select 1 from jsonb_array_elements(g.run_config->'evaluators') item where item->>'id'=v.id::text))
+                join catalog_resources r on r.id=v.resource_id and r.archived where g.id=? on conflict(resource_id) do nothing
+                """
+            ).param(id).update();
             return id;
         });
     }

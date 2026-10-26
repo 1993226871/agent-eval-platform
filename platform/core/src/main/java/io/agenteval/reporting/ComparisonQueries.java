@@ -8,7 +8,7 @@ import java.util.*;
 public interface ComparisonQueries {
     ReportData load(WorkspaceActor actor, UUID experiment);
     Pair pair(WorkspaceActor actor, UUID left, UUID right);
-    ExportInput export(WorkspaceActor actor, UUID experiment);
+    ExportInput export(WorkspaceActor actor, UUID experiment,long byteLimit);
     record Input(ReportData data, ReportProvenance provenance) {}
     record Pair(Input left, Input right) {}
     record FrozenEvidence(UUID trialId, UUID snapshotId, String snapshotHash, String completeness, JsonNode manifest) {

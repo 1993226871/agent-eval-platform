@@ -26,9 +26,10 @@ public class JdbcLeaseRepository implements LeaseRepository {
             if(!p.agentIds().contains(request.agentId())) throw new ScopeViolationException();
             var worker=jdbc.sql("select max_concurrency from worker_instances where id=? and workspace_id=? and credential_id=? and agent_id=? and agent_version=?")
                 .params(request.workerId(),p.workspaceId(),p.credentialId(),request.agentId(),request.agentVersion()).query(Integer.class).optional().orElseThrow(ScopeViolationException::new);
+            io.agenteval.administration.JdbcResourceAdmission.onlineWorker(jdbc,p.workspaceId(),request.workerId(),now);
             jdbc.sql("update worker_instances set last_seen_at=? where id=?").params(Timestamp.from(now),request.workerId()).update();
             expireLost(now);
-            if(activeCount(null,null)>=20 || activeCount(p.workspaceId(),null)>=2 || activeCount(null,request.workerId())>=worker) return Optional.empty();
+            if(activeCount(null,null)>=20 || activeCount(p.workspaceId(),null)>=io.agenteval.administration.JdbcResourceAdmission.limits(jdbc,p.workspaceId(),false).maxRunningTrials() || activeCount(null,request.workerId())>=worker) return Optional.empty();
             var candidate=jdbc.sql("select t.id,t.trace_id,t.task,e.deadline from trials t join experiments e on e.id=t.experiment_id where t.workspace_id=? and e.agent_id=? and e.agent_version=? and e.status='ACTIVE' and e.deadline>? and t.status='QUEUED' and t.next_run_at<=? order by t.created_at,t.id limit 1 for update of t,e skip locked")
                 .params(p.workspaceId(),request.agentId(),request.agentVersion(),Timestamp.from(now),Timestamp.from(now))
                 .query((row,n) -> new Candidate(row.getObject("id",UUID.class),row.getString("trace_id"),tree(row.getString("task")),row.getTimestamp("deadline").toInstant())).optional();
@@ -113,7 +114,7 @@ public class JdbcLeaseRepository implements LeaseRepository {
         requireCredential(p);
         var row=jdbc.sql("select t.status,t.completion_hash,t.completed_at,l.worker_id,l.token_hash,l.expires_at,l.execution_deadline,e.status experiment_status from trial_leases l join trials t on t.id=l.trial_id join experiments e on e.id=t.experiment_id join worker_instances w on w.id=l.worker_id where l.trial_id=? and l.workspace_id=? and w.credential_id=? for update of t,l,e")
             .params(id,p.workspaceId(),p.credentialId()).query((r,n) -> new AttemptRow(new AttemptContext(p.workspaceId(),id,r.getObject("worker_id",UUID.class),TrialExecutionStatus.valueOf(r.getString("status")),r.getTimestamp("expires_at").toInstant(),r.getTimestamp("execution_deadline").toInstant(),r.getString("experiment_status")),r.getString("token_hash"),r.getString("completion_hash"),r.getTimestamp("completed_at")==null?null:r.getTimestamp("completed_at").toInstant())).optional().orElseThrow(AttemptRejectedException::new);
-        if(!TokenSecrets.matches(row.tokenHash(),token)) throw new AttemptRejectedException(); return row;
+        if(Set.of("DELETING","DELETED").contains(row.context().experimentStatus()) || !TokenSecrets.matches(row.tokenHash(),token)) throw new AttemptRejectedException(); return row;
     }
     private void requireCredential(WorkerPrincipal p) {
         if(jdbc.sql("select id from worker_credentials where id=? and workspace_id=? and revoked=false for share").params(p.credentialId(),p.workspaceId()).query(UUID.class).optional().isEmpty()) throw new InvalidWorkerCredentialException();

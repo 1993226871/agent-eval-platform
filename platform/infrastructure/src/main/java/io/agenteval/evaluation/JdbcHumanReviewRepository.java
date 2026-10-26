@@ -15,7 +15,7 @@ public class JdbcHumanReviewRepository implements HumanReviewRepository {
     private final TransactionTemplate transactions;
     public JdbcHumanReviewRepository(JdbcClient jdbc,PlatformTransactionManager manager) { this.jdbc=jdbc; transactions=new TransactionTemplate(manager); }
     private void require(WorkspaceActor actor,UUID result,boolean lock) {
-        if(jdbc.sql("select job_id from evaluation_results where workspace_id=? and job_id=?"+(lock?" for key share":"")).params(actor.workspaceId(),result).query(UUID.class).optional().isEmpty()) throw new ScopeViolationException();
+        if(jdbc.sql("select r.job_id from evaluation_results r join trials t on t.id=r.trial_id join experiments e on e.id=t.experiment_id where r.workspace_id=? and r.job_id=? and e.status not in ('DELETING','DELETED')"+(lock?" for key share of r,t,e":"")).params(actor.workspaceId(),result).query(UUID.class).optional().isEmpty()) throw new ScopeViolationException();
     }
     public HumanReview add(WorkspaceActor actor,UUID resultId,BigDecimal score,String reason,Instant now) {
         return transactions.execute(status -> {

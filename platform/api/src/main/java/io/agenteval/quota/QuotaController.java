@@ -18,4 +18,8 @@ public class QuotaController {
     }
     @GetMapping public WalletView wallet(Authentication auth) { return WalletView.of(quota.wallet(current.require(auth))); }
     @GetMapping("/ledger") public List<LedgerEntry> ledger(Authentication auth,@RequestParam(defaultValue="50") int limit) { return quota.entries(current.require(auth),limit).stream().map(LedgerEntry::of).toList(); }
+    public record LedgerPage(List<LedgerEntry> items,String nextCursor) {}
+    @GetMapping("/ledger/page") public LedgerPage page(Authentication auth,@RequestParam(required=false) String cursor,@RequestParam(defaultValue="25") int limit) {
+        var page=quota.page(current.require(auth),cursor,limit); return new LedgerPage(page.items().stream().map(LedgerEntry::of).toList(),page.nextCursor());
+    }
 }

@@ -1,22 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api, request } from "../../api/client";
 import { ErrorNotice, Loading, PageHeading } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
 import { formatCredits } from "./credits";
+import { ResourceUsagePanel } from "../administration/ResourceUsagePanel";
 export function QuotaPage() {
   const { workspace_id } = useWorkspace();
+  const [history, setHistory] = useState<(string | undefined)[]>([undefined]);
+  const cursor = history[history.length - 1];
   const wallet = useQuery({
     queryKey: [workspace_id, "wallet"],
     queryFn: () => request(api.GET("/api/v1/quota")),
     refetchInterval: 10000,
   });
   const ledger = useQuery({
-    queryKey: [workspace_id, "ledger"],
-    queryFn: () =>
+    queryKey: [workspace_id, "ledger", cursor],
+    queryFn: ({ signal }) =>
       request(
-        api.GET("/api/v1/quota/ledger", { params: { query: { limit: 100 } } }),
+        api.GET("/api/v1/quota/ledger/page", {
+          params: { query: { cursor, limit: 25 } },
+          signal,
+        }),
       ),
-    refetchInterval: 10000,
+    gcTime: 0,
   });
   return (
     <>
@@ -47,7 +54,7 @@ export function QuotaPage() {
         )
       )}
       <section className="panel">
-        <h2>最近 100 条额度流水</h2>
+        <h2>额度流水</h2>
         <p className="hint">
           预留用于覆盖模型调用上界，结算后释放差额；结果不确定的请求保留额度，待管理员对账。
         </p>
@@ -67,7 +74,7 @@ export function QuotaPage() {
                 </tr>
               </thead>
               <tbody>
-                {ledger.data?.map((entry) => (
+                {ledger.data?.items.map((entry) => (
                   <tr key={entry.id}>
                     <td>
                       {new Date(entry.created_at).toLocaleString("zh-CN")}
@@ -83,7 +90,24 @@ export function QuotaPage() {
             </table>
           </div>
         )}
+        <div className="pagination">
+          <button
+            disabled={history.length < 2}
+            onClick={() => setHistory(history.slice(0, -1))}
+          >
+            上一页流水
+          </button>
+          <button
+            disabled={!ledger.data?.next_cursor}
+            onClick={() =>
+              setHistory([...history, ledger.data?.next_cursor ?? undefined])
+            }
+          >
+            下一页流水
+          </button>
+        </div>
       </section>
+      <ResourceUsagePanel />
     </>
   );
 }

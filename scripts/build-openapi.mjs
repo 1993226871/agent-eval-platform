@@ -41,6 +41,7 @@ define('Trial', { id: uuid, experiment_id: uuid, workspace_id: uuid, case_index:
 define('Wallet', { workspace_id: uuid, granted: credits, consumed: credits, reserved: credits, available: credits });
 define('QuotaEntry', { id: uuid, call_id: nullable(uuid), type: text, granted_delta: credits, consumed_delta: credits, reserved_delta: credits, reason: text, actor_user_id: nullable(uuid), created_at: date });
 define('QuotaAdjustment', { credits, reason: text, idempotency_key: uuid });
+define('QuotaLedgerPage', { items: array(ref('QuotaEntry')), next_cursor: nullable(text) });
 define('Price', { id: uuid, input_rate: credits, output_rate: credits, denominator: credits });
 define('ModelChoice', { id: uuid, name: text, model: text, input_token_bound: integer, max_output_tokens: integer, price: ref('Price') });
 define('ModelProfile', { id: uuid, name: text, endpoint: { type: 'string', format: 'uri' }, model: text, input_token_bound: integer, max_output_tokens: integer, max_request_bytes: integer, max_concurrent: integer, bound_reference: text, enabled: bool, disabled_reason: nullable(text), price: ref('Price') });
@@ -52,7 +53,7 @@ define('Reevaluation', { suite_version_id: uuid, include_late: bool, idempotency
 define('CreatedRun', { run_id: uuid });
 define('EvaluatorPreview', { revision: integer, trial_id: uuid, idempotency_key: text });
 define('RunCriterion', { result_id: uuid, result: ref('CriterionResult') });
-define('EvaluationRun', { run_id: uuid, trial_id: uuid, snapshot_id: uuid, snapshot_hash: text, suite_version_id: uuid, purpose: enumeration(['INITIAL', 'REEVALUATION', 'PREVIEW']), status: text, criteria: array(ref('RunCriterion')), created_at: date });
+define('EvaluationRun', { run_id: uuid, trial_id: uuid, snapshot_id: uuid, snapshot_hash: text, suite_version_id: uuid, purpose: enumeration(['INITIAL', 'REEVALUATION', 'PREVIEW']), status: text, criteria: array(ref('RunCriterion')), created_at: date, wait_reasons: array(text) });
 define('HumanReview', { id: uuid, result_id: uuid, score: { type: 'number', minimum: 0, maximum: 1 }, reason: text, reviewer_id: uuid, created_at: date });
 define('Span', { id: integer, span_id: text, parent_span_id: nullable(text), name: text, kind: text, status: text, started_at: nullable(date), ended_at: nullable(date), input: jsonValue, output: jsonValue, duration_ms: nullable(integer), origin: text });
 define('TracePage', { spans: array(ref('Span')), next_cursor: nullable(text) });
@@ -60,7 +61,7 @@ define('EvidenceSnapshot', { id: uuid, trial_id: uuid, content_hash: text, compl
 define('ArtifactUploadGrant', { artifact_id: uuid, url: { type: 'string', format: 'uri' }, expires_at: date, content_type: text, content_length: integer });
 define('DimensionScore', { score: nullable(number), scored_weight: number, total_weight: number, coverage: nullable(number), scored_criteria: integer, planned_criteria: integer, partial: bool });
 const dimensions = { type: 'object', additionalProperties: ref('DimensionScore') };
-define('TrialReport', { trial_id: uuid, case_index: integer, attempt: integer, execution_status: execution, run_id: nullable(uuid), snapshot_id: nullable(uuid), evaluation_state: text, verdict: text, dimensions, criteria: array(ref('CriterionResult')), reported_duration_ms: nullable(integer), suite_version_id: uuid });
+define('TrialReport', { trial_id: uuid, case_index: integer, attempt: integer, execution_status: execution, run_id: nullable(uuid), snapshot_id: nullable(uuid), evaluation_state: text, verdict: text, dimensions, criteria: array(ref('CriterionResult')), reported_duration_ms: nullable(integer), suite_version_id: uuid, evidence_wait_reason: nullable(text) });
 define('TrialReportPage', { items: array(ref('TrialReport')), next_cursor: nullable(text) });
 define('Rate', { numerator: integer, denominator: integer, value: nullable(number) });
 define('Efficiency', { observed_durations: integer, p50_duration_ms: nullable(integer), p95_duration_ms: nullable(integer), source: text });
@@ -72,6 +73,13 @@ define('ComparisonReport', { left: ref('ExperimentReport'), right: ref('Experime
 define('FrozenExportEvidence', { trial_id: uuid, snapshot_id: uuid, snapshot_hash: text, completeness: text, manifest: jsonValue });
 define('ResultIdentity', { result_id: uuid, run_id: uuid, trial_id: uuid, evaluator_version: uuid });
 define('ReportExport', { export_version: text, report: ref('ExperimentReport'), provenance: ref('ReportProvenance'), trials: array(ref('TrialReport')), reviews: array(ref('HumanReview')), evidence: array(ref('FrozenExportEvidence')), result_identities: array(ref('ResultIdentity')), source: text });
+define('ResourceLimits', { max_online_workers: { type: 'integer', minimum: 1, maximum: 50 }, max_running_trials: { type: 'integer', minimum: 1, maximum: 20 }, max_stored_bytes: { type: 'integer', minimum: 1, maximum: 107374182400 }, max_experiments: { type: 'integer', minimum: 1, maximum: 10000 }, max_catalog_resources: { type: 'integer', minimum: 1, maximum: 10000 }, max_published_versions: { type: 'integer', minimum: 1, maximum: 100000 }, max_trial_executions: { type: 'integer', minimum: 1, maximum: 1000000 }, max_evaluation_jobs: { type: 'integer', minimum: 1, maximum: 1000000 }, max_python_seconds: { type: 'integer', minimum: 30, maximum: 2592000 } });
+define('ResourceUsage', { trial_executions: integer, evaluation_jobs: integer, python_reserved_seconds: integer, artifact_bytes: integer, evidence_bytes: integer });
+define('ResourceLimitView', { limits: ref('ResourceLimits'), usage: ref('ResourceUsage') });
+define('ConfigureResources', { limits: ref('ResourceLimits'), reason: text });
+define('AuditEvent', { id: uuid, workspace_id: uuid, actor_user_id: nullable(uuid), action: text, entity_id: uuid, source: enumeration(['APPLICATION', 'SYSTEM']), created_at: date });
+define('AuditPage', { items: array(ref('AuditEvent')), next_cursor: nullable(text) });
+define('DeletionStatus', { experiment_id: uuid, status: text, requested_at: date, next_cleanup_at: date, completed_at: nullable(date), failure_count: integer });
 const spec = {
   openapi: '3.1.0', info: { title: 'AgentEval Platform API', version: '0.1.0', description: 'Implemented browser and SDK HTTP contract. Session mutations require CSRF. Monetary integers use decimal strings in browser DTOs.' },
   servers: [{ url: '/' }], security: [{ session: [] }], paths: {},
@@ -100,6 +108,11 @@ op('get', '/api/v1/auth/me', 'getCurrentUser', null, ref('CurrentUser'));
 op('post', '/api/v1/auth/password', 'changePassword', object({ current_password: text, new_password: { type: 'string', minLength: 12 } }), null, 204);
 op('post', '/api/v1/auth/logout', 'logout', null, null, 204);
 op('get', '/api/v1/workspace', 'getWorkspace', null, object({ id: uuid }));
+op('get', '/api/v1/resource-limits', 'getResourceLimits', null, ref('ResourceLimitView'));
+op('get', '/api/v1/admin/workspaces/{workspaceId}/resource-limits', 'getUserResourceLimits', null, ref('ResourceLimitView'));
+op('post', '/api/v1/admin/workspaces/{workspaceId}/resource-limits', 'configureUserResources', ref('ConfigureResources'), ref('ResourceLimitView'));
+op('get', '/api/v1/audit-events', 'listAuditEvents', null, ref('AuditPage'), 200, { query: cursor });
+op('get', '/api/v1/experiment-deletions/{id}', 'getDeletionStatus', null, ref('DeletionStatus'));
 op('get', '/api/v1/admin/users', 'listAccounts', null, array(ref('CurrentUser')), 200, { query: page });
 op('post', '/api/v1/admin/users', 'createAccount', ref('AccountCreate'), ref('CurrentUser'), 201);
 op('get', '/api/v1/catalog', 'listResources', null, array(ref('CatalogResource')), 200, { query: [{ name: 'kind', in: 'query', required: true, schema: kind }, ...page] });
@@ -124,10 +137,12 @@ op('delete', '/api/v1/worker-credentials/{id}', 'revokeCredential', null, null, 
 op('get', '/api/v1/experiments', 'listExperiments', null, array(ref('Experiment')), 200, { query: page });
 op('post', '/api/v1/experiments', 'startExperiment', ref('StartExperiment'), object({ id: uuid }), 201);
 op('get', '/api/v1/experiments/{id}', 'getExperiment', null, ref('Experiment'));
+op('delete', '/api/v1/experiments/{id}', 'deleteExperiment', object({ idempotency_key: uuid }), ref('DeletionStatus'), 202);
 op('get', '/api/v1/experiments/{id}/trials', 'listTrials', null, array(ref('Trial')));
 op('post', '/api/v1/experiments/{id}/cancel', 'cancelExperiment', null, null, 204);
 op('get', '/api/v1/quota', 'getWallet', null, ref('Wallet'));
 op('get', '/api/v1/quota/ledger', 'getLedger', null, array(ref('QuotaEntry')), 200, { query: [{ name: 'limit', in: 'query', schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 } }] });
+op('get', '/api/v1/quota/ledger/page', 'getLedgerPage', null, ref('QuotaLedgerPage'), 200, { query: cursor });
 op('post', '/api/v1/admin/workspaces/{workspaceId}/quota/adjustments', 'adjustCredits', ref('QuotaAdjustment'), ref('Wallet'));
 op('get', '/api/v1/models', 'listModelChoices', null, array(ref('ModelChoice')));
 op('get', '/api/v1/admin/models', 'listModelProfiles', null, array(ref('ModelProfile')));

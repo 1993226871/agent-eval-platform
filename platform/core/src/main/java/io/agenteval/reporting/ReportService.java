@@ -35,9 +35,9 @@ public final class ReportService {
         String next=end<data.trials().size()?Base64.getUrlEncoder().withoutPadding().encodeToString((actor.workspaceId()+"|"+experimentId+"|"+end).getBytes(StandardCharsets.UTF_8)):null; return new Page(items,next);
     }
     TrialReport trial(ReportData data,ReportData.TrialEvaluation row) {
-        boolean pending=row.runId()==null || Set.of("QUEUED","PENDING","RUNNING","WAITING_QUOTA").contains(row.evaluationState()); var aggregate=aggregator.aggregate(entries(data,row),row.results(),pending);
+        boolean pending=row.runId()==null || Set.of("QUEUED","PENDING","RUNNING","WAITING_QUOTA","WAITING_RESOURCES").contains(row.evaluationState()); var aggregate=aggregator.aggregate(entries(data,row),row.results(),pending);
         String verdict=row.executionStatus()==TrialExecutionStatus.CANCELLED?"CANCELLED":aggregate.verdict();
-        return new TrialReport(row.trialId(),row.caseIndex(),row.attempt(),row.executionStatus(),row.runId(),row.snapshotId(),row.evaluationState(),verdict,aggregate.dimensions(),row.results().values().stream().sorted(Comparator.comparing(CriterionResult::criterionId).thenComparing(CriterionResult::evaluatorVersion)).toList(),row.durationMs(),row.suiteVersionId()==null?data.suiteVersionId():row.suiteVersionId());
+        return new TrialReport(row.trialId(),row.caseIndex(),row.attempt(),row.executionStatus(),row.runId(),row.snapshotId(),row.evaluationState(),verdict,aggregate.dimensions(),row.results().values().stream().sorted(Comparator.comparing(CriterionResult::criterionId).thenComparing(CriterionResult::evaluatorVersion)).toList(),row.durationMs(),row.suiteVersionId()==null?data.suiteVersionId():row.suiteVersionId(),row.evidenceWaitReason());
     }
     private List<EvaluationEntry> entries(ReportData data,ReportData.TrialEvaluation row) { return row.entries().isEmpty()?data.entries():row.entries(); }
     private Long percentile(List<Long> values,double probability) { return values.isEmpty()?null:values.get(Math.max(0,(int)Math.ceil(values.size()*probability)-1)); }
