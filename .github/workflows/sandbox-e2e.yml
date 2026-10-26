@@ -37,6 +37,11 @@ jobs:
         run: |
           export RUNNER_TEST_IMAGE="$(docker image inspect --format '{{.Id}}' agent-eval-sandbox:acceptance)"
           python -m pytest runner/tests -q
+          # A prior boundary probe returned NO_RESULT once. Repeat the actual
+          # process/network/filesystem probe; any failure blocks acceptance.
+          for attempt in $(seq 1 10); do
+            python -m pytest runner/tests/integration/test_isolation.py -q -k network_filesystem_process_and_secret_boundaries
+          done
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
