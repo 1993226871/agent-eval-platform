@@ -149,7 +149,7 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：591个文件</summary>
+<summary>展开完整目录树：592个文件</summary>
 
 ```text
 veyraeval/
@@ -495,6 +495,7 @@ veyraeval/
 │   │   │   │   │           │   ├── PriceVersion.java
 │   │   │   │   │           │   └── ProviderResponse.java
 │   │   │   │   │           ├── quota/
+│   │   │   │   │           │   ├── BillingUnitMismatchException.java
 │   │   │   │   │           │   ├── CnyAmount.java
 │   │   │   │   │           │   ├── InsufficientQuotaException.java
 │   │   │   │   │           │   ├── QuotaConflictException.java
@@ -1476,6 +1477,7 @@ veyraeval/
 | [`platform/core/src/main/java/io/agenteval/model/PriceVersion.java`](../platform/core/src/main/java/io/agenteval/model/PriceVersion.java) | 固定模型价格与精确整数credits换算，检查用量与溢出。 |
 | [`platform/core/src/main/java/io/agenteval/model/ProviderResponse.java`](../platform/core/src/main/java/io/agenteval/model/ProviderResponse.java) | 平台模型配置、密钥、调用计费和不确定状态的不可变数据载体`ProviderResponse`；字段包括`content, inputTokens, outputTokens, model, finishReason, responseId, rawResponse`。 |
 | [`platform/core/src/main/java/io/agenteval/quota/CnyAmount.java`](../platform/core/src/main/java/io/agenteval/quota/CnyAmount.java) | 人民币字符串精确解析为整数微元，拒绝精度丢失和溢出。 |
+| [`platform/core/src/main/java/io/agenteval/quota/BillingUnitMismatchException.java`](../platform/core/src/main/java/io/agenteval/quota/BillingUnitMismatchException.java) | 标识钱包与模型计价单位冲突，使API能给出明确处理提示，禁止隐式换算历史账目。 |
 | [`platform/core/src/main/java/io/agenteval/quota/InsufficientQuotaException.java`](../platform/core/src/main/java/io/agenteval/quota/InsufficientQuotaException.java) | 累计credits、预留、结算和追加流水的显式异常`InsufficientQuotaException`，区分错误/冲突/限制类型，供上层稳定映射和处理。 |
 | [`platform/core/src/main/java/io/agenteval/quota/QuotaConflictException.java`](../platform/core/src/main/java/io/agenteval/quota/QuotaConflictException.java) | 累计credits、预留、结算和追加流水的显式异常`QuotaConflictException`，区分错误/冲突/限制类型，供上层稳定映射和处理。 |
 | [`platform/core/src/main/java/io/agenteval/quota/QuotaEntry.java`](../platform/core/src/main/java/io/agenteval/quota/QuotaEntry.java) | 累计credits、预留、结算和追加流水的不可变数据载体`QuotaEntry`；字段包括`id, callId, type, grantedDelta, consumedDelta, reservedDelta, reason`。 |

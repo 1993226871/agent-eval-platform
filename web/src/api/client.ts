@@ -16,6 +16,8 @@ const messages: Record<string, string> = {
   INVALID_CREDENTIALS: "邮箱或密码不正确。",
   INVALID_PASSWORD: "当前密码不正确，或新密码不符合要求。",
   INVALID_REQUEST: "请检查填写的内容。",
+  BILLING_UNIT_MISMATCH:
+    "当前账户的额度单位与模型计价单位不一致。平台模型需要人民币额度，请在管理后台初始化人民币额度；如需使用自带 Key 且不扣平台额度，请到“评审模型”接入。",
   CONFLICT: "内容已变化，请刷新后重试。",
   QUOTA_CONFLICT: "这次额度请求与之前的请求不一致。",
   INSUFFICIENT_QUOTA: "可用额度不足，或调减后不足以覆盖已消费和预留额度。",

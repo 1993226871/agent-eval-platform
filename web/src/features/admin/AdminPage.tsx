@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "../../api/client";
 import {
@@ -315,6 +316,11 @@ export function AdminPage() {
         <>
           <ErrorNotice error={models.error ?? modelAction.error} />
           <p className="hint">
+            此处配置平台提供的模型，测试平台模型会使用管理员本人的平台额度；自带
+            Key 由服务商计费。使用自己的 API Key 且不扣平台额度，请到
+            <Link to="/workspace/models">评审模型</Link>接入。
+          </p>
+          <p className="hint">
             连通性测试失败或待对账时，再次点击会查询原调用。收到明确结果后，下次点击才创建新的收费测试。
           </p>
           {modelAction.data != null && <JsonBlock value={modelAction.data} />}
@@ -362,7 +368,9 @@ export function AdminPage() {
                             modelAction.mutate(() => testModel(item.id))
                           }
                         >
-                          测试（消耗本人额度）
+                          {item.billing_mode === "BYOK"
+                            ? "测试（服务商计费）"
+                            : "测试（消耗本人额度）"}
                         </button>
                         <button
                           className="danger subtle"

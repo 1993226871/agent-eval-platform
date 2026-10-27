@@ -79,6 +79,21 @@ class ModelAdminApiIT {
         }
     }
     URI uri(String path) { return URI.create("http://localhost:"+port+path); }
+    @Test void platformTestReportsWalletUnitMismatchBeforeAnyProviderCall() throws Exception {
+        var admin=identities.createUser(UUID.randomUUID()+"@legacy-admin.local","Temporary-Password-1",true);
+        try(var management=login(admin.email())) {
+            String body=json.writeValueAsString(Map.of("model","deepseek-flash","endpoint","https://api.deepseek.com","api_key","test-no-real-provider-call-123456789"));
+            var created=post(management,"/api/v1/admin/models/connections",body);
+            assertThat(created.statusCode()).isEqualTo(200);
+            String id=json.readTree(created.body()).path("id").asText();
+            var tested=post(management,"/api/v1/admin/models/"+id+"/test",json.writeValueAsString(Map.of("call_id",UUID.randomUUID())));
+            assertThat(tested.statusCode()).isEqualTo(409);
+            assertThat(json.readTree(tested.body()).path("code").asText()).isEqualTo("BILLING_UNIT_MISMATCH");
+            assertThat(quota.wallet(admin.actor()).granted()).isZero();
+            assertThat(quota.wallet(admin.actor()).unit()).isEqualTo("CREDITS");
+            assertThat(post(management,"/api/v1/admin/models/"+id+"/disable","{\"reason\":\"Test fixture cleanup\"}").statusCode()).isEqualTo(204);
+        }
+    }
     @Test void privateConnectionsCannotBeListedDisabledOrCopiedByOtherUsers() throws Exception {
         var owner=identities.createUser(UUID.randomUUID()+"@private.local","Temporary-Password-1",false);
         var other=identities.createUser(UUID.randomUUID()+"@private.local","Temporary-Password-1",false);
