@@ -1,5 +1,7 @@
 # Python Agent 接入
 
+第一次使用可先跟随 [完整 Python 评测示例](python-evaluation-walkthrough.md)：从安装 SDK 到两个 Agent 的对比报告，含独立项目、规则配置和工具轨迹分析。
+
 需要 Python 3.11 或更高版本。SDK `0.1.0` 已发布到 [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/)，可直接安装，无需下载仓库。下面的订单示例文件仍位于仓库的 `examples/python-order-agent/`；自己的 Agent 项目只需引入 SDK 并按接入示例注册处理函数。
 
 ```bash

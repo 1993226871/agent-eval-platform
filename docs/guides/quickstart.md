@@ -1,6 +1,6 @@
 # 从源码启动私人评测平台
 
-当前版本为源码构建的 `0.1.0`，没有发布到 Maven Central 或 PyPI。平台使用 Java 21、PostgreSQL、React 和自建证据采集；Java/Python SDK 运行在 Agent 所在环境，长轮询领取平台任务。
+平台当前版本为源码构建的 `0.1.0`；Python SDK 已发布 PyPI，Java SDK 已发布 Maven Central，可直接引入依赖。平台使用 Java 21、PostgreSQL、React 和自建证据采集；Java/Python SDK 运行在 Agent 所在环境，长轮询领取平台任务。
 
 ## 构建与启动
 
@@ -21,6 +21,8 @@ Linux 上证书目录和私钥必须可被配置的 `WEB_UID/WEB_GID` 读取。�
 平台首次登录必须修改密码。管理员创建用户并发放累计 credits；每人初始为 0，没有周期重置。基础规则评测无需模型 credits，仍受执行次数和存储预算限制。
 
 ## 完成第一次评测
+
+也可以直接按 [完整 Python 使用示例](python-evaluation-walkthrough.md) 自动创建私人任务集、规则与两个示范 Agent，并查看真实评分及轨迹。下面是通过工作台逐步操作的方式。
 
 1. 普通用户在“任务集”展开“从平台示例开始”，复制完整入门示例，得到本人固定版本的任务集、规则评测器和套件。
 2. 在“Agent 接入”注册 Agent，保存 Agent ID，创建并保存一次性接入密钥。

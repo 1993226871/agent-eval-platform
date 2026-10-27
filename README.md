@@ -158,6 +158,7 @@ Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界�
 先读[项目完整说明](docs/project-guide.md)：架构、流程图、完整目录树、每个目录和文件的职责，以及推荐阅读顺序。
 
 - [快速开始](docs/guides/quickstart.md)：源码构建与 HTTPS 平台启动。
+- [完整 Python 使用示例](docs/guides/python-evaluation-walkthrough.md)：安装 SDK、运行正误两个 Agent、创建任务与规则、查看评分和工具轨迹，附可运行项目与实际结果。
 - [Python SDK](docs/guides/python-sdk.md) / [Java SDK](docs/guides/java-sdk.md)：接入自定义 Agent。
 - [SDK 发布指南](docs/guides/sdk-publishing.md)：Python 已发布版本、发布验证及 Maven Central 的准备、命名空间、产物与审批。
 - [Java 签名与 Maven Central 发布](docs/guides/maven-central.md)：GPG 密钥、Portal Token、环境配置及分阶段验证与发布。

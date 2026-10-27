@@ -149,7 +149,7 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：565个文件</summary>
+<summary>展开完整目录树：578个文件</summary>
 
 ```text
 veyraeval/
@@ -256,6 +256,7 @@ veyraeval/
 │   │   ├── java-sdk.md
 │   │   ├── maven-central.md
 │   │   ├── operations.md
+│   │   ├── python-evaluation-walkthrough.md
 │   │   ├── python-sdk.md
 │   │   ├── quickstart.md
 │   │   └── sdk-publishing.md
@@ -277,6 +278,22 @@ veyraeval/
 │   │   │                   └── examples/
 │   │   │                       └── OrderAgent.java
 │   │   └── pom.xml
+│   ├── python-evaluation-demo/
+│   │   ├── src/
+│   │   │   └── order_agent/
+│   │   │       ├── __init__.py
+│   │   │       ├── agent.py
+│   │   │       ├── catalog.py
+│   │   │       ├── cli.py
+│   │   │       ├── demo.py
+│   │   │       └── platform.py
+│   │   ├── tests/
+│   │   │   ├── test_agent.py
+│   │   │   ├── test_evidence.py
+│   │   │   └── test_platform.py
+│   │   ├── .gitignore
+│   │   ├── pyproject.toml
+│   │   └── README.md
 │   └── python-order-agent/
 │       └── main.py
 ├── platform/
@@ -944,6 +961,10 @@ veyraeval/
 | `examples/java-order-agent/src/main/java/io/` | Java订单Agent演示源码及构建。 |
 | `examples/java-order-agent/src/main/java/io/agenteval/` | Java订单Agent演示源码及构建。 |
 | `examples/java-order-agent/src/main/java/io/agenteval/examples/` | Java订单Agent演示源码及构建。 |
+| `examples/python-evaluation-demo/` | 独立的完整Python评测示例，使用已发布SDK比较正误Agent并下载证据。 |
+| `examples/python-evaluation-demo/src/` | 完整评测示例的Python应用源码。 |
+| `examples/python-evaluation-demo/src/order_agent/` | Agent业务、控制面API、任务与规则初始化、Worker及报告编排。 |
+| `examples/python-evaluation-demo/tests/` | Agent行为、Session/CSRF、SDK证据与完整评分等待测试。 |
 | `examples/python-order-agent/` | Python订单Agent演示源码及构建。 |
 | `platform/` | platform的源码/配置层级。 |
 | `platform/api/` | HTTP API应用根目录。 |
@@ -1239,6 +1260,7 @@ veyraeval/
 | [`docs/guides/custom-evaluators.md`](../docs/guides/custom-evaluators.md) | 说明文档：选择和扩展评测方法；规则、LLM 和 Python；合格 Linux 执行节点。 |
 | [`docs/guides/java-sdk.md`](../docs/guides/java-sdk.md) | 说明文档：Java Agent 接入。 |
 | [`docs/guides/operations.md`](../docs/guides/operations.md) | 说明文档：运维与恢复；启动、健康与网络；停写备份与空目标恢复；密钥轮换。 |
+| [`docs/guides/python-evaluation-walkthrough.md`](../docs/guides/python-evaluation-walkthrough.md) | 完整使用教程：安装SDK、接入Agent、运行双实验、规则评分、匿名实跑结果、轨迹定位和排错。 |
 | [`docs/guides/python-sdk.md`](../docs/guides/python-sdk.md) | 说明文档：Python Agent 接入。 |
 | [`docs/guides/quickstart.md`](../docs/guides/quickstart.md) | 说明文档：从源码启动私人评测平台；构建与启动；完成第一次评测；部署边界。 |
 | [`docs/guides/maven-central.md`](../docs/guides/maven-central.md) | Java签名与Central发布：正式GPG密钥、环境Secrets、公钥、Portal Token、分阶段工作流及消费者验收。 |
@@ -1262,6 +1284,18 @@ veyraeval/
 | --- | --- |
 | [`examples/java-order-agent/pom.xml`](../examples/java-order-agent/pom.xml) | 依赖Java SDK的订单Agent可运行示例构建。 |
 | [`examples/java-order-agent/src/main/java/io/agenteval/examples/OrderAgent.java`](../examples/java-order-agent/src/main/java/io/agenteval/examples/OrderAgent.java) | Java订单查询演示：注册处理函数、捕获工具调用，可本地演示或连接真实平台。 |
+| [`examples/python-evaluation-demo/.gitignore`](../examples/python-evaluation-demo/.gitignore) | 排除虚拟环境、构建缓存、凭据配置及个人运行证据。 |
+| [`examples/python-evaluation-demo/README.md`](../examples/python-evaluation-demo/README.md) | 独立示例的安装、运行、只读报告下载、文件职责与完整教程入口。 |
+| [`examples/python-evaluation-demo/pyproject.toml`](../examples/python-evaluation-demo/pyproject.toml) | Python示例包元数据、正式PyPI SDK依赖及命令入口。 |
+| [`examples/python-evaluation-demo/src/order_agent/__init__.py`](../examples/python-evaluation-demo/src/order_agent/__init__.py) | 独立示例的Python包入口。 |
+| [`examples/python-evaluation-demo/src/order_agent/agent.py`](../examples/python-evaluation-demo/src/order_agent/agent.py) | 模拟订单工具、observe打点、取消检查和正确/错误金额两个Agent版本。 |
+| [`examples/python-evaluation-demo/src/order_agent/catalog.py`](../examples/python-evaluation-demo/src/order_agent/catalog.py) | 三个任务参考答案、答案/工具集合/工具参数规则和套件初始化配置。 |
+| [`examples/python-evaluation-demo/src/order_agent/cli.py`](../examples/python-evaluation-demo/src/order_agent/cli.py) | local/demo/report命令、本人账号输入及终端隐藏密码登录。 |
+| [`examples/python-evaluation-demo/src/order_agent/demo.py`](../examples/python-evaluation-demo/src/order_agent/demo.py) | 创建资源与实验、启动SDK Worker、等待完整评分、下载轨迹及撤销临时凭据。 |
+| [`examples/python-evaluation-demo/src/order_agent/platform.py`](../examples/python-evaluation-demo/src/order_agent/platform.py) | 校验平台地址及TLS，处理Session/CSRF登录、目录发布和不泄露响应正文的API错误。 |
+| [`examples/python-evaluation-demo/tests/test_agent.py`](../examples/python-evaluation-demo/tests/test_agent.py) | Agent正误版本、取消、订单数据隔离及规则参考源测试。 |
+| [`examples/python-evaluation-demo/tests/test_evidence.py`](../examples/python-evaluation-demo/tests/test_evidence.py) | 真实SDK工具参数/中间结果打点及等待完整评分的行为测试。 |
+| [`examples/python-evaluation-demo/tests/test_platform.py`](../examples/python-evaluation-demo/tests/test_platform.py) | Session/CSRF、HTTPS地址约束及错误信息不泄露私有响应的测试。 |
 | [`examples/python-order-agent/main.py`](../examples/python-order-agent/main.py) | Python订单查询演示：observe打点、注册处理函数，可本地演示或长轮询执行平台任务。 |
 
 ### platform/api · HTTP API应用
