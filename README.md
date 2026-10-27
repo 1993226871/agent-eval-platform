@@ -152,6 +152,7 @@ Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界�
 - [快速开始](docs/guides/quickstart.md)：源码构建与 HTTPS 平台启动。
 - [Python SDK](docs/guides/python-sdk.md) / [Java SDK](docs/guides/java-sdk.md)：接入自定义 Agent。
 - [SDK 发布指南](docs/guides/sdk-publishing.md)：Python 已发布版本、发布验证及 Maven Central 的准备、命名空间、产物与审批。
+- [Java 签名与 Maven Central 发布](docs/guides/maven-central.md)：GPG 密钥、Portal Token、环境配置及分阶段验证与发布。
 - [自定义评测器](docs/guides/custom-evaluators.md)、[运维与恢复](docs/guides/operations.md)、[验收说明](docs/development/acceptance.md)。
 
 本地设计草稿与实施过程不随当前源码分发。忽略规则不会删除旧提交中的文件；历史清理是另行授权的操作。

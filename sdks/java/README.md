@@ -84,7 +84,7 @@ Both SDKs consume the same versioned contracts and fixture manifest. The Java SD
 
 ## Registry publication
 
-Distribution metadata and build checks are prepared, but this SDK has not been publicly published. See the [publishing guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/sdk-publishing.md) for the required package-name/namespace ownership and explicit release approval. After publication, consumers can use pip or Maven/Gradle without a repository checkout.
+Distribution metadata and build checks are prepared, but this SDK has not been publicly published. See the [Java signing and Central guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/maven-central.md) for GPG keys, Portal Token configuration, signed-bundle verification and separate release approval. After Java publication, consumers can use Maven/Gradle without a repository checkout. The Python SDK is already available on PyPI.
 
 ## License
 

@@ -140,7 +140,7 @@ flowchart TD
 | Runner控制层 | `python -m pytest runner/tests -m 'not integration' -q` | 可信控制/协议/幂等/删除；不证明真实隔离。 |
 | 真实隔离 | 合格Linux/runsc执行`runner/tests`，以及CI中的100次边界检查 | 内存/超时/PID/网络/文件/秘密隔离及私有结果清理。 |
 | 整个平台 | `e2e/`及Linux sandbox acceptance | HTTPS、双SDK三类评分、浏览器、恢复、容量和未知状态。 |
-| SDK分发 | [发布指南](guides/sdk-publishing.md) | 构建真实wheel/sdist、binary/source/Javadoc；当前没有公开上传。 |
+| SDK分发 | [发布指南](guides/sdk-publishing.md)、[Java签名发布](guides/maven-central.md) | Python已发布PyPI；Java支持本地签名bundle及独立验证，Maven Central尚未发布。 |
 
 规则：新增行为先写失败测试，修复后运行有意义的回归；不能把控制层通过写成runsc隔离通过。当前Git规则见[Agent.md](../Agent.md)：每次push必须先得到用户本次同意，commit说明使用中文。
 
@@ -149,12 +149,13 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：560个文件</summary>
+<summary>展开完整目录树：565个文件</summary>
 
 ```text
 veyraeval/
 ├── .github/
 │   └── workflows/
+│       ├── java-sdk-release.yml
 │       ├── runner-isolation.yml
 │       ├── sandbox-e2e.yml
 │       ├── python-sdk-release.yml
@@ -253,6 +254,7 @@ veyraeval/
 │   ├── guides/
 │   │   ├── custom-evaluators.md
 │   │   ├── java-sdk.md
+│   │   ├── maven-central.md
 │   │   ├── operations.md
 │   │   ├── python-sdk.md
 │   │   ├── quickstart.md
@@ -754,7 +756,11 @@ veyraeval/
 │   ├── ci-install-runsc.sh
 │   ├── configure_deployment.py
 │   ├── manage_backup.py
+│   ├── stage_maven_bundle.py
+│   ├── tests/
+│   │   └── test_stage_maven_bundle.py
 │   ├── verify_java_sdk_distribution.py
+│   ├── verify_maven_bundle.py
 │   ├── verify_phase_b.py
 │   ├── verify_project_guide.py
 │   └── verify_sdk_wheel.py
@@ -914,7 +920,7 @@ veyraeval/
 | 目录 | 功能 |
 | --- | --- |
 | `.github/` | GitHub自动化根目录。 |
-| `.github/workflows/` | 普通验证、强化沙箱/端到端验收、手工SDK产物构建和独立的Python手动发布工作流。 |
+| `.github/workflows/` | 普通验证、强化沙箱/端到端验收、手工SDK产物构建和独立的Python/Java手动发布工作流。 |
 | `.mvn/` | Maven项目构建约定根目录。 |
 | `.mvn/wrapper/` | 固定Maven版本的wrapper配置。 |
 | `contracts/` | 规范契约和共享样例根目录。 |
@@ -1068,7 +1074,8 @@ veyraeval/
 | `runner/sandbox/` | 仅放入runsc guest的固定入口与结果读取程序、镜像定义。 |
 | `runner/tests/` | Runner控制层、协议、结果通道和真实隔离测试。 |
 | `runner/tests/integration/` | 必须在合格Linux/runsc节点真实执行的安全/资源/结果删除验收。 |
-| `scripts/` | 构建/协议/运维/验证脚本根目录。 |
+| `scripts/` | 构建/协议/运维/验证及SDK发布脚本根目录。 |
+| `scripts/tests/` | Maven上传边界回归测试，使用模拟网络验证单次提交、未知结果、文件篡改和校验失败处理。 |
 | `sdks/` | sdks的源码/配置层级。 |
 | `sdks/java/` | Java Agent SDK根目录。 |
 | `sdks/java/src/` | Java Agent SDK源码根目录。 |
@@ -1120,12 +1127,13 @@ veyraeval/
 | [`README.md`](../README.md) | 项目首页：能力、接入示例、当前状态、文档入口和Apache许可证。 |
 | [`mvnw`](../mvnw) | Linux/macOS Maven Wrapper入口，用项目固定的Maven构建Java模块。 |
 | [`mvnw.cmd`](../mvnw.cmd) | Windows Maven Wrapper入口。 |
-| [`pom.xml`](../pom.xml) | Java聚合父POM：七个模块、Java21、依赖/BOM/测试插件版本、项目许可证及sdk-distribution分发profile。 |
+| [`pom.xml`](../pom.xml) | Java聚合父POM：七个模块、Java21、依赖/BOM/测试插件版本、项目许可证；sdk-distribution打包，sdk-central签名并固定只生成本地bundle。 |
 
 ### .github · GitHub自动化
 
 | 文件 | 做什么 |
 | --- | --- |
+| [`.github/workflows/java-sdk-release.yml`](../.github/workflows/java-sdk-release.yml) | Java手动构建、受保护环境签名及bundle校验；默认只构建，显式upload只提交Portal的USER_MANAGED部署，不自动正式发布。 |
 | [`.github/workflows/python-sdk-release.yml`](../.github/workflows/python-sdk-release.yml) | 手动构建Python源码包与wheel、测试和独立安装；默认不上传，显式发布仅允许main并使用对应注册表environment的OIDC。 |
 | [`.github/workflows/runner-isolation.yml`](../.github/workflows/runner-isolation.yml) | 管理员手工触发的专用自托管执行节点强化隔离资格检查。 |
 | [`.github/workflows/sandbox-e2e.yml`](../.github/workflows/sandbox-e2e.yml) | 专用Linux/runsc CI：26项Runner、100次边界检查、Java和HTTPS Compose端到端验收。 |
@@ -1233,7 +1241,8 @@ veyraeval/
 | [`docs/guides/operations.md`](../docs/guides/operations.md) | 说明文档：运维与恢复；启动、健康与网络；停写备份与空目标恢复；密钥轮换。 |
 | [`docs/guides/python-sdk.md`](../docs/guides/python-sdk.md) | 说明文档：Python Agent 接入。 |
 | [`docs/guides/quickstart.md`](../docs/guides/quickstart.md) | 说明文档：从源码启动私人评测平台；构建与启动；完成第一次评测；部署边界。 |
-| [`docs/guides/sdk-publishing.md`](../docs/guides/sdk-publishing.md) | PyPI/Maven发布准备、尚未发布状态、命名空间/账号/GPG条件和发布后依赖写法。 |
+| [`docs/guides/maven-central.md`](../docs/guides/maven-central.md) | Java签名与Central发布：正式GPG密钥、环境Secrets、公钥、Portal Token、分阶段工作流及消费者验收。 |
+| [`docs/guides/sdk-publishing.md`](../docs/guides/sdk-publishing.md) | Python已发布版本与验证、PyPI及Maven分发流程、命名空间/账号条件和依赖写法。 |
 | [`docs/project-guide.md`](../docs/project-guide.md) | 当前项目的架构、流程、目录和逐文件职责全量索引，即本文。 |
 
 ### e2e · 完整系统验收
@@ -1636,7 +1645,10 @@ veyraeval/
 | [`scripts/ci-install-runsc.sh`](../scripts/ci-install-runsc.sh) | 只在专用GitHub托管Linux VM校验并安装固定gVisor，登记Docker runtime和有界panic日志。 |
 | [`scripts/configure_deployment.py`](../scripts/configure_deployment.py) | 生成私有部署env、密钥与可选本地开发TLS证书，拒绝覆盖现有部署配置。 |
 | [`scripts/manage_backup.py`](../scripts/manage_backup.py) | 停止写入后备份数据库和S3对象/校验清单，或恢复到新建空目标；拒绝破坏非空目标。 |
+| [`scripts/stage_maven_bundle.py`](../scripts/stage_maven_bundle.py) | 将与已验证SHA-256一致的bundle单次提交Central USER_MANAGED并等待校验；未知上传不重试，不执行正式发布。 |
+| [`scripts/tests/test_stage_maven_bundle.py`](../scripts/tests/test_stage_maven_bundle.py) | 模拟网络的上传边界测试：仅USER_MANAGED、超时不重复提交、篡改零网络请求、FAILED不发布。 |
 | [`scripts/verify_java_sdk_distribution.py`](../scripts/verify_java_sdk_distribution.py) | 检查实际SDK/protocol二进制、sources、Javadoc jar和许可证及父POM元数据；不发布。 |
+| [`scripts/verify_maven_bundle.py`](../scripts/verify_maven_bundle.py) | 校验Central zip只包含父POM/协议/SDK的9个文件及签名；检查校验和并用指定公钥独立验证PGP，不上传。 |
 | [`scripts/verify_phase_b.py`](../scripts/verify_phase_b.py) | 启动临时真实平台，验证双SDK、报告及可选两个浏览器冒烟场景。 |
 | [`scripts/verify_project_guide.py`](../scripts/verify_project_guide.py) | 检查本说明逐文件索引是否覆盖全部可分发文件，以及公开Markdown链接是否指向真实、可分发文件。 |
 | [`scripts/verify_sdk_wheel.py`](../scripts/verify_sdk_wheel.py) | 检查实际Python wheel：10份规范schema、Apache许可证和Markdown使用说明都正确打包。 |

@@ -105,7 +105,7 @@ PyPI 与 TestPyPI 均发布可公开下载的文件。测试上传也需要审�
 1. 在 Sonatype Central Portal 注册并验证 namespace，确认最终 groupId、artifactId 和版本。
 2. 确认源码、Javadoc、POM 元数据、许可证和共享依赖齐全；给发布文件生成所需的签名与校验和。
 3. 按 Central 要求创建发布 Token 和 GPG 签名配置，存放在专用账号/受保护 environment 中；不得写入仓库或本文件。
-4. 后续在显式发布 profile中配置官方 `central-publishing-maven-plugin` 或按 Portal手工上传 bundle；只选择父 POM、protocol、SDK，不从根 reactor误发布服务端模块。当前 `sdk-distribution` 只打包，不配置 deploy或外部上传。
+4. 已准备 `sdk-central` profile及独立的 `java-sdk-release.yml` 工作流，具体配置和操作见[Java签名与Maven Central发布](maven-central.md)。profile固定只生成签名bundle，不直接上传；工作流先验证bundle，再通过USER_MANAGED请求提交Portal校验，正式发布另行确认。只选择父POM、protocol、SDK，不发布服务端模块。
 5. 你批准具体 bundle后才上传/发布；在干净的外部消费者项目中验证 Maven Central 可以解析完整依赖链。
 
 真正发布成功后，用户可使用最终坐标，例如当前候选：

@@ -1,0 +1,109 @@
+name: Java SDK release preparation
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Build only, sign a bundle, or upload for manual Portal validation
+        type: choice
+        options: [build, bundle, upload]
+        default: build
+      version:
+        description: Exact version expected in pom.xml
+        type: string
+        required: true
+        default: '0.1.0'
+permissions:
+  contents: read
+concurrency:
+  group: java-sdk-central
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check version and source
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+          RELEASE_MODE: ${{ inputs.mode }}
+        run: |
+          python - <<'PY'
+          import os
+          from xml.etree import ElementTree as ET
+          version = ET.parse('pom.xml').getroot().findtext('{http://maven.apache.org/POM/4.0.0}version')
+          assert version == os.environ['EXPECTED_VERSION'], 'Version differs from source'
+          assert not version.endswith('-SNAPSHOT'), 'A release version is required'
+          if os.environ['RELEASE_MODE'] != 'build':
+              assert os.environ['GITHUB_REF'] == 'refs/heads/main', 'Signing and uploading require main'
+              assert os.environ['GITHUB_REPOSITORY'] == '1993226871/veyraeval', 'Unexpected repository'
+          PY
+      - run: chmod +x mvnw && ./mvnw -B --no-transfer-progress -P sdk-distribution -pl sdks/java -am clean verify
+      - run: python scripts/verify_java_sdk_distribution.py
+      - run: python -m unittest discover -s scripts/tests -p test_stage_maven_bundle.py -v
+      - uses: actions/upload-artifact@v4
+        with:
+          name: java-sdk-distributions-unsigned
+          path: |
+            pom.xml
+            platform/protocol/pom.xml
+            platform/protocol/target/*.jar
+            sdks/java/pom.xml
+            sdks/java/target/*.jar
+          if-no-files-found: error
+  central-bundle:
+    if: inputs.mode != 'build'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: maven-central
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Sign and generate bundle locally (Maven upload disabled)
+        env:
+          MAVEN_GPG_KEY: ${{ secrets.MAVEN_GPG_KEY }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: |
+          test -n "$MAVEN_GPG_KEY" && test -n "$MAVEN_GPG_PASSPHRASE"
+          chmod +x mvnw
+          ./mvnw -B --no-transfer-progress -P sdk-distribution,sdk-central -pl sdks/java -am clean deploy
+      - name: Verify exact bundle, checksums and signatures
+        env:
+          MAVEN_GPG_PUBLIC_KEY: ${{ vars.MAVEN_GPG_PUBLIC_KEY }}
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          test -n "$MAVEN_GPG_PUBLIC_KEY"
+          printf '%s\n' "$MAVEN_GPG_PUBLIC_KEY" > "$RUNNER_TEMP/central-signing-public.asc"
+          python scripts/verify_java_sdk_distribution.py
+          python scripts/verify_maven_bundle.py target/central-publishing/central-bundle.zip --public-key "$RUNNER_TEMP/central-signing-public.asc"
+          sha256sum target/central-publishing/central-bundle.zip > target/central-publishing/SHA256SUMS
+          printf 'Commit: %s\nVersion: %s\n' "$GITHUB_SHA" "$EXPECTED_VERSION" > target/central-publishing/release-manifest.txt
+          cat target/central-publishing/SHA256SUMS >> target/central-publishing/release-manifest.txt
+          cat target/central-publishing/release-manifest.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: java-sdk-signed-central-bundle
+          path: target/central-publishing/
+          if-no-files-found: error
+      - name: Upload verified bundle for manual Portal validation
+        if: inputs.mode == 'upload'
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+        run: python scripts/stage_maven_bundle.py target/central-publishing/central-bundle.zip --checksums target/central-publishing/SHA256SUMS
