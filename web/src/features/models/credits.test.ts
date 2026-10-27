@@ -28,6 +28,7 @@ describe("integer credit estimates", () => {
       id: "m",
       name: "judge",
       model: "test",
+      billing_mode: "PLATFORM" as const,
       input_token_bound: 3,
       max_output_tokens: 10,
       price: {
@@ -45,6 +46,7 @@ describe("integer credit estimates", () => {
       id: "m",
       name: "judge",
       model: "test",
+      billing_mode: "PLATFORM" as const,
       input_token_bound: 3,
       max_output_tokens: 10,
       price: { id: "p", input_rate: "1", output_rate: "5", denominator: "2" },

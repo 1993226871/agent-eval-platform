@@ -93,25 +93,22 @@ class ModelGatewayIT {
         assertThat(quota.wallet(user).reserved()).isZero();
     }
     @Test void platformModelSpendsCnyAndStopsBeforeSendingWhenBalanceIsExhausted() {
-        var money=new io.agenteval.quota.CnyQuotaService(jdbc,quota); money.openNewAccount(admin,user.workspaceId());
+        var money=new io.agenteval.quota.CnyQuotaService(quota); money.openNewAccount(admin,user.workspaceId());
         var model=profiles.connect(admin,new ModelProfileCommand("Platform",origin+"/v1/chat/completions",providerKey,"fixture",1000,100,65536,2,"Verified fixture",1,1,1),true);
         assertThat(gateway.judge(request(model)).status()).isEqualTo("SUCCEEDED");
         assertThat(quota.wallet(user).consumed()).isEqualTo(15);
-        assertThat(quota.wallet(user).unit()).isEqualTo("CNY_MICRO");
         quota.grant(admin,user.workspaceId(),-4_999_985,"Exhaust remaining test balance",UUID.randomUUID());
         assertThat(gateway.judge(request(model)).status()).isEqualTo("WAITING_QUOTA");
         assertThat(requests.get()).isEqualTo(1);
         assertThat(quota.wallet(user).available()).isZero();
     }
-    @Test void newAccountReceivesFiveYuanOnceAndLegacyLedgerCannotBeRelabelled() {
-        var money=new io.agenteval.quota.CnyQuotaService(jdbc,quota);
+    @Test void newAccountReceivesFiveYuanOnceAndAllAdjustmentsUseMicroYuan() {
+        var money=new io.agenteval.quota.CnyQuotaService(quota);
         money.openNewAccount(admin,user.workspaceId()); money.openNewAccount(admin,user.workspaceId());
-        assertThat(quota.wallet(user).unit()).isEqualTo("CNY_MICRO");
         assertThat(quota.wallet(user).granted()).isEqualTo(5_000_000);
-        var other=account(false); quota.grant(admin,other.workspaceId(),123,"Existing legacy credits",UUID.randomUUID());
-        assertThatThrownBy(()->money.adjust(admin,other.workspaceId(),"5","No silent conversion",UUID.randomUUID())).isInstanceOf(IllegalArgumentException.class);
-        assertThat(quota.wallet(other).granted()).isEqualTo(123);
-        assertThat(quota.wallet(other).unit()).isEqualTo("CREDITS");
+        var other=account(false); quota.grant(admin,other.workspaceId(),123,"Existing monetary balance",UUID.randomUUID());
+        money.adjust(admin,other.workspaceId(),"5","Additional CNY budget",UUID.randomUUID());
+        assertThat(quota.wallet(other).granted()).isEqualTo(5_000_123);
     }
     String response(String content,long input,long output) {
         return "{\"id\":\"provider-call\",\"model\":\"test-model-v1\",\"choices\":[{\"message\":{\"content\":\""+content+"\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":"+input+",\"completion_tokens\":"+output+",\"total_tokens\":"+(input+output)+"}}";

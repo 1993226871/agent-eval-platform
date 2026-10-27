@@ -3,7 +3,6 @@ import { api, request } from "../../api/client";
 import type { Schema } from "../../api/types";
 import { ErrorNotice } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
-import { formatCredits } from "../models/credits";
 import { formatCny } from "../models/money";
 
 export function useExperimentEstimate(
@@ -50,11 +49,8 @@ export function EstimateNotice({
       {value && value.planned_credits !== null && (
         <p className="hint">
           首次评测预留上界：
-          {value.unit === "CNY_MICRO"
-            ? formatCny(value.planned_credits)
-            : `${formatCredits(value.planned_credits)} credits`}
-          （{value.trial_count} 次任务、{value.planned_calls}{" "}
-          次模型调用）。按所选版本、固定模型价格及 Token
+          {formatCny(value.planned_credits)}（{value.trial_count} 次任务、
+          {value.planned_calls} 次模型调用）。按所选版本、固定模型价格及 Token
           上限计算；实际按用量结算，格式修复重试和重评另计，此值不是消费硬上限。
         </p>
       )}

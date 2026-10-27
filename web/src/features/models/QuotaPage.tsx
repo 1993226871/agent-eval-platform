@@ -3,7 +3,6 @@ import { useState } from "react";
 import { api, request } from "../../api/client";
 import { ErrorNotice, Loading, PageHeading } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
-import { formatCredits } from "./credits";
 import { formatCny } from "./money";
 import { ResourceUsagePanel } from "../administration/ResourceUsagePanel";
 export function QuotaPage() {
@@ -26,7 +25,6 @@ export function QuotaPage() {
       ),
     gcTime: 0,
   });
-  const format = wallet.data?.unit === "CNY_MICRO" ? formatCny : formatCredits;
   return (
     <>
       <PageHeading
@@ -49,17 +47,11 @@ export function QuotaPage() {
             ).map(([label, value]) => (
               <div key={label}>
                 <dt>{label}</dt>
-                <dd>{format(value)}</dd>
+                <dd>{formatCny(value)}</dd>
               </div>
             ))}
           </dl>
         )
-      )}
-      {wallet.data?.unit !== "CNY_MICRO" && wallet.data && (
-        <p className="hint">
-          此账户保留历史 credits 账目，未自动换算为人民币。可接入自己的
-          Key；如需平台人民币额度，请联系管理员处理迁移。
-        </p>
       )}
       <section className="panel">
         <h2>额度流水</h2>
@@ -89,9 +81,9 @@ export function QuotaPage() {
                       {new Date(entry.created_at).toLocaleString("zh-CN")}
                     </td>
                     <td>{entry.type}</td>
-                    <td>{format(entry.granted_delta)}</td>
-                    <td>{format(entry.consumed_delta)}</td>
-                    <td>{format(entry.reserved_delta)}</td>
+                    <td>{formatCny(entry.granted_delta)}</td>
+                    <td>{formatCny(entry.consumed_delta)}</td>
+                    <td>{formatCny(entry.reserved_delta)}</td>
                     <td>{entry.reason}</td>
                   </tr>
                 ))}

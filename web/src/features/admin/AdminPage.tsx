@@ -10,20 +10,17 @@ import {
   PageHeading,
 } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
-import { formatCredits, integerCredits } from "../models/credits";
+import { integerCredits } from "../models/credits";
 import { ResourceAdminPanel } from "./ResourceAdminPanel";
 import { ModelConnectionForm } from "../models/ModelConnectionForm";
 import { formatCny, parseCny } from "../models/money";
 import { ModelTestResult } from "./ModelTestResult";
 
 function accountAmount(
-  wallet: Schema<"Wallet"> | undefined,
+  wallet: Schema<"Wallet">,
   field: "available" | "consumed" | "reserved" | "granted",
 ) {
-  if (!wallet) return "—";
-  return wallet.unit === "CNY_MICRO"
-    ? formatCny(wallet[field])
-    : `${formatCredits(wallet[field])} credits`;
+  return formatCny(wallet[field]);
 }
 
 export function AdminPage() {
@@ -83,13 +80,10 @@ export function AdminPage() {
     mutationFn: () => {
       parseCny(amount);
       return request(
-        api.POST(
-          "/api/v1/admin/workspaces/{workspaceId}/quota/money-adjustments",
-          {
-            params: { path: { workspaceId: workspace } },
-            body: { amount, reason, idempotency_key: adjustKey },
-          },
-        ),
+        api.POST("/api/v1/admin/workspaces/{workspaceId}/quota/adjustments", {
+          params: { path: { workspaceId: workspace } },
+          body: { amount, reason, idempotency_key: adjustKey },
+        }),
       );
     },
     onSuccess: async () => {
@@ -103,7 +97,7 @@ export function AdminPage() {
   const testCalls = useRef(new Map<string, string>());
   const [testResult, setTestResult] = useState<{
     modelName: string;
-    billingMode?: string;
+    billingMode: Schema<"ModelProfile">["billing_mode"];
     result: Schema<"ModelCallResolution">;
   }>();
   const testModel = async (profile: Schema<"ModelProfile">) => {
@@ -298,8 +292,7 @@ export function AdminPage() {
           <section className="panel">
             <h2>账户列表</h2>
             <p className="hint">
-              按页查看所有用户的额度，每10秒刷新；调整额度后自动更新。人民币与历史
-              credits 分别标注。
+              按页查看所有用户的额度，每10秒刷新；调整额度后自动更新。金额统一以人民币展示。
             </p>
             <button
               onClick={() => accounts.refetch()}
@@ -424,9 +417,7 @@ export function AdminPage() {
                       <td>
                         {item.billing_mode === "BYOK"
                           ? "本人 Key · 服务商计费"
-                          : item.billing_mode === "PLATFORM"
-                            ? "平台人民币额度"
-                            : "历史 credits"}
+                          : "平台人民币额度"}
                       </td>
                       <td>
                         <Badge>{item.enabled ? "可用" : "已停用"}</Badge>
@@ -491,7 +482,7 @@ export function AdminPage() {
                   <tr>
                     <th>调用</th>
                     <th>状态</th>
-                    <th>预留 credits</th>
+                    <th>预留金额</th>
                     <th>原因</th>
                   </tr>
                 </thead>
@@ -510,7 +501,7 @@ export function AdminPage() {
                         </button>
                       </td>
                       <td>{call.status}</td>
-                      <td>{formatCredits(call.reserved_credits)}</td>
+                      <td>{formatCny(call.reserved_credits)}</td>
                       <td>{call.failure_code}</td>
                     </tr>
                   ))}

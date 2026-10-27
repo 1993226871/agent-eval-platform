@@ -19,12 +19,12 @@ public class JdbcQuotaRepository implements QuotaRepository {
     @Override public Map<UUID,QuotaWallet> wallets(Collection<UUID> workspaceIds) {
         if(workspaceIds.isEmpty()) return Map.of();
         return jdbc.sql("select * from quota_wallets where workspace_id in (:ids)").param("ids",workspaceIds)
-            .query((row,index)->new QuotaWallet(row.getObject("workspace_id",UUID.class),row.getLong("granted"),row.getLong("consumed"),row.getLong("reserved"),row.getString("unit")))
+            .query((row,index)->new QuotaWallet(row.getObject("workspace_id",UUID.class),row.getLong("granted"),row.getLong("consumed"),row.getLong("reserved")))
             .list().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(QuotaWallet::workspaceId,java.util.function.Function.identity()));
     }
     private QuotaWallet loadWallet(UUID workspaceId,boolean lock) {
         return jdbc.sql("select * from quota_wallets where workspace_id=?"+(lock?" for update":"")).param(workspaceId)
-            .query((row,index)->new QuotaWallet(row.getObject("workspace_id",UUID.class),row.getLong("granted"),row.getLong("consumed"),row.getLong("reserved"),row.getString("unit"))).optional().orElseThrow(ScopeViolationException::new);
+            .query((row,index)->new QuotaWallet(row.getObject("workspace_id",UUID.class),row.getLong("granted"),row.getLong("consumed"),row.getLong("reserved"))).optional().orElseThrow(ScopeViolationException::new);
     }
     public List<QuotaEntry> entries(UUID workspaceId,int limit) {
         return jdbc.sql("select * from quota_ledger where workspace_id=? order by created_at desc,id desc limit ?").params(workspaceId,limit).query(this::entry).list();
@@ -62,7 +62,7 @@ public class JdbcQuotaRepository implements QuotaRepository {
             jdbc.sql("update quota_wallets set granted=? where workspace_id=?").params(granted,workspaceId).update();
             append(key,workspaceId,null,"ADJUST",credits,0,0,reason,adminId);
             io.agenteval.administration.JdbcAuditWriter.append(jdbc,new WorkspaceActor(adminId,workspaceId,true),io.agenteval.administration.AuditAction.QUOTA_ADJUSTED,key);
-            return new QuotaWallet(workspaceId,granted,wallet.consumed(),wallet.reserved(),wallet.unit());
+            return new QuotaWallet(workspaceId,granted,wallet.consumed(),wallet.reserved());
         }); } catch(DuplicateKeyException conflict) { throw new QuotaConflictException(); }
     }
     private record Adjustment(UUID workspace,QuotaEntry entry) {}

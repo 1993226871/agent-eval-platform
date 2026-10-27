@@ -40,7 +40,7 @@ public final class ExperimentService {
         var snapshot=JsonNodeFactory.instance.objectNode(); snapshot.set("dataset",datasetContent); snapshot.set("suite",suiteContent);
         var estimate=snapshot.putObject("cost_estimate"); var assumptions=estimate.putArray("assumptions");
         var unestimated=estimate.putArray("unestimated_evaluator_versions");
-        java.math.BigInteger total=java.math.BigInteger.ZERO; int calls=0,byokCalls=0; var units=new java.util.HashSet<String>();
+        java.math.BigInteger total=java.math.BigInteger.ZERO; int calls=0,byokCalls=0;
         var evaluators=snapshot.putArray("evaluators");
         for(var entry:suite.content().path("entries")) {
             var version=catalog.version(actor,UUID.fromString(entry.path("evaluator_version").asText()));
@@ -55,7 +55,7 @@ public final class ExperimentService {
                 if(pricing.workspaceId()!=null && !pricing.workspaceId().equals(actor.workspaceId())) throw new io.agenteval.identity.ScopeViolationException();
                 if(output<1 || output>pricing.maxOutputTokens()) throw new IllegalArgumentException("Invalid model output bound");
                 long perCall=pricing.byok()?0:pricing.price().credits(pricing.inputTokenBound(),output);
-                if(pricing.byok()) byokCalls=Math.addExact(byokCalls,trials); else units.add(pricing.unit());
+                if(pricing.byok()) byokCalls=Math.addExact(byokCalls,trials);
                 total=total.add(java.math.BigInteger.valueOf(perCall).multiply(java.math.BigInteger.valueOf(trials)));
                 assumptions.addObject().put("evaluator_version_id",version.id().toString()).put("model_profile_id",model.toString()).put("price_version_id",price.toString())
                     .put("input_token_bound",pricing.inputTokenBound()).put("max_output_tokens",output).put("input_rate",Long.toString(pricing.price().inputRate()))
@@ -64,8 +64,7 @@ public final class ExperimentService {
             }
         }
         estimate.put("planned_credits",total.toString()).put("planned_calls",calls).put("trial_count",trials).put("basis","FIRST_ATTEMPT_RESERVATION_BOUND");
-        estimate.put("unit",units.contains("CREDITS")?"CREDITS":"CNY_MICRO").put("byok_calls",byokCalls);
-        if(units.size()>1) estimate.putNull("planned_credits");
+        estimate.put("byok_calls",byokCalls);
         if(!unestimated.isEmpty()) estimate.putNull("planned_credits");
         if(snapshot.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length>8*1024*1024) throw new IllegalArgumentException("Frozen experiment configuration exceeds limit");
         return snapshot;

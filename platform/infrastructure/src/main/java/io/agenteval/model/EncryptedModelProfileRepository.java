@@ -31,7 +31,6 @@ public final class EncryptedModelProfileRepository implements ModelProfileReposi
             jdbc.sql("insert into model_profiles(id,name,endpoint,encrypted_api_key,model,input_token_bound,max_output_tokens,max_request_bytes,max_concurrent,bound_reference,created_by) values(?,?,?,?,?,?,?,?,?,?,?)")
                 .params(id,command.name(),command.endpoint(),encrypted,command.model(),command.inputTokenBound(),command.maxOutputTokens(),command.maxRequestBytes(),command.maxConcurrent(),command.boundReference(),administrator).update();
             jdbc.sql("insert into model_price_versions(id,profile_id,input_rate,output_rate,denominator) values(?,?,?,?,?)").params(price,id,command.inputRate(),command.outputRate(),command.denominator()).update();
-            if("CNY_MICRO".equals(command.billingUnit())) jdbc.sql("update model_profiles set billing_mode='PLATFORM' where id=?").param(id).update();
               io.agenteval.administration.JdbcAuditWriter.byUser(jdbc,administrator,io.agenteval.administration.AuditAction.MODEL_CREATED,id);
             return require(id);
         });

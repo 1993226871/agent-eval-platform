@@ -131,7 +131,7 @@ class Platform:
         self.workspace = self.request(self.user, "GET", "/auth/me")["workspace_id"]
         self.previous_ca = os.environ.get("SSL_CERT_FILE")
         os.environ["SSL_CERT_FILE"] = str(self.ca)
-        self.request(self.admin, "POST", f"/admin/workspaces/{self.workspace}/quota/adjustments", {"credits": "1000000", "reason": "Disposable acceptance budget", "idempotency_key": str(uuid4())})
+        self.request(self.admin, "POST", f"/admin/workspaces/{self.workspace}/quota/adjustments", {"amount": "1", "reason": "Disposable acceptance budget", "idempotency_key": str(uuid4())})
         print("Verified HTTPS Compose deployment and private accounts ready.", flush=True)
 
     def login(self, client, email, password):
@@ -155,7 +155,7 @@ class Platform:
         if name not in self.models:
             self.models[name] = self.request(self.admin, "POST", "/admin/models", {"name": name, "endpoint": "http://judge:8089/v1/chat/completions", "api_key": "disposable-test-key-only", "model": name,
                 "input_token_bound": 4096, "max_output_tokens": 100, "max_request_bytes": 65536, "max_concurrent": 2,
-                "bound_reference": "Local deterministic acceptance fixture", "input_rate": 1, "output_rate": 1, "denominator": 1, "billing_unit": "CNY_MICRO"})
+                "bound_reference": "Local deterministic acceptance fixture", "input_rate": 1, "output_rate": 1, "denominator": 1})
         return self.models[name]
 
     def publish(self, kind, name, content):

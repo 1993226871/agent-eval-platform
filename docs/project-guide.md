@@ -495,7 +495,6 @@ veyraeval/
 │   │   │   │   │           │   ├── PriceVersion.java
 │   │   │   │   │           │   └── ProviderResponse.java
 │   │   │   │   │           ├── quota/
-│   │   │   │   │           │   ├── BillingUnitMismatchException.java
 │   │   │   │   │           │   ├── CnyAmount.java
 │   │   │   │   │           │   ├── InsufficientQuotaException.java
 │   │   │   │   │           │   ├── QuotaConflictException.java
@@ -653,7 +652,8 @@ veyraeval/
 │   │   │   │               ├── V019__immutable_experiment_configuration.sql
 │   │   │   │               ├── V020__runner_evidence_cleanup.sql
 │   │   │   │               ├── V021__evidence_retry_fairness.sql
-│   │   │   │               └── V022__private_models_and_cny_wallets.sql
+│   │   │   │               ├── V022__private_models_and_cny_wallets.sql
+│   │   │   │               └── V023__single_cny_billing.sql
 │   │   │   └── test/
 │   │   │       └── java/
 │   │   │           └── io/
@@ -1279,7 +1279,7 @@ veyraeval/
 | [`docs/development/worker-protocol.md`](../docs/development/worker-protocol.md) | 说明文档：Worker v1 控制协议；凭证与注册；领取与执行；轨迹上传与查询。 |
 | [`docs/guides/custom-evaluators.md`](../docs/guides/custom-evaluators.md) | 说明文档：选择和扩展评测方法；规则、LLM 和 Python；合格 Linux 执行节点。 |
 | [`docs/guides/java-sdk.md`](../docs/guides/java-sdk.md) | 说明文档：Java Agent 接入。 |
-| [`docs/guides/llm-models.md`](../docs/guides/llm-models.md) | 平台模型与自带Key接入教程：三字段配置、私有模型隔离、人民币额度、价格预设及历史credits兼容。 |
+| [`docs/guides/llm-models.md`](../docs/guides/llm-models.md) | 平台模型与自带Key接入教程：三字段配置、私有模型隔离、统一人民币额度及价格预设。 |
 | [`docs/guides/maven-central.md`](../docs/guides/maven-central.md) | Java签名与Central发布：正式GPG密钥、环境Secrets、公钥、Portal Token、分阶段工作流及消费者验收。 |
 | [`docs/guides/operations.md`](../docs/guides/operations.md) | 说明文档：运维与恢复；启动、健康与网络；停写备份与空目标恢复；密钥轮换。 |
 | [`docs/guides/python-evaluation-walkthrough.md`](../docs/guides/python-evaluation-walkthrough.md) | 完整使用教程：安装SDK、接入Agent、运行双实验、规则评分、匿名实跑结果、轨迹定位和排错。 |
@@ -1479,7 +1479,6 @@ veyraeval/
 | [`platform/core/src/main/java/io/agenteval/model/PriceVersion.java`](../platform/core/src/main/java/io/agenteval/model/PriceVersion.java) | 固定模型价格与精确整数credits换算，检查用量与溢出。 |
 | [`platform/core/src/main/java/io/agenteval/model/ProviderResponse.java`](../platform/core/src/main/java/io/agenteval/model/ProviderResponse.java) | 平台模型配置、密钥、调用计费和不确定状态的不可变数据载体`ProviderResponse`；字段包括`content, inputTokens, outputTokens, model, finishReason, responseId, rawResponse`。 |
 | [`platform/core/src/main/java/io/agenteval/quota/CnyAmount.java`](../platform/core/src/main/java/io/agenteval/quota/CnyAmount.java) | 人民币字符串精确解析为整数微元，拒绝精度丢失和溢出。 |
-| [`platform/core/src/main/java/io/agenteval/quota/BillingUnitMismatchException.java`](../platform/core/src/main/java/io/agenteval/quota/BillingUnitMismatchException.java) | 标识钱包与模型计价单位冲突，使API能给出明确处理提示，禁止隐式换算历史账目。 |
 | [`platform/core/src/main/java/io/agenteval/quota/InsufficientQuotaException.java`](../platform/core/src/main/java/io/agenteval/quota/InsufficientQuotaException.java) | 累计credits、预留、结算和追加流水的显式异常`InsufficientQuotaException`，区分错误/冲突/限制类型，供上层稳定映射和处理。 |
 | [`platform/core/src/main/java/io/agenteval/quota/QuotaConflictException.java`](../platform/core/src/main/java/io/agenteval/quota/QuotaConflictException.java) | 累计credits、预留、结算和追加流水的显式异常`QuotaConflictException`，区分错误/冲突/限制类型，供上层稳定映射和处理。 |
 | [`platform/core/src/main/java/io/agenteval/quota/QuotaEntry.java`](../platform/core/src/main/java/io/agenteval/quota/QuotaEntry.java) | 累计credits、预留、结算和追加流水的不可变数据载体`QuotaEntry`；字段包括`id, callId, type, grantedDelta, consumedDelta, reservedDelta, reason`。 |
@@ -1571,7 +1570,7 @@ veyraeval/
 | [`platform/infrastructure/src/main/java/io/agenteval/model/ModelSecretBox.java`](../platform/infrastructure/src/main/java/io/agenteval/model/ModelSecretBox.java) | 平台模型密钥的带关联身份加密/解密，支持主密钥管理。 |
 | [`platform/infrastructure/src/main/java/io/agenteval/model/OpenAiCompatibleJudgeClient.java`](../platform/infrastructure/src/main/java/io/agenteval/model/OpenAiCompatibleJudgeClient.java) | 单次非流式Chat Completions请求适配，校验origin/模型状态、限制请求/响应并解析用量；发送后错误保持不确定。 |
 | [`platform/infrastructure/src/main/java/io/agenteval/operations/DeploymentOperations.java`](../platform/infrastructure/src/main/java/io/agenteval/operations/DeploymentOperations.java) | 离线运维CLI：迁移、健康检查和模型主密钥轮换。 |
-| [`platform/infrastructure/src/main/java/io/agenteval/quota/CnyQuotaService.java`](../platform/infrastructure/src/main/java/io/agenteval/quota/CnyQuotaService.java) | 事务初始化人民币钱包、幂等发放新用户5元额度、金额调整和历史单位迁移保护。 |
+| [`platform/infrastructure/src/main/java/io/agenteval/quota/CnyQuotaService.java`](../platform/infrastructure/src/main/java/io/agenteval/quota/CnyQuotaService.java) | 幂等发放新用户5元累计额度，以及人民币金额解析与调整。 |
 | [`platform/infrastructure/src/main/java/io/agenteval/quota/JdbcQuotaRepository.java`](../platform/infrastructure/src/main/java/io/agenteval/quota/JdbcQuotaRepository.java) | 累计整数credits钱包、预留、发送状态、结算、对账和不可变流水的数据库实现。 |
 | [`platform/infrastructure/src/main/java/io/agenteval/quota/QuotaConfiguration.java`](../platform/infrastructure/src/main/java/io/agenteval/quota/QuotaConfiguration.java) | 累计credits、预留、结算和追加流水的Spring Bean装配，将领域接口连接到实际仓储、网关或受控功能开关。 |
 | [`platform/infrastructure/src/main/java/io/agenteval/reporting/JdbcReportQueries.java`](../platform/infrastructure/src/main/java/io/agenteval/reporting/JdbcReportQueries.java) | 一致视图下读取报告摘要、证据来源、可比性和有界导出所需数据。 |
@@ -1604,6 +1603,7 @@ veyraeval/
 | [`platform/infrastructure/src/main/resources/db/migration/V020__runner_evidence_cleanup.sql`](../platform/infrastructure/src/main/resources/db/migration/V020__runner_evidence_cleanup.sql) | Flyway V020：Runner证据清理记录。创建`runner_executions`及相关约束。 |
 | [`platform/infrastructure/src/main/resources/db/migration/V021__evidence_retry_fairness.sql`](../platform/infrastructure/src/main/resources/db/migration/V021__evidence_retry_fairness.sql) | Flyway V021：冻结重试公平性。扩展现有表、索引/触发器及数据迁移约束。 |
 | [`platform/infrastructure/src/main/resources/db/migration/V022__private_models_and_cny_wallets.sql`](../platform/infrastructure/src/main/resources/db/migration/V022__private_models_and_cny_wallets.sql) | 新增人民币钱包单位、私有模型归属及计费模式，支持零平台扣费的模型调用。 |
+| [`platform/infrastructure/src/main/resources/db/migration/V023__single_cny_billing.sql`](../platform/infrastructure/src/main/resources/db/migration/V023__single_cny_billing.sql) | 统一人民币微元计价，删除钱包单位列和历史模型模式，不改变余额及不可变账目数值。 |
 | [`platform/infrastructure/src/test/java/io/agenteval/administration/AuditIT.java`](../platform/infrastructure/src/test/java/io/agenteval/administration/AuditIT.java) | 资源预算、删除状态、审计和工作空间轻量列表的真实组件集成测试。检查`keepsAppendOnlyScopedMetadataWithoutSecretPayloads`等场景。 |
 | [`platform/infrastructure/src/test/java/io/agenteval/administration/OperationsIT.java`](../platform/infrastructure/src/test/java/io/agenteval/administration/OperationsIT.java) | 资源预算、删除状态、审计和工作空间轻量列表的真实组件集成测试。检查`migrationJobCompletesWithoutStartingApplicationAndIsRepeatable`等场景。 |
 | [`platform/infrastructure/src/test/java/io/agenteval/administration/ResourceLimitIT.java`](../platform/infrastructure/src/test/java/io/agenteval/administration/ResourceLimitIT.java) | 资源预算、删除状态、审计和工作空间轻量列表的真实组件集成测试。检查`enforcesConcurrentLimitsAtomically`、`enforcesFiftyOnlineWorkersIncludingOfflineReactivation`、`queuesBeyondTwentyRunningTrialsAndResumesAfterCompletion`等场景。 |

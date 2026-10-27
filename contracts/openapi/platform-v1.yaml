@@ -2781,7 +2781,7 @@
     },
     "/api/v1/admin/workspaces/{workspaceId}/quota/adjustments": {
       "post": {
-        "operationId": "adjustCredits",
+        "operationId": "adjustQuota",
         "tags": [
           "admin"
         ],
@@ -3166,77 +3166,6 @@
         "parameters": [
           {
             "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/workspaces/{workspaceId}/quota/money-adjustments": {
-      "post": {
-        "operationId": "adjustMoneyQuota",
-        "tags": [
-          "admin"
-        ],
-        "responses": {
-          "200": {
-            "description": "Success.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Wallet"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Rejected"
-          },
-          "401": {
-            "$ref": "#/components/responses/Rejected"
-          },
-          "403": {
-            "$ref": "#/components/responses/Rejected"
-          },
-          "404": {
-            "$ref": "#/components/responses/Rejected"
-          },
-          "409": {
-            "$ref": "#/components/responses/Rejected"
-          },
-          "413": {
-            "$ref": "#/components/responses/Rejected"
-          },
-          "429": {
-            "$ref": "#/components/responses/Rejected"
-          },
-          "503": {
-            "$ref": "#/components/responses/Rejected"
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MoneyAdjustment"
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "session": [],
-            "csrf": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workspaceId",
             "in": "path",
             "required": true,
             "schema": {
@@ -6310,13 +6239,6 @@
               "format": "uuid"
             }
           },
-          "unit": {
-            "type": "string",
-            "enum": [
-              "CREDITS",
-              "CNY_MICRO"
-            ]
-          },
           "byok_calls": {
             "type": "integer"
           }
@@ -6408,13 +6330,6 @@
             "type": "string",
             "pattern": "^-?[0-9]+$",
             "description": "Exact integer decimal string; never round through a JavaScript number."
-          },
-          "unit": {
-            "type": "string",
-            "enum": [
-              "CREDITS",
-              "CNY_MICRO"
-            ]
           }
         },
         "required": [
@@ -6532,10 +6447,9 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "credits": {
+          "amount": {
             "type": "string",
-            "pattern": "^-?[0-9]+$",
-            "description": "Exact integer decimal string; never round through a JavaScript number."
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$"
           },
           "reason": {
             "type": "string"
@@ -6546,7 +6460,7 @@
           }
         },
         "required": [
-          "credits",
+          "amount",
           "reason",
           "idempotency_key"
         ]
@@ -6634,7 +6548,6 @@
           "billing_mode": {
             "type": "string",
             "enum": [
-              "LEGACY",
               "PLATFORM",
               "BYOK"
             ]
@@ -6646,7 +6559,8 @@
           "model",
           "input_token_bound",
           "max_output_tokens",
-          "price"
+          "price",
+          "billing_mode"
         ]
       },
       "ModelProfile": {
@@ -6701,7 +6615,6 @@
           "billing_mode": {
             "type": "string",
             "enum": [
-              "LEGACY",
               "PLATFORM",
               "BYOK"
             ]
@@ -6719,7 +6632,8 @@
           "bound_reference",
           "enabled",
           "disabled_reason",
-          "price"
+          "price",
+          "billing_mode"
         ]
       },
       "ModelConnection": {
@@ -6742,28 +6656,6 @@
           "model",
           "endpoint",
           "api_key"
-        ]
-      },
-      "MoneyAdjustment": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "amount": {
-            "type": "string",
-            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$"
-          },
-          "reason": {
-            "type": "string"
-          },
-          "idempotency_key": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "amount",
-          "reason",
-          "idempotency_key"
         ]
       },
       "ModelCreate": {
@@ -6813,13 +6705,6 @@
             "type": "string",
             "pattern": "^-?[0-9]+$",
             "description": "Exact integer decimal string; never round through a JavaScript number."
-          },
-          "billing_unit": {
-            "type": "string",
-            "enum": [
-              "CREDITS",
-              "CNY_MICRO"
-            ]
           }
         },
         "required": [

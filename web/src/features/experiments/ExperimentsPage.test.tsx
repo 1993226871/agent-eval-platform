@@ -81,7 +81,7 @@ describe("experiment submission recovery", () => {
     await user.selectOptions(screen.getByLabelText("任务集版本"), "DATASET");
     await user.selectOptions(screen.getByLabelText("套件版本"), "SUITE");
     expect(
-      await screen.findByText(/54,043,195,528,445,958 credits/),
+      await screen.findByText(/¥54,043,195,528\.445958/),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "启动实验" }));
     await screen.findByRole("alert");

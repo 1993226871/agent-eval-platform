@@ -60,6 +60,7 @@ describe("CatalogEditor", () => {
             id: "model-1",
             name: "Judge",
             model: "test",
+            billing_mode: "PLATFORM" as const,
             input_token_bound: 100,
             max_output_tokens: 100,
             price: {

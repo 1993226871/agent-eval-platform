@@ -14,7 +14,6 @@ public final class ModelProfileService {
             || command.boundReference()==null || command.boundReference().isBlank() || command.boundReference().length()>1000)
             throw new IllegalArgumentException("A verified provider input-token bound is required");
         new PriceVersion(java.util.UUID.randomUUID(),command.inputRate(),command.outputRate(),command.denominator()).credits(command.inputTokenBound(),command.maxOutputTokens());
-        if(command.billingUnit()!=null && !java.util.Set.of("CREDITS","CNY_MICRO").contains(command.billingUnit())) throw new IllegalArgumentException("Unsupported billing unit");
         return repository.create(administrator.userId(),command);
     }
     public ModelProfile connect(WorkspaceActor actor,ModelConnection input,boolean platform) {

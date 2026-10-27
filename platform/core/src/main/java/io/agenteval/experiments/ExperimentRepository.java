@@ -3,8 +3,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.agenteval.identity.WorkspaceActor;
 import java.util.*;
 public interface ExperimentRepository {
-    record ModelPricing(long inputTokenBound,int maxOutputTokens,io.agenteval.model.PriceVersion price,UUID workspaceId,boolean byok,String unit) {
-        public ModelPricing(long inputTokenBound,int maxOutputTokens,io.agenteval.model.PriceVersion price) { this(inputTokenBound,maxOutputTokens,price,null,false,"CREDITS"); }
+    record ModelPricing(long inputTokenBound,int maxOutputTokens,io.agenteval.model.PriceVersion price,UUID workspaceId,boolean byok) {
+        public ModelPricing(long inputTokenBound,int maxOutputTokens,io.agenteval.model.PriceVersion price) { this(inputTokenBound,maxOutputTokens,price,null,false); }
     }
     ModelPricing pricing(UUID modelId,UUID priceId);
     Optional<UUID> replay(WorkspaceActor actor,String key,String requestHash);

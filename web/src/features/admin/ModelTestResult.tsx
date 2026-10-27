@@ -47,7 +47,7 @@ export function ModelTestResult({
   result,
 }: {
   modelName: string;
-  billingMode?: string;
+  billingMode: Schema<"ModelProfile">["billing_mode"];
   result: Schema<"ModelCallResolution">;
 }) {
   const state = states[result.status] ?? {
@@ -61,9 +61,7 @@ export function ModelTestResult({
       ? "不扣平台额度"
       : result.credits == null
         ? "待确认"
-        : billingMode === "PLATFORM"
-          ? formatCny(result.credits)
-          : `${formatCredits(result.credits)} credits`;
+        : formatCny(result.credits);
   return (
     <section
       className="panel"

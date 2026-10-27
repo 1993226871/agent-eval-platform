@@ -53,9 +53,7 @@ export function MyModelsPage() {
                   <td>
                     {model.billing_mode === "BYOK"
                       ? "我的 API Key · 服务商计费"
-                      : model.billing_mode === "PLATFORM"
-                        ? "平台提供 · 扣平台人民币额度"
-                        : "历史 credits 模型"}
+                      : "平台提供 · 扣平台人民币额度"}
                   </td>
                   <td>
                     {model.billing_mode === "PLATFORM"

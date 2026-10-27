@@ -9,12 +9,10 @@ import java.util.*;
 public class ModelController {
     private final ModelProfileService profiles;
     private final CurrentActor current;
-    private final io.agenteval.quota.QuotaService quota;
-    public ModelController(ModelProfileService profiles,CurrentActor current,io.agenteval.quota.QuotaService quota) { this.profiles=profiles; this.current=current; this.quota=quota; }
+    public ModelController(ModelProfileService profiles,CurrentActor current) { this.profiles=profiles; this.current=current; }
     public record Choice(UUID id,String name,String model,long inputTokenBound,int maxOutputTokens,ModelViews.Price price,String billingMode) {}
     @GetMapping public List<Choice> choices(Authentication auth) {
-        var actor=current.require(auth); boolean money=quota.wallet(actor).unit().equals("CNY_MICRO");
-        return profiles.list(actor).stream().filter(ModelProfile::enabled).filter(profile->!money || !profile.billingMode().equals("LEGACY")).map(profile -> new Choice(profile.id(),profile.name(),profile.model(),profile.inputTokenBound(),profile.maxOutputTokens(),ModelViews.Price.of(profile.price()),profile.billingMode())).toList();
+        return profiles.list(current.require(auth)).stream().filter(ModelProfile::enabled).map(profile -> new Choice(profile.id(),profile.name(),profile.model(),profile.inputTokenBound(),profile.maxOutputTokens(),ModelViews.Price.of(profile.price()),profile.billingMode())).toList();
     }
     @PostMapping("/connections") public Choice connect(Authentication auth,@RequestBody ModelConnection command) {
         var profile=profiles.connect(current.require(auth),command,false);

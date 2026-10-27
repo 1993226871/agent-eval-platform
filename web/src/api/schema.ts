@@ -573,7 +573,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: operations["adjustCredits"];
+    post: operations["adjustQuota"];
     delete?: never;
     options?: never;
     head?: never;
@@ -654,22 +654,6 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations["disablePrivateModel"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/admin/workspaces/{workspaceId}/quota/money-adjustments": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations["adjustMoneyQuota"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1405,8 +1389,6 @@ export interface components {
         [key: string]: unknown;
       }[];
       unestimated_evaluator_versions: string[];
-      /** @enum {string} */
-      unit?: "CREDITS" | "CNY_MICRO";
       byok_calls?: number;
     };
     Trial: {
@@ -1442,8 +1424,6 @@ export interface components {
       reserved: string;
       /** @description Exact integer decimal string; never round through a JavaScript number. */
       available: string;
-      /** @enum {string} */
-      unit?: "CREDITS" | "CNY_MICRO";
     };
     AdminAccount: {
       /** Format: uuid */
@@ -1473,8 +1453,7 @@ export interface components {
       created_at: string;
     };
     QuotaAdjustment: {
-      /** @description Exact integer decimal string; never round through a JavaScript number. */
-      credits: string;
+      amount: string;
       reason: string;
       /** Format: uuid */
       idempotency_key: string;
@@ -1502,7 +1481,7 @@ export interface components {
       max_output_tokens: number;
       price: components["schemas"]["Price"];
       /** @enum {string} */
-      billing_mode?: "LEGACY" | "PLATFORM" | "BYOK";
+      billing_mode: "PLATFORM" | "BYOK";
     };
     ModelProfile: {
       /** Format: uuid */
@@ -1520,7 +1499,7 @@ export interface components {
       disabled_reason: string | null;
       price: components["schemas"]["Price"];
       /** @enum {string} */
-      billing_mode?: "LEGACY" | "PLATFORM" | "BYOK";
+      billing_mode: "PLATFORM" | "BYOK";
     };
     ModelConnection: {
       model: string;
@@ -1528,12 +1507,6 @@ export interface components {
       endpoint: string;
       /** Format: password */
       api_key: string;
-    };
-    MoneyAdjustment: {
-      amount: string;
-      reason: string;
-      /** Format: uuid */
-      idempotency_key: string;
     };
     ModelCreate: {
       name: string;
@@ -1553,8 +1526,6 @@ export interface components {
       output_rate: string;
       /** @description Exact integer decimal string; never round through a JavaScript number. */
       denominator: string;
-      /** @enum {string} */
-      billing_unit?: "CREDITS" | "CNY_MICRO";
     };
     PendingModelCall: {
       /** Format: uuid */
@@ -3293,7 +3264,7 @@ export interface operations {
       503: components["responses"]["Rejected"];
     };
   };
-  adjustCredits: {
+  adjustQuota: {
     parameters: {
       query?: never;
       header?: never;
@@ -3496,40 +3467,6 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
-      };
-      400: components["responses"]["Rejected"];
-      401: components["responses"]["Rejected"];
-      403: components["responses"]["Rejected"];
-      404: components["responses"]["Rejected"];
-      409: components["responses"]["Rejected"];
-      413: components["responses"]["Rejected"];
-      429: components["responses"]["Rejected"];
-      503: components["responses"]["Rejected"];
-    };
-  };
-  adjustMoneyQuota: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["MoneyAdjustment"];
-      };
-    };
-    responses: {
-      /** @description Success. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Wallet"];
-        };
       };
       400: components["responses"]["Rejected"];
       401: components["responses"]["Rejected"];

@@ -61,9 +61,6 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
                 if(!profile.usesPlatformQuota()) { state="RESERVED"; token=UUID.randomUUID(); deadline=now.plusSeconds(90); }
                 else {
                     long available=jdbc.sql("select granted-consumed-reserved from quota_wallets where workspace_id=? for update").param(request.workspaceId()).query(Long.class).single();
-                    String unit=jdbc.sql("select unit from quota_wallets where workspace_id=?").param(request.workspaceId()).query(String.class).single();
-                    if(profile.billingMode().equals("PLATFORM") && !unit.equals("CNY_MICRO")) throw new BillingUnitMismatchException();
-                    if(profile.billingMode().equals("LEGACY") && !unit.equals("CREDITS")) throw new BillingUnitMismatchException();
                     if(available<upper) state="WAITING_QUOTA";
                     else { quota.reserve(request.workspaceId(),request.callId(),upper); state="RESERVED"; token=UUID.randomUUID(); deadline=now.plusSeconds(90); }
                 }
