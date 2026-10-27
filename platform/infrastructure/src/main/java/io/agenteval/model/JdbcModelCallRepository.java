@@ -46,9 +46,10 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
                 return new Preparation(cancelled,null);
             }
             var profile=profiles.require(request.modelProfileId());
+            profile.requireWorkspace(request.workspaceId());
             if(!profile.price().id().equals(request.priceVersionId()) || request.maxOutputTokens()>profile.maxOutputTokens() || body.getBytes(StandardCharsets.UTF_8).length>profile.maxRequestBytes()) throw new IllegalArgumentException("Model request exceeds fixed profile");
-            long upper=profile.price().credits(profile.inputTokenBound(),request.maxOutputTokens());
-            if(upper<=0) throw new IllegalArgumentException("Invalid model reservation bound");
+            long upper=profile.usesPlatformQuota()?profile.price().credits(profile.inputTokenBound(),request.maxOutputTokens()):0;
+            if(profile.usesPlatformQuota() && upper<=0) throw new IllegalArgumentException("Invalid model reservation bound");
             String state;
             UUID token=null; Instant deadline=null;
             if(!profile.enabled()) state="MODEL_DISABLED";
@@ -57,9 +58,15 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
                 || jdbc.sql("select count(*) from model_calls where profile_id=? and state in "+ACTIVE).param(profile.id()).query(Long.class).single()>=profile.maxConcurrent()) state="WAITING_CAPACITY";
             else {
                 // Balance pre-check avoids catching a rollback-only nested reservation transaction.
-                long available=jdbc.sql("select granted-consumed-reserved from quota_wallets where workspace_id=? for update").param(request.workspaceId()).query(Long.class).single();
-                if(available<upper) state="WAITING_QUOTA";
-                else { quota.reserve(request.workspaceId(),request.callId(),upper); state="RESERVED"; token=UUID.randomUUID(); deadline=now.plusSeconds(90); }
+                if(!profile.usesPlatformQuota()) { state="RESERVED"; token=UUID.randomUUID(); deadline=now.plusSeconds(90); }
+                else {
+                    long available=jdbc.sql("select granted-consumed-reserved from quota_wallets where workspace_id=? for update").param(request.workspaceId()).query(Long.class).single();
+                    String unit=jdbc.sql("select unit from quota_wallets where workspace_id=?").param(request.workspaceId()).query(String.class).single();
+                    if(profile.billingMode().equals("PLATFORM") && !unit.equals("CNY_MICRO")) throw new IllegalArgumentException("Legacy credits cannot be spent as CNY");
+                    if(profile.billingMode().equals("LEGACY") && !unit.equals("CREDITS")) throw new IllegalArgumentException("Legacy prices cannot debit a CNY wallet");
+                    if(available<upper) state="WAITING_QUOTA";
+                    else { quota.reserve(request.workspaceId(),request.callId(),upper); state="RESERVED"; token=UUID.randomUUID(); deadline=now.plusSeconds(90); }
+                }
             }
             var response=empty(request,state,state.equals("MODEL_DISABLED")?"MODEL_DISABLED":null);
             if(previous.isEmpty()) jdbc.sql("insert into model_calls(call_id,workspace_id,profile_id,price_version_id,request_hash,request_json,state,upper_credits,dispatch_token,dispatch_deadline,response_json,created_at,updated_at,evaluation_job_id) values(?,?,?,?,?,cast(? as jsonb),?,?,?,?,cast(? as jsonb),?,?,?)")
@@ -81,9 +88,9 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
         return locked(() -> {
             var stored=requireDispatch(dispatch,now,"RESERVED");
             if(!evaluationActive(stored.jobId(),stored.request().workspaceId(),now)) {
-                quota.releaseUnsent(stored.request().callId()); var rejected=empty(stored.request(),"FAILED_UNSENT","EVALUATION_CANCELLED_BEFORE_SEND"); update(stored,"FAILED_UNSENT",rejected,now); return rejected;
+                if(stored.upper()>0) quota.releaseUnsent(stored.request().callId()); var rejected=empty(stored.request(),"FAILED_UNSENT","EVALUATION_CANCELLED_BEFORE_SEND"); update(stored,"FAILED_UNSENT",rejected,now); return rejected;
             }
-            quota.markSendIntent(stored.request().callId()); update(stored,"SEND_INTENT",empty(stored.request(),"SEND_INTENT",null),now); return null;
+            if(stored.upper()>0) quota.markSendIntent(stored.request().callId()); update(stored,"SEND_INTENT",empty(stored.request(),"SEND_INTENT",null),now); return null;
         });
     }
     private boolean evaluationActive(UUID jobId,UUID workspace,Instant now) {
@@ -92,7 +99,7 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
         return jdbc.sql("select count(*) from evaluation_jobs j join trials t on t.id=j.trial_id join experiments e on e.id=t.experiment_id where j.id=? and j.workspace_id=? and j.status='RUNNING' and j.lease_expires_at>? and t.status<>'CANCELLED' and e.status not in ('CANCELLED','DELETING','DELETED')").params(jobId,workspace,Timestamp.from(now)).query(Long.class).single()==1;
     }
     public JudgeResponse failUnsent(ModelDispatch dispatch,Instant now) {
-        return locked(() -> { var stored=requireDispatch(dispatch,now,"RESERVED"); quota.releaseUnsent(stored.request().callId()); var result=empty(stored.request(),"FAILED_UNSENT","PROVIDER_PREPARATION_FAILED"); update(stored,"FAILED_UNSENT",result,now); return result; });
+        return locked(() -> { var stored=requireDispatch(dispatch,now,"RESERVED"); if(stored.upper()>0) quota.releaseUnsent(stored.request().callId()); var result=empty(stored.request(),"FAILED_UNSENT","PROVIDER_PREPARATION_FAILED"); update(stored,"FAILED_UNSENT",result,now); return result; });
     }
     public JudgeResponse uncertain(ModelDispatch dispatch,Instant now) {
         return locked(() -> { var stored=requireDispatch(dispatch,now,"SEND_INTENT"); return pending(stored,null,"PROVIDER_USAGE_UNCERTAIN",now); });
@@ -100,6 +107,9 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
     public JudgeResponse complete(ModelDispatch dispatch,ProviderResponse response,Instant now) {
         return locked(() -> {
             var stored=requireDispatch(dispatch,now,"SEND_INTENT"); var request=stored.request();
+            if(stored.upper()==0) {
+                var result=respond(request,"SUCCEEDED",response,0L,null); update(stored,"SUCCEEDED",result,now); return result;
+            }
             if(response.inputTokens()==null || response.outputTokens()==null) return pending(stored,response,"PROVIDER_USAGE_MISSING",now);
             long credits;
             try { credits=dispatch.profile().price().credits(response.inputTokens(),response.outputTokens()); }
@@ -112,7 +122,7 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
         });
     }
     private JudgeResponse pending(Stored stored,ProviderResponse response,String error,Instant now) {
-        quota.markReconciliation(stored.request().callId());
+        if(stored.upper()>0) quota.markReconciliation(stored.request().callId());
         var result=respond(stored.request(),"PENDING_RECONCILIATION",response,null,error); update(stored,"PENDING_RECONCILIATION",result,now); return result;
     }
     private void update(Stored stored,String state,JudgeResponse response,Instant now) {
@@ -124,7 +134,7 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
             var ids=jdbc.sql("select call_id from model_calls where state in ('RESERVED','SEND_INTENT') and dispatch_deadline<=? order by dispatch_deadline limit 100").param(Timestamp.from(now)).query(UUID.class).list();
             for(var id:ids) {
                 var stored=find(id).orElseThrow();
-                if(stored.state().equals("RESERVED")) { quota.releaseUnsent(id); update(stored,"FAILED_UNSENT",empty(stored.request(),"FAILED_UNSENT","PRE_SEND_PROCESS_LOST"),now); }
+                if(stored.state().equals("RESERVED")) { if(stored.upper()>0) quota.releaseUnsent(id); update(stored,"FAILED_UNSENT",empty(stored.request(),"FAILED_UNSENT","PRE_SEND_PROCESS_LOST"),now); }
                 else pending(stored,null,"POST_SEND_PROCESS_LOST",now);
             }
             return null;
@@ -146,9 +156,9 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
                 return stored.response();
             }
             if(!stored.state().equals("PENDING_RECONCILIATION")) throw new ModelCallConflictException();
-            long credits=profiles.require(stored.request().modelProfileId()).price().credits(input,output);
+            long credits=stored.upper()==0?0:profiles.require(stored.request().modelProfileId()).price().credits(input,output);
             if(credits>stored.upper()) quota.approveOverage(admin,callId,credits,reason,key);
-            quota.settle(callId,credits);
+            if(stored.upper()>0) quota.settle(callId,credits);
             jdbc.sql("insert into model_reconciliations(idempotency_key,call_id,administrator,input_tokens,output_tokens,credits,reason,created_at) values(?,?,?,?,?,?,?,?)").params(key,callId,admin.userId(),input,output,credits,reason,Timestamp.from(now)).update();
             io.agenteval.administration.JdbcAuditWriter.append(jdbc,new WorkspaceActor(admin.userId(),stored.request().workspaceId(),true),io.agenteval.administration.AuditAction.MODEL_RECONCILED,callId);
             var previous=stored.response();
@@ -160,7 +170,7 @@ public final class JdbcModelCallRepository implements ModelCallRepository {
     private JudgeResponse respond(JudgeRequest request,String state,ProviderResponse response,Long credits,String error) {
         Long reported=null;
         if(response!=null && response.inputTokens()!=null && response.outputTokens()!=null) {
-            try { reported=profiles.require(request.modelProfileId()).price().credits(response.inputTokens(),response.outputTokens()); }
+            try { var profile=profiles.require(request.modelProfileId()); reported=profile.usesPlatformQuota()?profile.price().credits(response.inputTokens(),response.outputTokens()):0L; }
             catch(IllegalArgumentException overflow) { /* Usage and frozen price remain available for manual investigation. */ }
         }
         return new JudgeResponse(request.callId(),state,response==null?null:response.content(),response==null?null:response.inputTokens(),response==null?null:response.outputTokens(),credits,request.modelProfileId(),request.priceVersionId(),response==null?null:response.model(),response==null?null:response.finishReason(),response==null?null:response.responseId(),error,response==null?null:response.rawResponse(),reported);

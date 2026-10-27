@@ -4,6 +4,7 @@ import { api, request } from "../../api/client";
 import { ErrorNotice, Loading, PageHeading } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
 import { formatCredits } from "./credits";
+import { formatCny } from "./money";
 import { ResourceUsagePanel } from "../administration/ResourceUsagePanel";
 export function QuotaPage() {
   const { workspace_id } = useWorkspace();
@@ -25,11 +26,12 @@ export function QuotaPage() {
       ),
     gcTime: 0,
   });
+  const format = wallet.data?.unit === "CNY_MICRO" ? formatCny : formatCredits;
   return (
     <>
       <PageHeading
         title="个人额度"
-        description="额度由平台累计发放，消耗后不会按周期重置。所有数额以整数 credits 记账。"
+        description="平台模型使用累计人民币额度，新用户默认 ¥5.00；自带 API Key 由服务商计费，不扣平台额度。"
       />
       <ErrorNotice error={wallet.error ?? ledger.error} />
       {wallet.isPending ? (
@@ -47,16 +49,23 @@ export function QuotaPage() {
             ).map(([label, value]) => (
               <div key={label}>
                 <dt>{label}</dt>
-                <dd>{formatCredits(value)}</dd>
+                <dd>{format(value)}</dd>
               </div>
             ))}
           </dl>
         )
       )}
+      {wallet.data?.unit !== "CNY_MICRO" && wallet.data && (
+        <p className="hint">
+          此账户保留历史 credits 账目，未自动换算为人民币。可接入自己的
+          Key；如需平台人民币额度，请联系管理员处理迁移。
+        </p>
+      )}
       <section className="panel">
         <h2>额度流水</h2>
         <p className="hint">
-          预留用于覆盖模型调用上界，结算后释放差额；结果不确定的请求保留额度，待管理员对账。
+          平台请求先预留额度，按用量结算后释放差额；余额不足以覆盖下一次请求时暂停新的平台模型调用。自带
+          Key 不受此余额限制。
         </p>
         {ledger.isPending ? (
           <Loading />
@@ -80,9 +89,9 @@ export function QuotaPage() {
                       {new Date(entry.created_at).toLocaleString("zh-CN")}
                     </td>
                     <td>{entry.type}</td>
-                    <td>{formatCredits(entry.granted_delta)}</td>
-                    <td>{formatCredits(entry.consumed_delta)}</td>
-                    <td>{formatCredits(entry.reserved_delta)}</td>
+                    <td>{format(entry.granted_delta)}</td>
+                    <td>{format(entry.consumed_delta)}</td>
+                    <td>{format(entry.reserved_delta)}</td>
                     <td>{entry.reason}</td>
                   </tr>
                 ))}

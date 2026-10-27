@@ -612,6 +612,70 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/admin/models/connections": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["connectPlatformModel"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/models/connections": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["connectPrivateModel"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/models/connections/{id}/disable": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["disablePrivateModel"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/workspaces/{workspaceId}/quota/money-adjustments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["adjustMoneyQuota"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/models/{profileId}/disable": {
     parameters: {
       query?: never;
@@ -1341,6 +1405,9 @@ export interface components {
         [key: string]: unknown;
       }[];
       unestimated_evaluator_versions: string[];
+      /** @enum {string} */
+      unit?: "CREDITS" | "CNY_MICRO";
+      byok_calls?: number;
     };
     Trial: {
       /** Format: uuid */
@@ -1375,6 +1442,8 @@ export interface components {
       reserved: string;
       /** @description Exact integer decimal string; never round through a JavaScript number. */
       available: string;
+      /** @enum {string} */
+      unit?: "CREDITS" | "CNY_MICRO";
     };
     QuotaEntry: {
       /** Format: uuid */
@@ -1421,6 +1490,8 @@ export interface components {
       input_token_bound: number;
       max_output_tokens: number;
       price: components["schemas"]["Price"];
+      /** @enum {string} */
+      billing_mode?: "LEGACY" | "PLATFORM" | "BYOK";
     };
     ModelProfile: {
       /** Format: uuid */
@@ -1437,6 +1508,21 @@ export interface components {
       enabled: boolean;
       disabled_reason: string | null;
       price: components["schemas"]["Price"];
+      /** @enum {string} */
+      billing_mode?: "LEGACY" | "PLATFORM" | "BYOK";
+    };
+    ModelConnection: {
+      model: string;
+      /** Format: uri */
+      endpoint: string;
+      /** Format: password */
+      api_key: string;
+    };
+    MoneyAdjustment: {
+      amount: string;
+      reason: string;
+      /** Format: uuid */
+      idempotency_key: string;
     };
     ModelCreate: {
       name: string;
@@ -1456,6 +1542,8 @@ export interface components {
       output_rate: string;
       /** @description Exact integer decimal string; never round through a JavaScript number. */
       denominator: string;
+      /** @enum {string} */
+      billing_unit?: "CREDITS" | "CNY_MICRO";
     };
     PendingModelCall: {
       /** Format: uuid */
@@ -3304,6 +3392,132 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ModelProfile"];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  connectPlatformModel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ModelConnection"];
+      };
+    };
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelProfile"];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  connectPrivateModel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ModelConnection"];
+      };
+    };
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelChoice"];
+        };
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  disablePrivateModel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No content. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["Rejected"];
+      401: components["responses"]["Rejected"];
+      403: components["responses"]["Rejected"];
+      404: components["responses"]["Rejected"];
+      409: components["responses"]["Rejected"];
+      413: components["responses"]["Rejected"];
+      429: components["responses"]["Rejected"];
+      503: components["responses"]["Rejected"];
+    };
+  };
+  adjustMoneyQuota: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspaceId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MoneyAdjustment"];
+      };
+    };
+    responses: {
+      /** @description Success. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Wallet"];
         };
       };
       400: components["responses"]["Rejected"];

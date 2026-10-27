@@ -24,7 +24,7 @@ export function ResourceUsagePanel() {
     <section className="panel">
       <h2>执行与存储预算</h2>
       <p className="hint">
-        执行预算与模型 credits
+        执行预算与模型金额额度
         分开计算。累计次数不会因删除实验而退回；存储占用在清理成功后释放。
       </p>
       <ErrorNotice error={resources.error} />
@@ -96,7 +96,7 @@ export function resourceWaitMessage(reason: string) {
     EVALUATION_JOB_LIMIT: "累计评测作业预算不足",
     STORAGE_LIMIT: "证据存储预算不足",
     EVIDENCE_BYTE_LIMIT: "单次任务证据过大，请减少采集内容或使用附件",
-    WAITING_QUOTA: "模型评审 credits 不足",
+    WAITING_QUOTA: "平台模型评审额度不足",
   };
   return labels[reason] ?? reason;
 }

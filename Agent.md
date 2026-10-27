@@ -20,7 +20,7 @@
 | --- | --- |
 | `platform/protocol/` | 共享 Java DTO、协议序列化和协议契约测试；Java SDK 直接依赖。 |
 | `platform/core/` | 身份、目录、实验、租约、证据、规则/LLM/Python 评测、费用、报告等领域服务和仓储接口。 |
-| `platform/infrastructure/` | PostgreSQL/JDBC 仓储、S3 附件、模型网关、Runner HTTP 客户端、21 个 Flyway 迁移及集成测试。 |
+| `platform/infrastructure/` | PostgreSQL/JDBC 仓储、S3 附件、模型网关、Runner HTTP 客户端、22 个 Flyway 迁移及集成测试。 |
 | `platform/api/` | Spring Boot API、浏览器 Session/CSRF、安全过滤器、Worker 鉴权、Controller 和平台模板。 |
 | `platform/worker/` | 平台后台进程：评分、超时维护、模型请求恢复与删除清理。不是用户 Agent Worker。 |
 | `sdks/java/`、`sdks/python/` | 用户环境中的 Agent Worker、长轮询、心跳、打点、持久化上传和结果提交。 |
@@ -39,7 +39,8 @@
 - PostgreSQL 是租约、调度、评分和额度的权威来源；Redis 当前在部署中预留，不是可靠任务队列。
 - 任务、套件和评测器按发布版本冻结；证据快照不可变。未知业务执行和未知模型请求不能自动重放。
 - 执行失败、证据不足和评测器错误不能伪装成 Agent 零分。规则、LLM Judge 和自定义 Python 结果都有证据来源。
-- 费用是累计整数 credits；浏览器用整数字符串/BigInt。未知模型费用保持待对账，不能自动退款后重发。
+- 平台新额度以整数微元记账（1元=1,000,000微元），新建用户默认5元累计额度；历史credits保留原单位，禁止隐式换算或混扣。浏览器使用整数字符串/BigInt。
+- 自带API Key的模型限定本人工作空间，不预留或扣减平台额度；仍受资源边界约束。未知模型调用保持原调用身份，平台模式保留待对账预留，两种模式均不能自动重发。
 - 用户 Agent 在其环境运行；自定义 Python 评测代码只在通过验收的 runsc 节点运行。不可回退到宿主解释器或普通容器。
 - Runner guest real UID 的任务/线程默认软硬限制为32（允许4..32）；宿主运行时另有256 PID预算，不能混为一谈。
 - 删除完成前必须收到对象存储和对应 Runner 的清理确认；墓碑围栏阻止迟到数据重新进入。

@@ -149,16 +149,16 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：578个文件</summary>
+<summary>展开完整目录树：591个文件</summary>
 
 ```text
 veyraeval/
 ├── .github/
 │   └── workflows/
 │       ├── java-sdk-release.yml
+│       ├── python-sdk-release.yml
 │       ├── runner-isolation.yml
 │       ├── sandbox-e2e.yml
-│       ├── python-sdk-release.yml
 │       ├── sdk-distributions.yml
 │       └── verify.yml
 ├── .mvn/
@@ -227,11 +227,11 @@ veyraeval/
 │   │   ├── requirements.lock
 │   │   └── storage.py
 │   ├── .env.example
-│   ├── compose.sandbox.yaml
-│   ├── compose.yaml
 │   ├── Dockerfile.platform
 │   ├── Dockerfile.runner
 │   ├── Dockerfile.web
+│   ├── compose.sandbox.yaml
+│   ├── compose.yaml
 │   └── nginx.conf
 ├── docs/
 │   ├── development/
@@ -254,6 +254,7 @@ veyraeval/
 │   ├── guides/
 │   │   ├── custom-evaluators.md
 │   │   ├── java-sdk.md
+│   │   ├── llm-models.md
 │   │   ├── maven-central.md
 │   │   ├── operations.md
 │   │   ├── python-evaluation-walkthrough.md
@@ -292,8 +293,8 @@ veyraeval/
 │   │   │   ├── test_evidence.py
 │   │   │   └── test_platform.py
 │   │   ├── .gitignore
-│   │   ├── pyproject.toml
-│   │   └── README.md
+│   │   ├── README.md
+│   │   └── pyproject.toml
 │   └── python-order-agent/
 │       └── main.py
 ├── platform/
@@ -398,8 +399,8 @@ veyraeval/
 │   │   │   │   │           │   ├── AuditAction.java
 │   │   │   │   │           │   ├── AuditEvent.java
 │   │   │   │   │           │   ├── AuditService.java
-│   │   │   │   │           │   ├── ResourceLimits.java
 │   │   │   │   │           │   ├── ResourceLimitService.java
+│   │   │   │   │           │   ├── ResourceLimits.java
 │   │   │   │   │           │   ├── ResourceReadLimitException.java
 │   │   │   │   │           │   ├── ResourceUsage.java
 │   │   │   │   │           │   └── WorkspaceListings.java
@@ -482,6 +483,8 @@ veyraeval/
 │   │   │   │   │           │   ├── ModelCallRepository.java
 │   │   │   │   │           │   ├── ModelCallStateMachine.java
 │   │   │   │   │           │   ├── ModelCallSummary.java
+│   │   │   │   │           │   ├── ModelConnection.java
+│   │   │   │   │           │   ├── ModelConnectionDefaults.java
 │   │   │   │   │           │   ├── ModelDispatch.java
 │   │   │   │   │           │   ├── ModelGateway.java
 │   │   │   │   │           │   ├── ModelProfile.java
@@ -492,6 +495,7 @@ veyraeval/
 │   │   │   │   │           │   ├── PriceVersion.java
 │   │   │   │   │           │   └── ProviderResponse.java
 │   │   │   │   │           ├── quota/
+│   │   │   │   │           │   ├── CnyAmount.java
 │   │   │   │   │           │   ├── InsufficientQuotaException.java
 │   │   │   │   │           │   ├── QuotaConflictException.java
 │   │   │   │   │           │   ├── QuotaEntry.java
@@ -506,8 +510,8 @@ veyraeval/
 │   │   │   │   │           │   ├── ComparisonService.java
 │   │   │   │   │           │   ├── ExperimentReport.java
 │   │   │   │   │           │   ├── ReportData.java
-│   │   │   │   │           │   ├── ReportExporter.java
 │   │   │   │   │           │   ├── ReportExportLimitException.java
+│   │   │   │   │           │   ├── ReportExporter.java
 │   │   │   │   │           │   ├── ReportProvenance.java
 │   │   │   │   │           │   ├── ReportRepository.java
 │   │   │   │   │           │   ├── ReportService.java
@@ -549,11 +553,15 @@ veyraeval/
 │   │   │               └── agenteval/
 │   │   │                   ├── catalog/
 │   │   │                   │   └── TaskPayloadLimitTest.java
-│   │   │                   └── evaluation/
-│   │   │                       ├── EvaluationAggregatorTest.java
-│   │   │                       ├── HumanReviewValidationTest.java
-│   │   │                       ├── LlmEvaluatorTest.java
-│   │   │                       └── RuleEvaluatorTest.java
+│   │   │                   ├── evaluation/
+│   │   │                   │   ├── EvaluationAggregatorTest.java
+│   │   │                   │   ├── HumanReviewValidationTest.java
+│   │   │                   │   ├── LlmEvaluatorTest.java
+│   │   │                   │   └── RuleEvaluatorTest.java
+│   │   │                   ├── model/
+│   │   │                   │   └── ModelConnectionDefaultsTest.java
+│   │   │                   └── quota/
+│   │   │                       └── CnyAmountTest.java
 │   │   └── pom.xml
 │   ├── infrastructure/
 │   │   ├── src/
@@ -605,6 +613,7 @@ veyraeval/
 │   │   │   │   │           ├── operations/
 │   │   │   │   │           │   └── DeploymentOperations.java
 │   │   │   │   │           ├── quota/
+│   │   │   │   │           │   ├── CnyQuotaService.java
 │   │   │   │   │           │   ├── JdbcQuotaRepository.java
 │   │   │   │   │           │   └── QuotaConfiguration.java
 │   │   │   │   │           ├── reporting/
@@ -642,7 +651,8 @@ veyraeval/
 │   │   │   │               ├── V018__preview_resource_ownership.sql
 │   │   │   │               ├── V019__immutable_experiment_configuration.sql
 │   │   │   │               ├── V020__runner_evidence_cleanup.sql
-│   │   │   │               └── V021__evidence_retry_fairness.sql
+│   │   │   │               ├── V021__evidence_retry_fairness.sql
+│   │   │   │               └── V022__private_models_and_cny_wallets.sql
 │   │   │   └── test/
 │   │   │       └── java/
 │   │   │           └── io/
@@ -768,14 +778,14 @@ veyraeval/
 │   ├── pyproject.toml
 │   └── requirements-test.lock
 ├── scripts/
+│   ├── tests/
+│   │   └── test_stage_maven_bundle.py
 │   ├── build-openapi.mjs
 │   ├── build-release.sh
 │   ├── ci-install-runsc.sh
 │   ├── configure_deployment.py
 │   ├── manage_backup.py
 │   ├── stage_maven_bundle.py
-│   ├── tests/
-│   │   └── test_stage_maven_bundle.py
 │   ├── verify_java_sdk_distribution.py
 │   ├── verify_maven_bundle.py
 │   ├── verify_phase_b.py
@@ -812,8 +822,8 @@ veyraeval/
 │   │   │                       ├── HttpTransportTest.java
 │   │   │                       ├── SpoolRecoveryTest.java
 │   │   │                       └── WorkerContractTest.java
-│   │   ├── pom.xml
-│   │   └── README.md
+│   │   ├── README.md
+│   │   └── pom.xml
 │   └── python/
 │       ├── scripts/
 │       │   └── sync_contracts.py
@@ -844,8 +854,8 @@ veyraeval/
 │       │   ├── test_transport.py
 │       │   └── test_worker.py
 │       ├── LICENSE
-│       ├── pyproject.toml
 │       ├── README.md
+│       ├── pyproject.toml
 │       └── requirements-test.lock
 ├── web/
 │   ├── e2e/
@@ -881,22 +891,27 @@ veyraeval/
 │   │   │   │   ├── CatalogEditor.test.tsx
 │   │   │   │   ├── CatalogEditor.tsx
 │   │   │   │   ├── CatalogPage.tsx
-│   │   │   │   ├── pagination.test.ts
-│   │   │   │   ├── pagination.ts
 │   │   │   │   ├── PreviewPanel.test.tsx
 │   │   │   │   ├── PreviewPanel.tsx
+│   │   │   │   ├── pagination.test.ts
+│   │   │   │   ├── pagination.ts
 │   │   │   │   ├── queries.ts
 │   │   │   │   └── validation.ts
 │   │   │   ├── experiments/
 │   │   │   │   ├── DeletionControl.test.tsx
 │   │   │   │   ├── DeletionControl.tsx
-│   │   │   │   ├── estimate.tsx
 │   │   │   │   ├── ExperimentsPage.test.tsx
-│   │   │   │   └── ExperimentsPage.tsx
+│   │   │   │   ├── ExperimentsPage.tsx
+│   │   │   │   └── estimate.tsx
 │   │   │   ├── models/
+│   │   │   │   ├── ModelConnectionForm.test.tsx
+│   │   │   │   ├── ModelConnectionForm.tsx
+│   │   │   │   ├── MyModelsPage.tsx
+│   │   │   │   ├── QuotaPage.tsx
 │   │   │   │   ├── credits.test.ts
 │   │   │   │   ├── credits.ts
-│   │   │   │   └── QuotaPage.tsx
+│   │   │   │   ├── money.test.ts
+│   │   │   │   └── money.ts
 │   │   │   └── reports/
 │   │   │       ├── ComparisonView.tsx
 │   │   │       ├── ExperimentReport.tsx
@@ -910,22 +925,22 @@ veyraeval/
 │   │   ├── main.tsx
 │   │   ├── styles.css
 │   │   └── tokens.css
+│   ├── README.md
 │   ├── index.html
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── playwright.config.ts
-│   ├── README.md
 │   ├── tsconfig.json
 │   └── vite.config.ts
 ├── .dockerignore
 ├── .gitignore
-├── Agent.md
 ├── AGENTS.md
+├── Agent.md
 ├── LICENSE
+├── README.md
 ├── mvnw
 ├── mvnw.cmd
-├── pom.xml
-└── README.md
+└── pom.xml
 ```
 
 </details>
@@ -1026,6 +1041,8 @@ veyraeval/
 | `platform/core/src/test/java/io/agenteval/` | 领域服务与边界测试命名空间。 |
 | `platform/core/src/test/java/io/agenteval/catalog/` | 领域服务与边界测试命名空间：任务集/评测器/套件草稿、发布版本与平台模板。 |
 | `platform/core/src/test/java/io/agenteval/evaluation/` | 领域服务与边界测试命名空间：规则、LLM、Python评分、重评、试运行和人工复核。 |
+| `platform/core/src/test/java/io/agenteval/model/` | 模型接入/权限或人民币精度的领域行为测试。 |
+| `platform/core/src/test/java/io/agenteval/quota/` | 模型接入/权限或人民币精度的领域行为测试。 |
 | `platform/infrastructure/` | 持久化及外部系统适配根目录。 |
 | `platform/infrastructure/src/` | 持久化及外部系统适配源码根目录。 |
 | `platform/infrastructure/src/main/` | 持久化及外部系统适配生产源码和资源根。 |
@@ -1259,11 +1276,12 @@ veyraeval/
 | [`docs/development/worker-protocol.md`](../docs/development/worker-protocol.md) | 说明文档：Worker v1 控制协议；凭证与注册；领取与执行；轨迹上传与查询。 |
 | [`docs/guides/custom-evaluators.md`](../docs/guides/custom-evaluators.md) | 说明文档：选择和扩展评测方法；规则、LLM 和 Python；合格 Linux 执行节点。 |
 | [`docs/guides/java-sdk.md`](../docs/guides/java-sdk.md) | 说明文档：Java Agent 接入。 |
+| [`docs/guides/llm-models.md`](../docs/guides/llm-models.md) | 平台模型与自带Key接入教程：三字段配置、私有模型隔离、人民币额度、价格预设及历史credits兼容。 |
+| [`docs/guides/maven-central.md`](../docs/guides/maven-central.md) | Java签名与Central发布：正式GPG密钥、环境Secrets、公钥、Portal Token、分阶段工作流及消费者验收。 |
 | [`docs/guides/operations.md`](../docs/guides/operations.md) | 说明文档：运维与恢复；启动、健康与网络；停写备份与空目标恢复；密钥轮换。 |
 | [`docs/guides/python-evaluation-walkthrough.md`](../docs/guides/python-evaluation-walkthrough.md) | 完整使用教程：安装SDK、接入Agent、运行双实验、规则评分、匿名实跑结果、轨迹定位和排错。 |
 | [`docs/guides/python-sdk.md`](../docs/guides/python-sdk.md) | 说明文档：Python Agent 接入。 |
 | [`docs/guides/quickstart.md`](../docs/guides/quickstart.md) | 说明文档：从源码启动私人评测平台；构建与启动；完成第一次评测；部署边界。 |
-| [`docs/guides/maven-central.md`](../docs/guides/maven-central.md) | Java签名与Central发布：正式GPG密钥、环境Secrets、公钥、Portal Token、分阶段工作流及消费者验收。 |
 | [`docs/guides/sdk-publishing.md`](../docs/guides/sdk-publishing.md) | 两语言已发布版本与验证、PyPI及Maven分发流程、命名空间/账号条件和依赖写法。 |
 | [`docs/project-guide.md`](../docs/project-guide.md) | 当前项目的架构、流程、目录和逐文件职责全量索引，即本文。 |
 
@@ -1446,6 +1464,8 @@ veyraeval/
 | [`platform/core/src/main/java/io/agenteval/model/ModelCallRepository.java`](../platform/core/src/main/java/io/agenteval/model/ModelCallRepository.java) | 平台模型配置、密钥、调用计费和不确定状态的接口/仓储边界，定义读写或调用契约，分离领域服务与具体适配器。 |
 | [`platform/core/src/main/java/io/agenteval/model/ModelCallStateMachine.java`](../platform/core/src/main/java/io/agenteval/model/ModelCallStateMachine.java) | 平台模型配置、密钥、调用计费和不确定状态的状态转换约束，拒绝非法迁移和终态复活。 |
 | [`platform/core/src/main/java/io/agenteval/model/ModelCallSummary.java`](../platform/core/src/main/java/io/agenteval/model/ModelCallSummary.java) | 平台模型配置、密钥、调用计费和不确定状态的不可变数据载体`ModelCallSummary`；字段包括`callId, workspaceId, profileId, priceVersionId, status, reservedCredits, inputTokens`。 |
+| [`platform/core/src/main/java/io/agenteval/model/ModelConnection.java`](../platform/core/src/main/java/io/agenteval/model/ModelConnection.java) | 三字段模型接入命令，禁止调用方选择计费模式，toString隐藏凭据。 |
+| [`platform/core/src/main/java/io/agenteval/model/ModelConnectionDefaults.java`](../platform/core/src/main/java/io/agenteval/model/ModelConnectionDefaults.java) | 已核验DeepSeek预设：规范请求URL、默认参数、官方服务校验及人民币固定标准价。 |
 | [`platform/core/src/main/java/io/agenteval/model/ModelDispatch.java`](../platform/core/src/main/java/io/agenteval/model/ModelDispatch.java) | 平台模型配置、密钥、调用计费和不确定状态的不可变数据载体`ModelDispatch`；字段包括`request, profile, token, deadline, upperCredits, evaluationJobId`。 |
 | [`platform/core/src/main/java/io/agenteval/model/ModelGateway.java`](../platform/core/src/main/java/io/agenteval/model/ModelGateway.java) | 模型请求准备、发送意图、外部调用、结算/未知状态以及管理员对账的统一入口。 |
 | [`platform/core/src/main/java/io/agenteval/model/ModelProfile.java`](../platform/core/src/main/java/io/agenteval/model/ModelProfile.java) | 平台模型配置、密钥、调用计费和不确定状态的不可变数据载体`ModelProfile`；字段包括`id, name, endpoint, model, inputTokenBound, maxOutputTokens, maxRequestBytes`。 |
@@ -1455,6 +1475,7 @@ veyraeval/
 | [`platform/core/src/main/java/io/agenteval/model/ModelUnavailableException.java`](../platform/core/src/main/java/io/agenteval/model/ModelUnavailableException.java) | 平台模型配置、密钥、调用计费和不确定状态的显式异常`ModelUnavailableException`，区分错误/冲突/限制类型，供上层稳定映射和处理。 |
 | [`platform/core/src/main/java/io/agenteval/model/PriceVersion.java`](../platform/core/src/main/java/io/agenteval/model/PriceVersion.java) | 固定模型价格与精确整数credits换算，检查用量与溢出。 |
 | [`platform/core/src/main/java/io/agenteval/model/ProviderResponse.java`](../platform/core/src/main/java/io/agenteval/model/ProviderResponse.java) | 平台模型配置、密钥、调用计费和不确定状态的不可变数据载体`ProviderResponse`；字段包括`content, inputTokens, outputTokens, model, finishReason, responseId, rawResponse`。 |
+| [`platform/core/src/main/java/io/agenteval/quota/CnyAmount.java`](../platform/core/src/main/java/io/agenteval/quota/CnyAmount.java) | 人民币字符串精确解析为整数微元，拒绝精度丢失和溢出。 |
 | [`platform/core/src/main/java/io/agenteval/quota/InsufficientQuotaException.java`](../platform/core/src/main/java/io/agenteval/quota/InsufficientQuotaException.java) | 累计credits、预留、结算和追加流水的显式异常`InsufficientQuotaException`，区分错误/冲突/限制类型，供上层稳定映射和处理。 |
 | [`platform/core/src/main/java/io/agenteval/quota/QuotaConflictException.java`](../platform/core/src/main/java/io/agenteval/quota/QuotaConflictException.java) | 累计credits、预留、结算和追加流水的显式异常`QuotaConflictException`，区分错误/冲突/限制类型，供上层稳定映射和处理。 |
 | [`platform/core/src/main/java/io/agenteval/quota/QuotaEntry.java`](../platform/core/src/main/java/io/agenteval/quota/QuotaEntry.java) | 累计credits、预留、结算和追加流水的不可变数据载体`QuotaEntry`；字段包括`id, callId, type, grantedDelta, consumedDelta, reservedDelta, reason`。 |
@@ -1506,6 +1527,8 @@ veyraeval/
 | [`platform/core/src/test/java/io/agenteval/evaluation/HumanReviewValidationTest.java`](../platform/core/src/test/java/io/agenteval/evaluation/HumanReviewValidationTest.java) | 规则、LLM、Python评分、重评、试运行和人工复核的单元/契约回归测试。检查`rejectsExtremeNegativeScaleEvenForZeroBeforeDatabaseConversion`等场景。 |
 | [`platform/core/src/test/java/io/agenteval/evaluation/LlmEvaluatorTest.java`](../platform/core/src/test/java/io/agenteval/evaluation/LlmEvaluatorTest.java) | 规则、LLM、Python评分、重评、试运行和人工复核的单元/契约回归测试。检查`mapsThreeOfFourAndKeepsInjectionInDataMessage`、`rejectsUnsupportedClaimsAndPreservesUsage`、`invalidJsonRetriesOnceAndNeverFabricatesZero`等场景。 |
 | [`platform/core/src/test/java/io/agenteval/evaluation/RuleEvaluatorTest.java`](../platform/core/src/test/java/io/agenteval/evaluation/RuleEvaluatorTest.java) | 规则、LLM、Python评分、重评、试运行和人工复核的单元/契约回归测试。检查`distinguishesMissingEvidenceFromFailure`、`allowsExplicitAbsenceOnlyWhenEvidenceCanEstablishIt`、`aggregatesRetriedToolsExplicitly`等场景。 |
+| [`platform/core/src/test/java/io/agenteval/model/ModelConnectionDefaultsTest.java`](../platform/core/src/test/java/io/agenteval/model/ModelConnectionDefaultsTest.java) | 模型默认值、地址规范化、未知模型拒绝与私有工作空间归属测试。 |
+| [`platform/core/src/test/java/io/agenteval/quota/CnyAmountTest.java`](../platform/core/src/test/java/io/agenteval/quota/CnyAmountTest.java) | 微元解析、负数调整、非法金额、精度与范围边界测试。 |
 
 ### platform/infrastructure · 持久化及外部系统适配
 
@@ -1544,6 +1567,7 @@ veyraeval/
 | [`platform/infrastructure/src/main/java/io/agenteval/model/ModelSecretBox.java`](../platform/infrastructure/src/main/java/io/agenteval/model/ModelSecretBox.java) | 平台模型密钥的带关联身份加密/解密，支持主密钥管理。 |
 | [`platform/infrastructure/src/main/java/io/agenteval/model/OpenAiCompatibleJudgeClient.java`](../platform/infrastructure/src/main/java/io/agenteval/model/OpenAiCompatibleJudgeClient.java) | 单次非流式Chat Completions请求适配，校验origin/模型状态、限制请求/响应并解析用量；发送后错误保持不确定。 |
 | [`platform/infrastructure/src/main/java/io/agenteval/operations/DeploymentOperations.java`](../platform/infrastructure/src/main/java/io/agenteval/operations/DeploymentOperations.java) | 离线运维CLI：迁移、健康检查和模型主密钥轮换。 |
+| [`platform/infrastructure/src/main/java/io/agenteval/quota/CnyQuotaService.java`](../platform/infrastructure/src/main/java/io/agenteval/quota/CnyQuotaService.java) | 事务初始化人民币钱包、幂等发放新用户5元额度、金额调整和历史单位迁移保护。 |
 | [`platform/infrastructure/src/main/java/io/agenteval/quota/JdbcQuotaRepository.java`](../platform/infrastructure/src/main/java/io/agenteval/quota/JdbcQuotaRepository.java) | 累计整数credits钱包、预留、发送状态、结算、对账和不可变流水的数据库实现。 |
 | [`platform/infrastructure/src/main/java/io/agenteval/quota/QuotaConfiguration.java`](../platform/infrastructure/src/main/java/io/agenteval/quota/QuotaConfiguration.java) | 累计credits、预留、结算和追加流水的Spring Bean装配，将领域接口连接到实际仓储、网关或受控功能开关。 |
 | [`platform/infrastructure/src/main/java/io/agenteval/reporting/JdbcReportQueries.java`](../platform/infrastructure/src/main/java/io/agenteval/reporting/JdbcReportQueries.java) | 一致视图下读取报告摘要、证据来源、可比性和有界导出所需数据。 |
@@ -1575,6 +1599,7 @@ veyraeval/
 | [`platform/infrastructure/src/main/resources/db/migration/V019__immutable_experiment_configuration.sql`](../platform/infrastructure/src/main/resources/db/migration/V019__immutable_experiment_configuration.sql) | Flyway V019：实验配置不可变。扩展现有表、索引/触发器及数据迁移约束。 |
 | [`platform/infrastructure/src/main/resources/db/migration/V020__runner_evidence_cleanup.sql`](../platform/infrastructure/src/main/resources/db/migration/V020__runner_evidence_cleanup.sql) | Flyway V020：Runner证据清理记录。创建`runner_executions`及相关约束。 |
 | [`platform/infrastructure/src/main/resources/db/migration/V021__evidence_retry_fairness.sql`](../platform/infrastructure/src/main/resources/db/migration/V021__evidence_retry_fairness.sql) | Flyway V021：冻结重试公平性。扩展现有表、索引/触发器及数据迁移约束。 |
+| [`platform/infrastructure/src/main/resources/db/migration/V022__private_models_and_cny_wallets.sql`](../platform/infrastructure/src/main/resources/db/migration/V022__private_models_and_cny_wallets.sql) | 新增人民币钱包单位、私有模型归属及计费模式，支持零平台扣费的模型调用。 |
 | [`platform/infrastructure/src/test/java/io/agenteval/administration/AuditIT.java`](../platform/infrastructure/src/test/java/io/agenteval/administration/AuditIT.java) | 资源预算、删除状态、审计和工作空间轻量列表的真实组件集成测试。检查`keepsAppendOnlyScopedMetadataWithoutSecretPayloads`等场景。 |
 | [`platform/infrastructure/src/test/java/io/agenteval/administration/OperationsIT.java`](../platform/infrastructure/src/test/java/io/agenteval/administration/OperationsIT.java) | 资源预算、删除状态、审计和工作空间轻量列表的真实组件集成测试。检查`migrationJobCompletesWithoutStartingApplicationAndIsRepeatable`等场景。 |
 | [`platform/infrastructure/src/test/java/io/agenteval/administration/ResourceLimitIT.java`](../platform/infrastructure/src/test/java/io/agenteval/administration/ResourceLimitIT.java) | 资源预算、删除状态、审计和工作空间轻量列表的真实组件集成测试。检查`enforcesConcurrentLimitsAtomically`、`enforcesFiftyOnlineWorkersIncludingOfflineReactivation`、`queuesBeyondTwentyRunningTrialsAndResumesAfterCompletion`等场景。 |
@@ -1788,9 +1813,14 @@ veyraeval/
 | [`web/src/features/experiments/ExperimentsPage.test.tsx`](../web/src/features/experiments/ExperimentsPage.test.tsx) | 前端回归测试：reuses the same complete request after an uncertain network failure。 |
 | [`web/src/features/experiments/ExperimentsPage.tsx`](../web/src/features/experiments/ExperimentsPage.tsx) | 实验列表、版本选择、费用预估、幂等启动、任务状态、取消与删除入口。 |
 | [`web/src/features/experiments/estimate.tsx`](../web/src/features/experiments/estimate.tsx) | 查询整次实验首次评测的整数预留估算，并显示假设、配置无效及重试额外费用提示。 |
+| [`web/src/features/models/ModelConnectionForm.test.tsx`](../web/src/features/models/ModelConnectionForm.test.tsx) | 仅提交模型名/API地址/Key、携带CSRF且保存后清空Key的接入表单测试。 |
+| [`web/src/features/models/ModelConnectionForm.tsx`](../web/src/features/models/ModelConnectionForm.tsx) | 平台或本人Key的三字段接入表单，后端决定计费模式与预设。 |
+| [`web/src/features/models/MyModelsPage.tsx`](../web/src/features/models/MyModelsPage.tsx) | 本人Key接入与停用、可用模型列表、平台标准价及计费方式说明。 |
 | [`web/src/features/models/QuotaPage.tsx`](../web/src/features/models/QuotaPage.tsx) | 个人累计额度、费用流水、预留状态及资源用量。 |
 | [`web/src/features/models/credits.test.ts`](../web/src/features/models/credits.test.ts) | 前端回归测试：retains exact amounts beyond Number.MAX_SAFE_INTEGER and rounds up once；rejects invalid output token values。 |
 | [`web/src/features/models/credits.ts`](../web/src/features/models/credits.ts) | 十进制整数字符串/BigInt格式化和模型单次预留计算，避免浮点误差。 |
+| [`web/src/features/models/money.test.ts`](../web/src/features/models/money.test.ts) | 人民币精确转换、微额显示和大整数金额边界测试。 |
+| [`web/src/features/models/money.ts`](../web/src/features/models/money.ts) | BigInt人民币/整数微元转换及展示，不通过浮点数计算。 |
 | [`web/src/features/reports/ComparisonView.tsx`](../web/src/features/reports/ComparisonView.tsx) | 两个实验的配置可比性、覆盖率、双通过率和可比维度差值。 |
 | [`web/src/features/reports/ExperimentReport.tsx`](../web/src/features/reports/ExperimentReport.tsx) | 实验报告、任务分页、证据定位、仅重评/重跑、人工复核和JSON导出。 |
 | [`web/src/features/reports/HumanReviewPanel.tsx`](../web/src/features/reports/HumanReviewPanel.tsx) | 向已有评测结果追加人工评分和理由，不覆盖自动结果。 |

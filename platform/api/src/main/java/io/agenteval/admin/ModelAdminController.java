@@ -14,6 +14,7 @@ public class ModelAdminController {
     private final io.agenteval.administration.AuditService audit;
     public ModelAdminController(ModelProfileService profiles,ModelGateway gateway,CurrentActor current,io.agenteval.administration.AuditService audit) { this.profiles=profiles; this.gateway=gateway; this.current=current; this.audit=audit; }
     @PostMapping("/models") public ModelViews.Profile create(Authentication auth,@RequestBody ModelProfileCommand command) { return ModelViews.Profile.of(profiles.create(current.require(auth),command)); }
+    @PostMapping("/models/connections") public ModelViews.Profile connect(Authentication auth,@RequestBody ModelConnection command) { return ModelViews.Profile.of(profiles.connect(current.require(auth),command,true)); }
     @GetMapping("/models") public List<ModelViews.Profile> list(Authentication auth) { return profiles.list(current.require(auth)).stream().map(ModelViews.Profile::of).toList(); }
     @GetMapping("/model-calls") public List<ModelViews.Pending> pending(Authentication auth,@RequestParam(defaultValue="50") int limit) { return gateway.pending(current.require(auth),limit).stream().map(ModelViews.Pending::of).toList(); }
     public record Disable(String reason) {}

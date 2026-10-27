@@ -43,7 +43,7 @@ VeyraEval Platform 旨在帮助开发者回答两个问题：**Agent 是否完�
 - **Evaluate outcomes and behavior.** 分开评估任务结果、执行过程和效率，定位具体失败步骤。
 - **Extend the criteria.** 使用基础模板起步，再配置业务规则、编写评分提示词或添加 Python 评测函数。
 - **Keep experiments traceable.** 固定任务、评测器和证据版本，重评保留历史结果。
-- **Control judge usage.** 平台提供评审模型，按用户累计额度预留、结算并记录调用消耗。
+- **Control judge usage.** 平台模型按人民币累计额度预留与结算，新用户默认 ¥5.00；也可接入本人私有 Key，由供应商计费、不扣平台额度。
 
 <a id="architecture"></a>
 ## Architecture
@@ -159,6 +159,7 @@ Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界�
 
 - [快速开始](docs/guides/quickstart.md)：源码构建与 HTTPS 平台启动。
 - [完整 Python 使用示例](docs/guides/python-evaluation-walkthrough.md)：安装 SDK、运行正误两个 Agent、创建任务与规则、查看评分和工具轨迹，附可运行项目与实际结果。
+- [LLM 模型接入与额度](docs/guides/llm-models.md)：三字段接入、平台新用户 ¥5.00 累计额度、自带 Key 的私有隔离与零平台扣款。
 - [Python SDK](docs/guides/python-sdk.md) / [Java SDK](docs/guides/java-sdk.md)：接入自定义 Agent。
 - [SDK 发布指南](docs/guides/sdk-publishing.md)：Python 已发布版本、发布验证及 Maven Central 的准备、命名空间、产物与审批。
 - [Java 签名与 Maven Central 发布](docs/guides/maven-central.md)：GPG 密钥、Portal Token、环境配置及分阶段验证与发布。

@@ -10,8 +10,8 @@ public class QuotaController {
     private final QuotaService quota;
     private final CurrentActor current;
     public QuotaController(QuotaService quota,CurrentActor current) { this.quota=quota; this.current=current; }
-    public record WalletView(UUID workspaceId,String granted,String consumed,String reserved,String available) {
-        public static WalletView of(QuotaWallet wallet) { return new WalletView(wallet.workspaceId(),Long.toString(wallet.granted()),Long.toString(wallet.consumed()),Long.toString(wallet.reserved()),Long.toString(wallet.available())); }
+    public record WalletView(UUID workspaceId,String granted,String consumed,String reserved,String available,String unit) {
+        public static WalletView of(QuotaWallet wallet) { return new WalletView(wallet.workspaceId(),Long.toString(wallet.granted()),Long.toString(wallet.consumed()),Long.toString(wallet.reserved()),Long.toString(wallet.available()),wallet.unit()); }
     }
     public record LedgerEntry(UUID id,UUID callId,String type,String grantedDelta,String consumedDelta,String reservedDelta,String reason,UUID actorUserId,java.time.Instant createdAt) {
         static LedgerEntry of(QuotaEntry entry) { return new LedgerEntry(entry.id(),entry.callId(),entry.type(),Long.toString(entry.grantedDelta()),Long.toString(entry.consumedDelta()),Long.toString(entry.reservedDelta()),entry.reason(),entry.actorUserId(),entry.createdAt()); }

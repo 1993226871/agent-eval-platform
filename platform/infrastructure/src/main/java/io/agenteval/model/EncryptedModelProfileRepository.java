@@ -21,7 +21,7 @@ public final class EncryptedModelProfileRepository implements ModelProfileReposi
         if(value==null || value.length()>2048) throw new IllegalArgumentException("Invalid provider endpoint");
         URI uri=URI.create(value);
         if(!Set.of("http","https").contains(uri.getScheme()) || uri.getHost()==null || uri.getUserInfo()!=null || uri.getFragment()!=null || uri.getQuery()!=null
-            || !uri.getPath().endsWith("/chat/completions") || !origins.contains(uri.getScheme()+"://"+uri.getRawAuthority())) throw new IllegalArgumentException("Provider endpoint not allowlisted");
+            || !uri.getPath().endsWith("/chat/completions") || !(origins.contains(uri.getScheme()+"://"+uri.getRawAuthority()) || ModelConnectionDefaults.officialEndpoint(value))) throw new IllegalArgumentException("Provider endpoint not allowlisted");
     }
     public ModelProfile create(UUID administrator,ModelProfileCommand command) {
         endpoint(command.endpoint());
@@ -31,12 +31,24 @@ public final class EncryptedModelProfileRepository implements ModelProfileReposi
             jdbc.sql("insert into model_profiles(id,name,endpoint,encrypted_api_key,model,input_token_bound,max_output_tokens,max_request_bytes,max_concurrent,bound_reference,created_by) values(?,?,?,?,?,?,?,?,?,?,?)")
                 .params(id,command.name(),command.endpoint(),encrypted,command.model(),command.inputTokenBound(),command.maxOutputTokens(),command.maxRequestBytes(),command.maxConcurrent(),command.boundReference(),administrator).update();
             jdbc.sql("insert into model_price_versions(id,profile_id,input_rate,output_rate,denominator) values(?,?,?,?,?)").params(price,id,command.inputRate(),command.outputRate(),command.denominator()).update();
+            if("CNY_MICRO".equals(command.billingUnit())) jdbc.sql("update model_profiles set billing_mode='PLATFORM' where id=?").param(id).update();
               io.agenteval.administration.JdbcAuditWriter.byUser(jdbc,administrator,io.agenteval.administration.AuditAction.MODEL_CREATED,id);
             return require(id);
         });
     }
     public ModelProfile require(UUID id) { return jdbc.sql(SELECT+"where p.id=?").param(id).query(this::map).optional().orElseThrow(ScopeViolationException::new); }
+    @Override public ModelProfile connect(io.agenteval.identity.WorkspaceActor actor,ModelProfileCommand command,boolean platform) {
+        return transactions.execute(status -> {
+            var created=create(actor.userId(),command);
+            jdbc.sql("update model_profiles set workspace_id=?,billing_mode=? where id=?")
+                .param(1,platform?null:actor.workspaceId(),Types.OTHER).param(2,platform?"PLATFORM":"BYOK").param(3,created.id()).update();
+            return require(created.id());
+        });
+    }
     public List<ModelProfile> list() { return jdbc.sql(SELECT+"order by p.created_at desc,p.id desc limit 100").query(this::map).list(); }
+    @Override public List<ModelProfile> visible(io.agenteval.identity.WorkspaceActor actor) {
+        return jdbc.sql(SELECT+"where p.workspace_id is null or p.workspace_id=? order by p.created_at desc,p.id desc limit 100").param(actor.workspaceId()).query(this::map).list();
+    }
     public void disable(UUID id,String reason) {
         transactions.executeWithoutResult(status -> {
             if(jdbc.sql("update model_profiles set enabled=false,disabled_reason=? where id=? and enabled").params(reason,id).update()==1) {
@@ -51,6 +63,6 @@ public final class EncryptedModelProfileRepository implements ModelProfileReposi
     }
     public void checkEndpoint(ModelProfile profile) { endpoint(profile.endpoint()); }
     private ModelProfile map(ResultSet row,int index) throws SQLException {
-        return new ModelProfile(row.getObject("id",UUID.class),row.getString("name"),row.getString("endpoint"),row.getString("model"),row.getLong("input_token_bound"),row.getInt("max_output_tokens"),row.getInt("max_request_bytes"),row.getInt("max_concurrent"),row.getString("bound_reference"),row.getBoolean("enabled"),row.getString("disabled_reason"),new PriceVersion(row.getObject("price_id",UUID.class),row.getLong("input_rate"),row.getLong("output_rate"),row.getLong("denominator")));
+        return new ModelProfile(row.getObject("id",UUID.class),row.getString("name"),row.getString("endpoint"),row.getString("model"),row.getLong("input_token_bound"),row.getInt("max_output_tokens"),row.getInt("max_request_bytes"),row.getInt("max_concurrent"),row.getString("bound_reference"),row.getBoolean("enabled"),row.getString("disabled_reason"),new PriceVersion(row.getObject("price_id",UUID.class),row.getLong("input_rate"),row.getLong("output_rate"),row.getLong("denominator")),row.getObject("workspace_id",UUID.class),row.getString("billing_mode"));
     }
 }

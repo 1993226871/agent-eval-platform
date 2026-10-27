@@ -4,6 +4,8 @@
 
 ## 规则、LLM 和 Python
 
+LLM 模型只需填写模型名称、API 地址和 API Key；平台模型扣累计人民币额度，自带 Key 由供应商向用户计费、不扣平台额度。配置步骤、预设范围和计费口径见 [模型接入与额度](llm-models.md)。
+
 RULE 用于可确定的检查，例如 `config: {"operator":"eq","selector":"/output/amount","expected":100}`，不产生模型费用。字段选择、工具调用和过程指标的完整操作符见 [规则评测说明](../development/reporting.md)。
 
 LLM 用于语义指标。每个指标指定五档 rubric、`prompt_version: rubric-v1`、模型/价格版本、输入和输出上限。模型返回 `status`、整数 `grade: 0..4`、原因和已提供的证据引用；平台归一化为 0～1 并计算阈值。固定响应格式并不保证判断正确，需用人工标注校准。结构错误最多触发一次额外计费请求；已发送但未知的调用保留预留，不自动重发。配置和示例见 [LLM 指南](../development/llm-evaluation.md)。

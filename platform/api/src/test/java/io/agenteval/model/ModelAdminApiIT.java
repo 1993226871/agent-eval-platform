@@ -23,6 +23,7 @@ class ModelAdminApiIT {
     @DynamicPropertySource static void database(DynamicPropertyRegistry p) { p.add("spring.datasource.url",postgres::getJdbcUrl); p.add("spring.datasource.username",postgres::getUsername); p.add("spring.datasource.password",postgres::getPassword); }
     @Autowired IdentityService identities;
     @Autowired ObjectMapper json;
+    @Autowired io.agenteval.quota.QuotaService quota;
     @LocalServerPort int port;
     @Test void onlyAdministratorCreatesModelAndCredentialsNeverReturn() throws Exception {
         var owner=identities.createUser(UUID.randomUUID()+"@model.local","Temporary-Password-1",false);
@@ -32,6 +33,10 @@ class ModelAdminApiIT {
             String account=json.writeValueAsString(Map.of("email",UUID.randomUUID()+"@created.local","temporary_password","Temporary-Password-999"));
             assertThat(post(user,"/api/v1/admin/users",account).statusCode()).isEqualTo(403);
             var provisioned=post(management,"/api/v1/admin/users",account); assertThat(provisioned.statusCode()).isEqualTo(201);
+            var provisionedJson=json.readTree(provisioned.body());
+            var provisionedActor=new io.agenteval.identity.WorkspaceActor(UUID.fromString(provisionedJson.path("user_id").asText()),UUID.fromString(provisionedJson.path("workspace_id").asText()),false);
+            assertThat(quota.wallet(provisionedActor).granted()).isEqualTo(5_000_000);
+            assertThat(quota.wallet(provisionedActor).unit()).isEqualTo("CNY_MICRO");
             assertThat(provisioned.body()).doesNotContain("Temporary-Password-999","password_hash");
             assertThat(json.readTree(provisioned.body()).path("must_change_password").asBoolean()).isTrue();
             var accounts=get(management,"/api/v1/admin/users"); assertThat(accounts.statusCode()).isEqualTo(200);
@@ -74,6 +79,31 @@ class ModelAdminApiIT {
         }
     }
     URI uri(String path) { return URI.create("http://localhost:"+port+path); }
+    @Test void privateConnectionsCannotBeListedDisabledOrCopiedByOtherUsers() throws Exception {
+        var owner=identities.createUser(UUID.randomUUID()+"@private.local","Temporary-Password-1",false);
+        var other=identities.createUser(UUID.randomUUID()+"@private.local","Temporary-Password-1",false);
+        var admin=identities.createUser(UUID.randomUUID()+"@private.local","Temporary-Password-1",true);
+        String key="private-connection-test-only-123456789";
+        try(var mine=login(owner.email());var theirs=login(other.email());var management=login(admin.email())) {
+            var forged=json.writeValueAsString(Map.of("model","deepseek-flash","endpoint","https://api.deepseek.com","api_key",key,"billing_mode","PLATFORM","input_rate","0"));
+            assertThat(post(mine,"/api/v1/models/connections",forged).statusCode()).isEqualTo(400);
+            var body=json.writeValueAsString(Map.of("model","deepseek-flash","endpoint","https://api.deepseek.com","api_key",key));
+            var response=post(mine,"/api/v1/models/connections",body);
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response.body()).doesNotContain(key,"endpoint","api_key");
+            var model=json.readTree(response.body()); String id=model.path("id").asText();
+            assertThat(model.path("billing_mode").asText()).isEqualTo("BYOK");
+            assertThat(get(mine,"/api/v1/models").body()).contains(id);
+            assertThat(get(theirs,"/api/v1/models").body()).doesNotContain(id);
+            assertThat(get(management,"/api/v1/admin/models").body()).doesNotContain(id,key);
+            assertThat(post(theirs,"/api/v1/models/connections/"+id+"/disable","{}").statusCode()).isEqualTo(404);
+            assertThat(post(management,"/api/v1/admin/models/"+id+"/disable","{\"reason\":\"No private bypass\"}").statusCode()).isEqualTo(404);
+            String template=json.writeValueAsString(Map.of("model_profile_id",id,"price_version_id",model.path("price").path("id").asText()));
+            assertThat(post(theirs,"/api/v1/templates/judges/content-coverage/copy",template).statusCode()).isEqualTo(404);
+            assertThat(post(mine,"/api/v1/templates/judges/content-coverage/copy",template).statusCode()).isEqualTo(200);
+            assertThat(post(mine,"/api/v1/models/connections/"+id+"/disable","{}").statusCode()).isEqualTo(204);
+        }
+    }
     HttpResponse<String> get(HttpClient client,String path) throws Exception { return client.send(HttpRequest.newBuilder(uri(path)).GET().build(),HttpResponse.BodyHandlers.ofString()); }
     HttpResponse<String> post(HttpClient client,String path,String body) throws Exception {
         var token=json.readTree(get(client,"/api/v1/auth/csrf").body());

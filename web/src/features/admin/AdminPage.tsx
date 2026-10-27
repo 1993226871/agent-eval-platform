@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "../../api/client";
-import type { Schema } from "../../api/types";
 import {
   Badge,
   ErrorNotice,
@@ -11,22 +10,9 @@ import {
 import { useWorkspace } from "../auth/AuthProvider";
 import { formatCredits, integerCredits } from "../models/credits";
 import { ResourceAdminPanel } from "./ResourceAdminPanel";
+import { ModelConnectionForm } from "../models/ModelConnectionForm";
+import { formatCny, parseCny } from "../models/money";
 
-type ModelForm = Schema<"ModelCreate">;
-const emptyModel: ModelForm = {
-  name: "",
-  endpoint: "",
-  api_key: "",
-  model: "",
-  input_token_bound: 20000,
-  max_output_tokens: 1000,
-  max_request_bytes: 65536,
-  max_concurrent: 2,
-  bound_reference: "",
-  input_rate: "1",
-  output_rate: "1",
-  denominator: "1000",
-};
 export function AdminPage() {
   const { workspace_id } = useWorkspace();
   const cache = useQueryClient();
@@ -80,12 +66,15 @@ export function AdminPage() {
   });
   const adjust = useMutation({
     mutationFn: () => {
-      integerCredits(amount);
+      parseCny(amount);
       return request(
-        api.POST("/api/v1/admin/workspaces/{workspaceId}/quota/adjustments", {
-          params: { path: { workspaceId: workspace } },
-          body: { credits: amount, reason, idempotency_key: adjustKey },
-        }),
+        api.POST(
+          "/api/v1/admin/workspaces/{workspaceId}/quota/money-adjustments",
+          {
+            params: { path: { workspaceId: workspace } },
+            body: { amount, reason, idempotency_key: adjustKey },
+          },
+        ),
       );
     },
     onSuccess: async () => {
@@ -95,7 +84,6 @@ export function AdminPage() {
       await refresh();
     },
   });
-  const [model, setModel] = useState<ModelForm>(emptyModel);
   const [disableReason, setDisableReason] = useState("");
   const testCalls = useRef(new Map<string, string>());
   const testModel = async (profileId: string) => {
@@ -117,14 +105,6 @@ export function AdminPage() {
   const modelAction = useMutation({
     mutationFn: (operation: () => Promise<unknown>) => operation(),
     onSuccess: refresh,
-  });
-  const saveModel = useMutation({
-    mutationFn: () =>
-      request(api.POST("/api/v1/admin/models", { body: model })),
-    onSuccess: async () => {
-      setModel(emptyModel);
-      await refresh();
-    },
   });
   const [callId, setCallId] = useState("");
   const [input, setInput] = useState("");
@@ -212,7 +192,7 @@ export function AdminPage() {
                   />
                 </label>
                 <p className="hint">
-                  新账户首次登录必须修改密码。请妥善交付临时密码。
+                  新账户首次登录必须修改密码，默认获得 ¥5.00 累计平台评审额度。
                 </p>
                 <ErrorNotice error={create.error} />
                 {create.isSuccess && <p role="status">账户已创建。</p>}
@@ -248,11 +228,11 @@ export function AdminPage() {
                   </select>
                 </label>
                 <label>
-                  调整 credits
+                  调整金额（元）
                   <input
                     required
-                    inputMode="numeric"
-                    pattern="-?[0-9]+"
+                    inputMode="decimal"
+                    pattern="-?[0-9]+(\.[0-9]{1,6})?"
                     value={amount}
                     onChange={(event) => {
                       setAmount(event.target.value);
@@ -278,7 +258,7 @@ export function AdminPage() {
                 <ErrorNotice error={adjust.error} />
                 {adjust.data && (
                   <p role="status">
-                    调整后可用：{formatCredits(adjust.data.available)} credits
+                    调整后可用：{formatCny(adjust.data.available)}
                   </p>
                 )}
                 <button className="primary" disabled={adjust.isPending}>
@@ -353,7 +333,7 @@ export function AdminPage() {
                 <thead>
                   <tr>
                     <th>模型</th>
-                    <th>价格 / 比例</th>
+                    <th>计费方式</th>
                     <th>状态</th>
                     <th>操作</th>
                   </tr>
@@ -366,8 +346,11 @@ export function AdminPage() {
                         <small>{item.model}</small>
                       </td>
                       <td>
-                        {item.price.input_rate} / {item.price.output_rate} /{" "}
-                        {item.price.denominator}
+                        {item.billing_mode === "BYOK"
+                          ? "本人 Key · 服务商计费"
+                          : item.billing_mode === "PLATFORM"
+                            ? "平台人民币额度"
+                            : "历史 credits"}
                       </td>
                       <td>
                         <Badge>{item.enabled ? "可用" : "已停用"}</Badge>
@@ -414,112 +397,7 @@ export function AdminPage() {
           </section>
           <section className="panel">
             <h2>添加平台模型</h2>
-            <form
-              className="model-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                saveModel.mutate();
-              }}
-            >
-              {(
-                [
-                  "name",
-                  "endpoint",
-                  "model",
-                  "api_key",
-                  "bound_reference",
-                ] as const
-              ).map((field) => (
-                <label key={field}>
-                  {
-                    {
-                      name: "显示名称",
-                      endpoint: "模型服务 URL",
-                      model: "模型标识",
-                      api_key: "服务 API Key",
-                      bound_reference: "输入上界核验依据",
-                    }[field]
-                  }
-                  <input
-                    required
-                    type={
-                      field === "api_key"
-                        ? "password"
-                        : field === "endpoint"
-                          ? "url"
-                          : "text"
-                    }
-                    autoComplete="off"
-                    value={model[field]}
-                    onChange={(event) =>
-                      setModel({ ...model, [field]: event.target.value })
-                    }
-                  />
-                </label>
-              ))}
-              {(
-                [
-                  "input_token_bound",
-                  "max_output_tokens",
-                  "max_request_bytes",
-                  "max_concurrent",
-                ] as const
-              ).map((field) => (
-                <label key={field}>
-                  {
-                    {
-                      input_token_bound: "输入 Token 上界",
-                      max_output_tokens: "最大输出 Token",
-                      max_request_bytes: "请求字节上界",
-                      max_concurrent: "最大并发",
-                    }[field]
-                  }
-                  <input
-                    required
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={model[field]}
-                    onChange={(event) =>
-                      setModel({
-                        ...model,
-                        [field]: Number(event.target.value),
-                      })
-                    }
-                  />
-                </label>
-              ))}
-              {(["input_rate", "output_rate", "denominator"] as const).map(
-                (field) => (
-                  <label key={field}>
-                    {
-                      {
-                        input_rate: "输入单价分子",
-                        output_rate: "输出单价分子",
-                        denominator: "计价比例分母",
-                      }[field]
-                    }
-                    <input
-                      required
-                      pattern="[0-9]+"
-                      inputMode="numeric"
-                      value={model[field]}
-                      onChange={(event) =>
-                        setModel({ ...model, [field]: event.target.value })
-                      }
-                    />
-                  </label>
-                ),
-              )}
-              <p className="hint">
-                仅接受部署配置允许的服务源。价格固定为不可变版本；Key
-                加密保存，创建后不再返回。
-              </p>
-              <ErrorNotice error={saveModel.error} />
-              <button className="primary" disabled={saveModel.isPending}>
-                保存模型配置
-              </button>
-            </form>
+            <ModelConnectionForm mode="PLATFORM" onSaved={refresh} />
           </section>
         </>
       )}

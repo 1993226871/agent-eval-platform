@@ -9,6 +9,7 @@ import { LoginPage, PasswordPage } from "./features/auth/AuthPages";
 import { CatalogPage } from "./features/catalog/CatalogPage";
 import { AgentsPage } from "./features/agents/AgentsPage";
 import { ExperimentsPage } from "./features/experiments/ExperimentsPage";
+import { MyModelsPage } from "./features/models/MyModelsPage";
 import { QuotaPage } from "./features/models/QuotaPage";
 import { AdminPage } from "./features/admin/AdminPage";
 import { AuditPage } from "./features/administration/AuditPage";
@@ -44,6 +45,7 @@ function Layout() {
     ["suites", "评分套件"],
     ["agents", "Agent 接入"],
     ["quota", "个人额度"],
+    ["models", "评审模型"],
     ["audit", "操作记录"],
   ] as const;
   return (
@@ -121,6 +123,7 @@ export function App() {
           />
           <Route path="/workspace/agents" element={<AgentsPage />} />
           <Route path="/workspace/quota" element={<QuotaPage />} />
+          <Route path="/workspace/models" element={<MyModelsPage />} />
           <Route path="/workspace/audit" element={<AuditPage />} />
           <Route
             path="/workspace/deletions/:id"

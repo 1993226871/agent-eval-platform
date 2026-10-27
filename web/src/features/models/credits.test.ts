@@ -2,6 +2,27 @@ import { describe, expect, it } from "vitest";
 import { estimateReservation, formatCredits } from "./credits";
 
 describe("integer credit estimates", () => {
+  it("does not reserve platform money for a private API key", () => {
+    expect(
+      estimateReservation(
+        {
+          id: "m",
+          name: "private",
+          model: "deepseek-flash",
+          billing_mode: "BYOK",
+          input_token_bound: 1048576,
+          max_output_tokens: 8192,
+          price: {
+            id: "p",
+            input_rate: "2",
+            output_rate: "8",
+            denominator: "1",
+          },
+        },
+        500,
+      ),
+    ).toBe(0n);
+  });
   it("retains exact amounts beyond Number.MAX_SAFE_INTEGER and rounds up once", () => {
     const model = {
       id: "m",

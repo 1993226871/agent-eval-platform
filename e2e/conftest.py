@@ -155,7 +155,7 @@ class Platform:
         if name not in self.models:
             self.models[name] = self.request(self.admin, "POST", "/admin/models", {"name": name, "endpoint": "http://judge:8089/v1/chat/completions", "api_key": "disposable-test-key-only", "model": name,
                 "input_token_bound": 4096, "max_output_tokens": 100, "max_request_bytes": 65536, "max_concurrent": 2,
-                "bound_reference": "Local deterministic acceptance fixture", "input_rate": 1, "output_rate": 1, "denominator": 1})
+                "bound_reference": "Local deterministic acceptance fixture", "input_rate": 1, "output_rate": 1, "denominator": 1, "billing_unit": "CNY_MICRO"})
         return self.models[name]
 
     def publish(self, kind, name, content):

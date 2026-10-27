@@ -3002,6 +3002,251 @@
         ]
       }
     },
+    "/api/v1/admin/models/connections": {
+      "post": {
+        "operationId": "connectPlatformModel",
+        "tags": [
+          "admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "401": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "403": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "404": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "409": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "413": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "429": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "503": {
+            "$ref": "#/components/responses/Rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelConnection"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ]
+      }
+    },
+    "/api/v1/models/connections": {
+      "post": {
+        "operationId": "connectPrivateModel",
+        "tags": [
+          "models"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelChoice"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "401": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "403": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "404": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "409": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "413": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "429": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "503": {
+            "$ref": "#/components/responses/Rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelConnection"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ]
+      }
+    },
+    "/api/v1/models/connections/{id}/disable": {
+      "post": {
+        "operationId": "disablePrivateModel",
+        "tags": [
+          "models"
+        ],
+        "responses": {
+          "204": {
+            "description": "No content."
+          },
+          "400": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "401": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "403": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "404": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "409": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "413": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "429": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "503": {
+            "$ref": "#/components/responses/Rejected"
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/workspaces/{workspaceId}/quota/money-adjustments": {
+      "post": {
+        "operationId": "adjustMoneyQuota",
+        "tags": [
+          "admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wallet"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "401": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "403": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "404": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "409": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "413": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "429": {
+            "$ref": "#/components/responses/Rejected"
+          },
+          "503": {
+            "$ref": "#/components/responses/Rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoneyAdjustment"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
     "/api/v1/admin/models/{profileId}/disable": {
       "post": {
         "operationId": "disableModel",
@@ -6064,6 +6309,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "CREDITS",
+              "CNY_MICRO"
+            ]
+          },
+          "byok_calls": {
+            "type": "integer"
           }
         },
         "required": [
@@ -6153,6 +6408,13 @@
             "type": "string",
             "pattern": "^-?[0-9]+$",
             "description": "Exact integer decimal string; never round through a JavaScript number."
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "CREDITS",
+              "CNY_MICRO"
+            ]
           }
         },
         "required": [
@@ -6333,6 +6595,14 @@
           },
           "price": {
             "$ref": "#/components/schemas/Price"
+          },
+          "billing_mode": {
+            "type": "string",
+            "enum": [
+              "LEGACY",
+              "PLATFORM",
+              "BYOK"
+            ]
           }
         },
         "required": [
@@ -6392,6 +6662,14 @@
           },
           "price": {
             "$ref": "#/components/schemas/Price"
+          },
+          "billing_mode": {
+            "type": "string",
+            "enum": [
+              "LEGACY",
+              "PLATFORM",
+              "BYOK"
+            ]
           }
         },
         "required": [
@@ -6407,6 +6685,50 @@
           "enabled",
           "disabled_reason",
           "price"
+        ]
+      },
+      "ModelConnection": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "api_key": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": [
+          "model",
+          "endpoint",
+          "api_key"
+        ]
+      },
+      "MoneyAdjustment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "amount",
+          "reason",
+          "idempotency_key"
         ]
       },
       "ModelCreate": {
@@ -6456,6 +6778,13 @@
             "type": "string",
             "pattern": "^-?[0-9]+$",
             "description": "Exact integer decimal string; never round through a JavaScript number."
+          },
+          "billing_unit": {
+            "type": "string",
+            "enum": [
+              "CREDITS",
+              "CNY_MICRO"
+            ]
           }
         },
         "required": [

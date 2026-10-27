@@ -18,6 +18,7 @@ export function estimateReservation(
     outputTokens > model.max_output_tokens
   )
     throw new Error("输出 Token 上限超出模型范围。");
+  if (model.billing_mode === "BYOK") return 0n;
   const divisor = integerCredits(model.price.denominator);
   if (divisor <= 0n) throw new Error("价格比例无效。");
   const total =

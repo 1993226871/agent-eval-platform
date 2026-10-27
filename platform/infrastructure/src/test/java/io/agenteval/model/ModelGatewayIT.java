@@ -62,6 +62,57 @@ class ModelGatewayIT {
         return new ModelProfileService(profiles).create(admin,new ModelProfileCommand("Test",origin+"/v1/chat/completions",providerKey,"test-model-v1",1000,100,65536,2,"Fixture provider enforces input token limit",1,1,1));
     }
     JudgeRequest request(ModelProfile profile) { return new JudgeRequest(user.workspaceId(),UUID.randomUUID(),profile.id(),profile.price().id(),"Judge using the fixed rubric","Untrusted evidence",20); }
+    @Test void privateKeyWorksWithZeroPlatformBalanceAndCannotBeUsedByAnotherWorkspace() throws Exception {
+        var model=profiles.connect(user,new ModelProfileCommand("Private",origin+"/v1/chat/completions",providerKey,"deepseek-flash",1048576,8192,65536,2,"Verified fixture",2,8,1),false);
+        assertThat(quota.wallet(user).available()).isZero();
+        var request=request(model);
+        var result=gateway.judge(request);
+        assertThat(result.status()).isEqualTo("SUCCEEDED"); assertThat(result.credits()).isZero();
+        assertThat(gateway.judge(request).status()).isEqualTo("SUCCEEDED");
+        assertThat(requests.get()).isEqualTo(1);
+        assertThat(quota.wallet(user).consumed()).isZero(); assertThat(quota.wallet(user).reserved()).isZero();
+        assertThat(jdbc.sql("select count(*) from quota_reservations where call_id=?").param(request.callId()).query(Long.class).single()).isZero();
+        assertThat(jdbc.sql("select count(*) from quota_ledger where call_id=?").param(request.callId()).query(Long.class).single()).isZero();
+        assertThat(profiles.visible(admin)).noneMatch(p->p.id().equals(model.id()));
+        assertThat(profiles.visible(user)).anyMatch(p->p.id().equals(model.id()));
+        var foreign=new JudgeRequest(admin.workspaceId(),UUID.randomUUID(),model.id(),model.price().id(),"system","input",20);
+        assertThatThrownBy(()->gateway.judge(foreign)).isInstanceOf(ScopeViolationException.class);
+        assertThat(requests.get()).isEqualTo(1);
+        var sent=new com.fasterxml.jackson.databind.ObjectMapper().readTree(capturedBody);
+        assertThat(sent.path("max_tokens").asInt()).isEqualTo(20);
+        assertThat(sent.has("max_completion_tokens")).isFalse();
+        assertThat(sent.path("thinking").path("type").asText()).isEqualTo("disabled");
+    }
+    @Test void privateUnknownExecutionRetainsCallIdentityWithoutHoldingMoneyOrReplaying() {
+        var model=profiles.connect(user,new ModelProfileCommand("Private",origin+"/v1/chat/completions",providerKey,"fixture",1000,100,65536,2,"Verified fixture",1,1,1),false);
+        disconnect=true; var request=request(model);
+        assertThat(gateway.judge(request).status()).isEqualTo("PENDING_RECONCILIATION");
+        gateway.recover();
+        assertThat(gateway.judge(request).status()).isEqualTo("PENDING_RECONCILIATION");
+        assertThat(requests.get()).isEqualTo(1);
+        assertThat(quota.wallet(user).reserved()).isZero();
+    }
+    @Test void platformModelSpendsCnyAndStopsBeforeSendingWhenBalanceIsExhausted() {
+        var money=new io.agenteval.quota.CnyQuotaService(jdbc,quota); money.openNewAccount(admin,user.workspaceId());
+        var model=profiles.connect(admin,new ModelProfileCommand("Platform",origin+"/v1/chat/completions",providerKey,"fixture",1000,100,65536,2,"Verified fixture",1,1,1),true);
+        assertThat(gateway.judge(request(model)).status()).isEqualTo("SUCCEEDED");
+        assertThat(quota.wallet(user).consumed()).isEqualTo(15);
+        assertThat(quota.wallet(user).unit()).isEqualTo("CNY_MICRO");
+        quota.grant(admin,user.workspaceId(),-4_999_985,"Exhaust remaining test balance",UUID.randomUUID());
+        assertThat(gateway.judge(request(model)).status()).isEqualTo("WAITING_QUOTA");
+        assertThat(requests.get()).isEqualTo(1);
+        assertThat(quota.wallet(user).available()).isZero();
+    }
+    @Test void newAccountReceivesFiveYuanOnceAndLegacyLedgerCannotBeRelabelled() {
+        var money=new io.agenteval.quota.CnyQuotaService(jdbc,quota);
+        money.openNewAccount(admin,user.workspaceId()); money.openNewAccount(admin,user.workspaceId());
+        assertThat(quota.wallet(user).unit()).isEqualTo("CNY_MICRO");
+        assertThat(quota.wallet(user).granted()).isEqualTo(5_000_000);
+        var other=account(false); quota.grant(admin,other.workspaceId(),123,"Existing legacy credits",UUID.randomUUID());
+        assertThatThrownBy(()->money.adjust(admin,other.workspaceId(),"5","No silent conversion",UUID.randomUUID())).isInstanceOf(IllegalArgumentException.class);
+        assertThat(quota.wallet(other).granted()).isEqualTo(123);
+        assertThat(quota.wallet(other).unit()).isEqualTo("CREDITS");
+    }
     String response(String content,long input,long output) {
         return "{\"id\":\"provider-call\",\"model\":\"test-model-v1\",\"choices\":[{\"message\":{\"content\":\""+content+"\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":"+input+",\"completion_tokens\":"+output+",\"total_tokens\":"+(input+output)+"}}";
     }

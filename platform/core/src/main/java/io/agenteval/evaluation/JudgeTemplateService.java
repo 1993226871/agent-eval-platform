@@ -20,6 +20,7 @@ public final class JudgeTemplateService {
     public CatalogResource copy(WorkspaceActor actor,String templateId,UUID modelId,UUID priceId) {
         var template=templates.stream().filter(item -> item.id().equals(templateId)).findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown Judge template"));
         var model=models.require(Objects.requireNonNull(modelId));
+        model.requireWorkspace(actor.workspaceId());
         if(!model.enabled() || !model.price().id().equals(priceId) || model.maxRequestBytes()<4096) throw new IllegalArgumentException("Model is unavailable or request budget is too small");
         var content=JsonNodeFactory.instance.objectNode().put("type","LLM").put("criterion_id",template.criterionId()).put("threshold",new BigDecimal("0.75"));
         var required=content.putArray("required_evidence"); template.requiredEvidence().forEach(required::add);

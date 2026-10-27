@@ -56,7 +56,8 @@ export function PreviewPanel({ resource }: { resource: CatalogResource }) {
       <summary>用已有任务证据试运行</summary>
       <p>
         选择一个已结束任务的 Trial
-        ID。试运行使用当前已保存草稿，不改变正式结果；模型评审会消耗个人额度。
+        ID。试运行使用当前已保存草稿，不改变正式结果；平台模型消耗平台额度，自带
+        Key 由服务商计费。
       </p>
       <label>
         试运行 Trial ID

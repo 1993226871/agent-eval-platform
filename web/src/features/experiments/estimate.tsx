@@ -4,6 +4,7 @@ import type { Schema } from "../../api/types";
 import { ErrorNotice } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
 import { formatCredits } from "../models/credits";
+import { formatCny } from "../models/money";
 
 export function useExperimentEstimate(
   dataset: string,
@@ -48,10 +49,19 @@ export function EstimateNotice({
       <ErrorNotice error={error} />
       {value && value.planned_credits !== null && (
         <p className="hint">
-          首次评测预留上界：{formatCredits(value.planned_credits)} credits（
-          {value.trial_count} 次任务、{value.planned_calls}{" "}
+          首次评测预留上界：
+          {value.unit === "CNY_MICRO"
+            ? formatCny(value.planned_credits)
+            : `${formatCredits(value.planned_credits)} credits`}
+          （{value.trial_count} 次任务、{value.planned_calls}{" "}
           次模型调用）。按所选版本、固定模型价格及 Token
           上限计算；实际按用量结算，格式修复重试和重评另计，此值不是消费硬上限。
+        </p>
+      )}
+      {value && (value.byok_calls ?? 0) > 0 && (
+        <p className="hint">
+          其中 {value.byok_calls} 次使用本人的 API
+          Key，不扣平台额度；服务商会直接向你的 API 账户计费。
         </p>
       )}
       {value && value.planned_credits === null && (

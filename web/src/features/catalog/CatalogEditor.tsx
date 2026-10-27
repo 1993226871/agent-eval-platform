@@ -7,6 +7,7 @@ import type {
 } from "../../api/types";
 import { Dialog, ErrorNotice, Loading } from "../../components/ui";
 import { formatCredits, estimateReservation } from "../models/credits";
+import { formatCny } from "../models/money";
 import { objectValue, parseContent, pretty } from "./validation";
 
 export type VersionOption = { id: string; label: string };
@@ -78,7 +79,9 @@ export function CatalogEditor({
   let reservation: string | undefined;
   if (selectedModel) {
     try {
-      reservation = formatCredits(
+      reservation = (
+        selectedModel.billing_mode === "PLATFORM" ? formatCny : formatCredits
+      )(
         estimateReservation(
           selectedModel,
           Number(config.max_output_tokens ?? 500),
@@ -191,7 +194,9 @@ export function CatalogEditor({
               {selectedModel && (
                 <p className="hint">
                   {reservation
-                    ? `单次调用预留上界：${reservation} credits。实际消耗按用量结算，重试与重评另计。`
+                    ? selectedModel?.billing_mode === "BYOK"
+                      ? "使用本人的 API Key，不扣平台额度；费用由服务商收取。"
+                      : `单次调用预留上界：${reservation}${selectedModel?.billing_mode === "PLATFORM" ? "" : " credits"}。实际消耗按用量结算，重试与重评另计。`
                     : "请填写模型允许范围内的整数输出 Token 上限后查看估算。"}
                 </p>
               )}

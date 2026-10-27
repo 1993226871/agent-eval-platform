@@ -21,8 +21,13 @@ public final class OpenAiCompatibleJudgeClient implements JudgeProvider,AutoClos
         if(!profiles.require(profile.id()).enabled()) throw new ModelUnavailableException();
         String secret=profiles.credential(profile.id()); var input=dispatch.request();
         try {
-            String body=json.writeValueAsString(Map.of("model",profile.model(),"messages",List.of(Map.of("role","system","content",input.systemPrompt()),Map.of("role","user","content",input.userPrompt())),
-                "max_completion_tokens",input.maxOutputTokens(),"n",1,"stream",false,"response_format",Map.of("type","json_object"),"temperature",0));
+            var payload=new LinkedHashMap<String,Object>();
+            payload.put("model",profile.model()); payload.put("messages",List.of(Map.of("role","system","content",input.systemPrompt()),Map.of("role","user","content",input.userPrompt())));
+            boolean deepseek=profile.model().equals("deepseek-flash") || profile.model().equals("deepseek-v4-pro");
+            payload.put(deepseek?"max_tokens":"max_completion_tokens",input.maxOutputTokens());
+            if(deepseek) payload.put("thinking",Map.of("type","disabled"));
+            payload.put("n",1); payload.put("stream",false); payload.put("response_format",Map.of("type","json_object")); payload.put("temperature",0);
+            String body=json.writeValueAsString(payload);
             if(body.getBytes(StandardCharsets.UTF_8).length>profile.maxRequestBytes()) throw new IllegalArgumentException("Model request limit");
             var request=HttpRequest.newBuilder(URI.create(profile.endpoint())).timeout(Duration.ofSeconds(60)).header("Authorization","Bearer "+secret)
                 .header("Content-Type","application/json").header("Idempotency-Key",input.callId().toString()).POST(HttpRequest.BodyPublishers.ofString(body)).build();
