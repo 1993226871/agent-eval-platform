@@ -88,7 +88,7 @@ flowchart LR
 <a id="sdk-preview"></a>
 ## SDK integration
 
-SDK提供 **Worker 接入**和**执行轨迹采集**。Python SDK 已发布到 [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/)，可直接通过 pip 安装；Java SDK 当前仍从源码构建安装，尚未发布 Maven Central。
+SDK提供 **Worker 接入**和**执行轨迹采集**。Python SDK 已发布到 [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/)，Java SDK 已发布 Maven Central，均可直接引入依赖。
 
 ### Python
 
@@ -116,8 +116,16 @@ finally:
 
 ### Java
 
+```xml
+<dependency>
+  <groupId>io.github.1993226871</groupId>
+  <artifactId>veyraeval-sdk</artifactId>
+  <version>0.1.0</version>
+</dependency>
+```
+
 ```java
-// 先从源码安装 io.github.1993226871:veyraeval-sdk:0.1.0。
+// 引入上述依赖后，在自己的 Java 21 Agent 项目中使用。
 try (var worker = EvaluationWorker.fromEnvironment()) {
     worker.registerAgent("YOUR_AGENT_UUID", context ->
         AgentResult.of(Telemetry.tool("query_order", () ->
@@ -142,7 +150,7 @@ try (var worker = EvaluationWorker.fromEnvironment()) {
 | Deployment | Linux · Docker Compose |
 | Engineering | TDD · 共享协议契约 · 租户与额度并发测试 |
 
-Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界。依赖版本、lockfile与实际取得的镜像digest已锁定；Python SDK `0.1.0` 已发布 PyPI，Java SDK `0.1.0` 尚未发布 Maven Central。
+Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界。依赖版本、lockfile与实际取得的镜像digest已锁定；Python SDK `0.1.0` 已发布 PyPI，Java SDK `0.1.0` 已发布 Maven Central，并通过独立环境安装/编译验证。
 
 <a id="documentation"></a>
 ## Documentation

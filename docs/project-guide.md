@@ -140,7 +140,7 @@ flowchart TD
 | Runner控制层 | `python -m pytest runner/tests -m 'not integration' -q` | 可信控制/协议/幂等/删除；不证明真实隔离。 |
 | 真实隔离 | 合格Linux/runsc执行`runner/tests`，以及CI中的100次边界检查 | 内存/超时/PID/网络/文件/秘密隔离及私有结果清理。 |
 | 整个平台 | `e2e/`及Linux sandbox acceptance | HTTPS、双SDK三类评分、浏览器、恢复、容量和未知状态。 |
-| SDK分发 | [发布指南](guides/sdk-publishing.md)、[Java签名发布](guides/maven-central.md) | Python已发布PyPI；Java支持本地签名bundle及独立验证，Maven Central尚未发布。 |
+| SDK分发 | [发布指南](guides/sdk-publishing.md)、[Java签名发布](guides/maven-central.md) | Python已发布PyPI、Java已发布Maven Central；均已通过独立环境安装/编译验证。 |
 
 规则：新增行为先写失败测试，修复后运行有意义的回归；不能把控制层通过写成runsc隔离通过。当前Git规则见[Agent.md](../Agent.md)：每次push必须先得到用户本次同意，commit说明使用中文。
 
@@ -1242,7 +1242,7 @@ veyraeval/
 | [`docs/guides/python-sdk.md`](../docs/guides/python-sdk.md) | 说明文档：Python Agent 接入。 |
 | [`docs/guides/quickstart.md`](../docs/guides/quickstart.md) | 说明文档：从源码启动私人评测平台；构建与启动；完成第一次评测；部署边界。 |
 | [`docs/guides/maven-central.md`](../docs/guides/maven-central.md) | Java签名与Central发布：正式GPG密钥、环境Secrets、公钥、Portal Token、分阶段工作流及消费者验收。 |
-| [`docs/guides/sdk-publishing.md`](../docs/guides/sdk-publishing.md) | Python已发布版本与验证、PyPI及Maven分发流程、命名空间/账号条件和依赖写法。 |
+| [`docs/guides/sdk-publishing.md`](../docs/guides/sdk-publishing.md) | 两语言已发布版本与验证、PyPI及Maven分发流程、命名空间/账号条件和依赖写法。 |
 | [`docs/project-guide.md`](../docs/project-guide.md) | 当前项目的架构、流程、目录和逐文件职责全量索引，即本文。 |
 
 ### e2e · 完整系统验收
@@ -1657,7 +1657,7 @@ veyraeval/
 
 | 文件 | 做什么 |
 | --- | --- |
-| [`sdks/java/README.md`](../sdks/java/README.md) | 说明文档：VeyraEval · Java SDK；Build；Connect；Record calls and async work。 |
+| [`sdks/java/README.md`](../sdks/java/README.md) | 说明文档：VeyraEval · Java SDK；Maven/Gradle安装、源码构建、Worker接入、异步打点及公开发布验证。 |
 | [`sdks/java/pom.xml`](../sdks/java/pom.xml) | Java SDK依赖、共享protocol引用和jar许可证资源配置；不依赖Spring。 |
 | [`sdks/java/src/main/java/io/agenteval/sdk/AgentResult.java`](../sdks/java/src/main/java/io/agenteval/sdk/AgentResult.java) | 用户Agent运行、打点与持久上传的不可变数据载体`AgentResult`；字段包括`output, artifactIds`。 |
 | [`sdks/java/src/main/java/io/agenteval/sdk/BoundedBodySubscriber.java`](../sdks/java/src/main/java/io/agenteval/sdk/BoundedBodySubscriber.java) | Java SDK的HTTP响应体字节上限控制。 |

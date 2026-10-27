@@ -2,7 +2,26 @@
 
 Run platform-assigned tasks in your own Java Agent. Capture visible tool/model calls and return evidence without adding a Spring dependency.
 
-## Build
+## Install
+
+Requires JDK21. Version `0.1.0` is available from Maven Central:
+
+```xml
+<dependency>
+  <groupId>io.github.1993226871</groupId>
+  <artifactId>veyraeval-sdk</artifactId>
+  <version>0.1.0</version>
+</dependency>
+```
+
+```kotlin
+repositories { mavenCentral() }
+dependencies { implementation("io.github.1993226871:veyraeval-sdk:0.1.0") }
+```
+
+The protocol dependency and parent POM are also published. A fresh-cache independent Maven consumer has compiled and executed successfully. Runtime dependencies include Jackson and SQLite JDBC3.53.4.0; keep the SDK spool directory private to the Worker account.
+
+## Build from source
 
 Requires JDK21. From the repository root:
 
@@ -10,7 +29,7 @@ Requires JDK21. From the repository root:
 ./mvnw -pl sdks/java -am install
 ```
 
-This installs the unpublished `io.github.1993226871:veyraeval-sdk:0.1.0`, its protocol dependency and parent POM into your local Maven repository. Add that SDK dependency to your Agent project; it is not yet available from Maven Central. Runtime dependencies include Jackson and SQLite JDBC3.53.4.0; keep the SDK spool directory private to the Worker account.
+This installs the source-built SDK, its protocol dependency and parent POM into your local Maven repository for development. Regular SDK consumers can use Maven Central directly.
 
 ## Connect
 
@@ -84,7 +103,7 @@ Both SDKs consume the same versioned contracts and fixture manifest. The Java SD
 
 ## Registry publication
 
-Distribution metadata and build checks are prepared, but this SDK has not been publicly published. See the [Java signing and Central guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/maven-central.md) for GPG keys, Portal Token configuration, signed-bundle verification and separate release approval. After Java publication, consumers can use Maven/Gradle without a repository checkout. The Python SDK is already available on PyPI.
+Version `0.1.0` is published to Maven Central. The 9 POM/jar files and 9 PGP signatures for the parent, protocol and SDK were downloaded from the public repository and matched the approved CI bundle. See the [Java signing and Central guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/maven-central.md) for release evidence and future releases. Consumers can use Maven/Gradle without a repository checkout. The Python SDK is also available on PyPI.
 
 ## License
 

@@ -1,6 +1,10 @@
 # Java SDK：签名与 Maven Central 发布
 
-当前 Java SDK 尚未发布 Maven Central。命名空间 `io.github.1993226871` 已由维护者确认 Verified；本地已用临时测试密钥验证签名、bundle 和篡改拒绝逻辑，未上传测试密钥或任何 Java 包。
+Java SDK `0.1.0` 已发布 Maven Central，可直接通过 Maven/Gradle 引入；命名空间为已验证的 `io.github.1993226871`。
+
+2026-10-27，[发布运行](https://github.com/1993226871/veyraeval/actions/runs/40474230908)将提交 `04058c37f61baa8f01fdd1f80a15314790ae1a53` 的签名包以 USER_MANAGED 提交 Portal，通过 VALIDATED 校验，部署 ID 为 `723fb6e8-5444-4715-a677-d78cedfaec32`。维护者在 Portal 执行正式发布后，已从公共仓库下载9个 POM/jar 和9份签名，逐一与该运行的 bundle 比对一致。独立项目使用全新 Maven 缓存，仅声明 SDK 依赖，成功从公共 Central 解析 SDK、protocol、父POM，编译并运行 `AgentResult`/`ProtocolCodec` 示例。本次验收覆盖公共依赖解析、编译和基础 API 运行；具体Agent的实际业务接入按其任务集验收。
+
+实际发布 bundle 的 SHA-256 为 `d5396b16cdec8d5601ea2b9cde2ce53ed0fe173db598acee997326d8ed2df9f7`。正式公钥指纹为 `1F423457DBF791BF056AEB0A5A140871A03A12FC`，已在公钥服务器发布并核对。以下步骤供维护后续版本使用；本地构建测试密钥从未上传或用于正式发布。
 
 ## 1. 发布哪些组件
 

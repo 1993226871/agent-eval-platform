@@ -1,6 +1,6 @@
 # Worker v1 控制协议
 
-这些接口已实现并通过数据库和HTTP集成测试。Java/Python SDK尚未发布；本文件描述SDK将消费的接口。
+这些接口已实现并通过数据库和HTTP集成测试。Java/Python SDK `0.1.0` 已分别发布 Maven Central 和 PyPI；本文件描述SDK使用的接口。
 
 ## 凭证与注册
 

@@ -72,7 +72,7 @@ Schemas in `src/agent_eval/schemas` are generated copies of `contracts/schemas`;
 
 ## Registry publication
 
-Version `0.1.0` is available on [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/) and [TestPyPI](https://test.pypi.org/project/veyraeval-sdk/0.1.0/). The Python import name remains `agent_eval`. Registry downloads, artifact SHA-256, dependencies, imports and packaged schemas have been verified in fresh environments. See the [publishing guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/sdk-publishing.md) for future releases. Contributors can still install from this repository with `python -m pip install ./sdks/python`. The Java SDK has not yet been published to Maven Central.
+Version `0.1.0` is available on [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/) and [TestPyPI](https://test.pypi.org/project/veyraeval-sdk/0.1.0/). The Python import name remains `agent_eval`. Registry downloads, artifact SHA-256, dependencies, imports and packaged schemas have been verified in fresh environments. See the [publishing guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/sdk-publishing.md) for future releases. Contributors can still install from this repository with `python -m pip install ./sdks/python`. The Java SDK `0.1.0` is also published to Maven Central.
 
 ## License
 
