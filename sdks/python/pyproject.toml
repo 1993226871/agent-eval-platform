@@ -3,21 +3,21 @@ requires = ["setuptools==80.9.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agent-eval-sdk"
+name = "veyraeval-sdk"
 version = "0.1.0"
-description = "Private Agent Eval worker and trace instrumentation"
+description = "VeyraEval worker and trace instrumentation"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-authors = [{name = "AgentEval Platform maintainers"}]
+authors = [{name = "VeyraEval Platform maintainers"}]
 keywords = ["agent", "evaluation", "tracing", "llm"]
 requires-python = ">=3.11"
 dependencies = ["httpx==0.28.1", "jsonschema==4.23.0"]
 
 [project.urls]
-Homepage = "https://github.com/1993226871/agent-eval-platform"
-Repository = "https://github.com/1993226871/agent-eval-platform"
-Documentation = "https://github.com/1993226871/agent-eval-platform/blob/main/sdks/python/README.md"
+Homepage = "https://github.com/1993226871/veyraeval"
+Repository = "https://github.com/1993226871/veyraeval"
+Documentation = "https://github.com/1993226871/veyraeval/blob/main/sdks/python/README.md"
 
 [project.optional-dependencies]
 test = ["pytest==8.3.5"]

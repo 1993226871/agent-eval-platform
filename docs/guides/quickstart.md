@@ -7,8 +7,8 @@
 准备 JDK 21、Node.js 22.23.4、Python 3.11、Docker Engine 和 Docker Compose v2。Windows Docker Desktop 可验证基础平台；自定义 Python 执行需要另行通过验收的 Linux/runsc 节点。源码构建需要访问依赖仓库。
 
 ```bash
-git clone https://github.com/1993226871/agent-eval-platform.git
-cd agent-eval-platform
+git clone https://github.com/1993226871/veyraeval.git
+cd veyraeval
 bash scripts/build-release.sh
 python scripts/configure_deployment.py .tools/local --admin-email admin@example.test --development-tls
 docker compose --env-file .tools/local/.env -f deploy/compose.yaml up --build -d --wait

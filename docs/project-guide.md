@@ -1,4 +1,4 @@
-# AgentEval Platform：项目结构与代码阅读指南
+# VeyraEval Platform：项目结构与代码阅读指南
 
 本文根据当前源码整理，描述系统现在如何工作，不记录私人设计讨论。适合第一次接手仓库的开发者：先理解运行角色，再跟一次实验，最后按文件索引进入实现。
 
@@ -149,14 +149,15 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：559个文件</summary>
+<summary>展开完整目录树：560个文件</summary>
 
 ```text
-agent-eval-platform/
+veyraeval/
 ├── .github/
 │   └── workflows/
 │       ├── runner-isolation.yml
 │       ├── sandbox-e2e.yml
+│       ├── python-sdk-release.yml
 │       ├── sdk-distributions.yml
 │       └── verify.yml
 ├── .mvn/
@@ -913,7 +914,7 @@ agent-eval-platform/
 | 目录 | 功能 |
 | --- | --- |
 | `.github/` | GitHub自动化根目录。 |
-| `.github/workflows/` | 普通验证、强化沙箱/端到端验收和手工SDK产物构建工作流。 |
+| `.github/workflows/` | 普通验证、强化沙箱/端到端验收、手工SDK产物构建和独立的Python手动发布工作流。 |
 | `.mvn/` | Maven项目构建约定根目录。 |
 | `.mvn/wrapper/` | 固定Maven版本的wrapper配置。 |
 | `contracts/` | 规范契约和共享样例根目录。 |
@@ -1125,6 +1126,7 @@ agent-eval-platform/
 
 | 文件 | 做什么 |
 | --- | --- |
+| [`.github/workflows/python-sdk-release.yml`](../.github/workflows/python-sdk-release.yml) | 手动构建Python源码包与wheel、测试和独立安装；默认不上传，显式发布仅允许main并使用对应注册表environment的OIDC。 |
 | [`.github/workflows/runner-isolation.yml`](../.github/workflows/runner-isolation.yml) | 管理员手工触发的专用自托管执行节点强化隔离资格检查。 |
 | [`.github/workflows/sandbox-e2e.yml`](../.github/workflows/sandbox-e2e.yml) | 专用Linux/runsc CI：26项Runner、100次边界检查、Java和HTTPS Compose端到端验收。 |
 | [`.github/workflows/sdk-distributions.yml`](../.github/workflows/sdk-distributions.yml) | 仅手工构建并检查SDK分发包、保存artifact；没有注册表发布步骤或发布凭证权限。 |
@@ -1643,7 +1645,7 @@ agent-eval-platform/
 
 | 文件 | 做什么 |
 | --- | --- |
-| [`sdks/java/README.md`](../sdks/java/README.md) | 说明文档：Agent Eval · Java SDK；Build；Connect；Record calls and async work。 |
+| [`sdks/java/README.md`](../sdks/java/README.md) | 说明文档：VeyraEval · Java SDK；Build；Connect；Record calls and async work。 |
 | [`sdks/java/pom.xml`](../sdks/java/pom.xml) | Java SDK依赖、共享protocol引用和jar许可证资源配置；不依赖Spring。 |
 | [`sdks/java/src/main/java/io/agenteval/sdk/AgentResult.java`](../sdks/java/src/main/java/io/agenteval/sdk/AgentResult.java) | 用户Agent运行、打点与持久上传的不可变数据载体`AgentResult`；字段包括`output, artifactIds`。 |
 | [`sdks/java/src/main/java/io/agenteval/sdk/BoundedBodySubscriber.java`](../sdks/java/src/main/java/io/agenteval/sdk/BoundedBodySubscriber.java) | Java SDK的HTTP响应体字节上限控制。 |
@@ -1669,7 +1671,7 @@ agent-eval-platform/
 | 文件 | 做什么 |
 | --- | --- |
 | [`sdks/python/LICENSE`](../sdks/python/LICENSE) | 与根LICENSE保持一致的Apache2.0文本，随SDK分发包一起打包。 |
-| [`sdks/python/README.md`](../sdks/python/README.md) | 说明文档：Agent Eval · Python SDK；Install；Connect an Agent；Instrument calls。 |
+| [`sdks/python/README.md`](../sdks/python/README.md) | 说明文档：VeyraEval · Python SDK；Install；Connect an Agent；Instrument calls。 |
 | [`sdks/python/pyproject.toml`](../sdks/python/pyproject.toml) | Python SDK包名、版本、Python要求、依赖、Apache/README元数据和schema包资源。 |
 | [`sdks/python/requirements-test.lock`](../sdks/python/requirements-test.lock) | 锁定Python工具/运行/测试依赖版本；安装时使用该文件，避免无意漂移。 |
 | [`sdks/python/scripts/sync_contracts.py`](../sdks/python/scripts/sync_contracts.py) | 将规范contracts/schemas同步成Python SDK打包副本，避免协议漂移。 |
@@ -1700,7 +1702,7 @@ agent-eval-platform/
 
 | 文件 | 做什么 |
 | --- | --- |
-| [`web/README.md`](../web/README.md) | 说明文档：AgentEval workspace；本地开发；检查。 |
+| [`web/README.md`](../web/README.md) | 说明文档：VeyraEval workspace；本地开发；检查。 |
 | [`web/e2e/private-workspace.spec.ts`](../web/e2e/private-workspace.spec.ts) | 真实浏览器E2E：real session, CSRF, immutable publication, and one-time worker credential。 |
 | [`web/e2e/report.spec.ts`](../web/e2e/report.spec.ts) | 真实浏览器E2E：explains real SDK results and exports linked manual reviews；,。 |
 | [`web/e2e/workspace-evaluation.spec.ts`](../web/e2e/workspace-evaluation.spec.ts) | 真实浏览器E2E：HTTPS administrator provisions credits and a private user evaluates, compares and deletes。 |

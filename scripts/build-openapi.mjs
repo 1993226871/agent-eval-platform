@@ -85,7 +85,7 @@ define('AuditEvent', { id: uuid, workspace_id: uuid, actor_user_id: nullable(uui
 define('AuditPage', { items: array(ref('AuditEvent')), next_cursor: nullable(text) });
 define('DeletionStatus', { experiment_id: uuid, status: text, requested_at: date, next_cleanup_at: date, completed_at: nullable(date), failure_count: integer });
 const spec = {
-  openapi: '3.1.0', info: { title: 'AgentEval Platform API', version: '0.1.0', description: 'Implemented browser and SDK HTTP contract. Session mutations require CSRF. Monetary integers use decimal strings in browser DTOs.' },
+  openapi: '3.1.0', info: { title: 'VeyraEval Platform API', version: '0.1.0', description: 'Implemented browser and SDK HTTP contract. Session mutations require CSRF. Monetary integers use decimal strings in browser DTOs.' },
   servers: [{ url: '/' }], security: [{ session: [] }], paths: {},
   components: { schemas, securitySchemes: { session: { type: 'apiKey', in: 'cookie', name: 'SESSION' }, csrf: { type: 'apiKey', in: 'header', name: 'X-CSRF-TOKEN' }, worker: { type: 'http', scheme: 'bearer' } },
     responses: { Rejected: { description: 'Request rejected with a scoped, non-secret problem code.', content: { 'application/problem+json': { schema: ref('Problem') } } } } },

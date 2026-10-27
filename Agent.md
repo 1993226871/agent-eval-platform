@@ -1,4 +1,4 @@
-# AgentEval Platform 项目协作规则
+# VeyraEval Platform 项目协作规则
 
 本文件是本仓库的项目级 Agent 说明；`AGENTS.md` 是自动发现入口。用户本轮明确指令优先于本文件。
 

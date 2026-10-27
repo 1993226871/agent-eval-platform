@@ -8,8 +8,8 @@
 
 ```xml
 <dependency>
-  <groupId>io.agenteval</groupId>
-  <artifactId>agent-eval-sdk</artifactId>
+  <groupId>io.github.1993226871</groupId>
+  <artifactId>veyraeval-sdk</artifactId>
   <version>0.1.0</version>
 </dependency>
 ```

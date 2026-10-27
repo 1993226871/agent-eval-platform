@@ -1,4 +1,4 @@
-# Agent Eval · Java SDK
+# VeyraEval · Java SDK
 
 Run platform-assigned tasks in your own Java Agent. Capture visible tool/model calls and return evidence without adding a Spring dependency.
 
@@ -10,7 +10,7 @@ Requires JDK21. From the repository root:
 ./mvnw -pl sdks/java -am install
 ```
 
-This installs the unpublished `io.agenteval:agent-eval-sdk:0.1.0`, its protocol dependency and parent POM into your local Maven repository. Add that SDK dependency to your Agent project; it is not yet available from Maven Central. Runtime dependencies include Jackson and SQLite JDBC3.53.4.0; keep the SDK spool directory private to the Worker account.
+This installs the unpublished `io.github.1993226871:veyraeval-sdk:0.1.0`, its protocol dependency and parent POM into your local Maven repository. Add that SDK dependency to your Agent project; it is not yet available from Maven Central. Runtime dependencies include Jackson and SQLite JDBC3.53.4.0; keep the SDK spool directory private to the Worker account.
 
 ## Connect
 
@@ -84,7 +84,7 @@ Both SDKs consume the same versioned contracts and fixture manifest. The Java SD
 
 ## Registry publication
 
-Distribution metadata and build checks are prepared, but this SDK has not been publicly published. See the [publishing guide](https://github.com/1993226871/agent-eval-platform/blob/main/docs/guides/sdk-publishing.md) for the required package-name/namespace ownership and explicit release approval. After publication, consumers can use pip or Maven/Gradle without a repository checkout.
+Distribution metadata and build checks are prepared, but this SDK has not been publicly published. See the [publishing guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/sdk-publishing.md) for the required package-name/namespace ownership and explicit release approval. After publication, consumers can use pip or Maven/Gradle without a repository checkout.
 
 ## License
 

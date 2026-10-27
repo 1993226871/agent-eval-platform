@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "AgentEval Platform API",
+    "title": "VeyraEval Platform API",
     "version": "0.1.0",
     "description": "Implemented browser and SDK HTTP contract. Session mutations require CSRF. Monetary integers use decimal strings in browser DTOs."
   },

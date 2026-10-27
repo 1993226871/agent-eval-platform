@@ -25,7 +25,7 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-intro">
-        <span className="wordmark">AgentEval</span>
+        <span className="wordmark">VeyraEval</span>
         <h2>
           让每次评测
           <br />
@@ -50,7 +50,7 @@ export function LoginPage() {
           }
         }}
       >
-        <h1>登录 AgentEval</h1>
+        <h1>登录 VeyraEval</h1>
         <p>使用管理员为你创建的账户。</p>
         <label>
           邮箱
@@ -116,7 +116,7 @@ export function PasswordPage() {
           }
         }}
       >
-        <span className="wordmark">AgentEval</span>
+        <span className="wordmark">VeyraEval</span>
         <h1>设置新密码</h1>
         <p>首次使用请替换临时密码，至少 12 个字符。</p>
         {auth.needsCurrentPassword && (

@@ -1,4 +1,4 @@
-# AgentEval workspace
+# VeyraEval workspace
 
 React / TypeScript 管理界面。使用同源 Session Cookie 和 CSRF，不保存密码或 Worker 密钥到浏览器存储。
 

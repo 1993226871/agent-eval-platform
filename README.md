@@ -1,6 +1,6 @@
 <div align="center">
 
-# AgentEval Platform
+# VeyraEval Platform
 
 ### Connect your agents. Inspect their work. Measure what matters.
 
@@ -30,7 +30,7 @@
 <a id="overview"></a>
 ## Overview
 
-AgentEval Platform 旨在帮助开发者回答两个问题：**Agent 是否完成了任务，以及它是怎样完成的。**
+VeyraEval Platform 旨在帮助开发者回答两个问题：**Agent 是否完成了任务，以及它是怎样完成的。**
 
 你保留自己的 Agent 实现和运行环境，在私人工作空间中维护任务集与评分标准，通过 Java 或 Python SDK 接入。评测从平台发起，SDK Worker 主动领取任务，记录模型调用、工具调用、中间结果和最终输出。平台将这些证据交给规则、模型评审或自定义 Python 代码，生成可追溯的评测结果。
 
@@ -117,7 +117,7 @@ finally:
 ### Java
 
 ```java
-// 先从源码安装 io.agenteval:agent-eval-sdk:0.1.0。
+// 先从源码安装 io.github.1993226871:veyraeval-sdk:0.1.0。
 try (var worker = EvaluationWorker.fromEnvironment()) {
     worker.registerAgent("YOUR_AGENT_UUID", context ->
         AgentResult.of(Telemetry.tool("query_order", () ->

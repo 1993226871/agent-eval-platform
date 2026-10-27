@@ -53,7 +53,7 @@ function Layout() {
       </a>
       <aside className="sidebar">
         <NavLink className="wordmark" to="/workspace/experiments">
-          AgentEval<span>PLATFORM</span>
+          VeyraEval<span>PLATFORM</span>
         </NavLink>
         <div className="workspace-label">个人工作空间</div>
         <nav aria-label="主导航">

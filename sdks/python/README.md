@@ -1,4 +1,4 @@
-# Agent Eval · Python SDK
+# VeyraEval · Python SDK
 
 Connect your own Agent to private evaluations. Your Agent runs in your environment; the platform assigns tasks and collects execution evidence.
 
@@ -72,7 +72,7 @@ Schemas in `src/agent_eval/schemas` are generated copies of `contracts/schemas`;
 
 ## Registry publication
 
-Distribution metadata and build checks are prepared, but this SDK has not been publicly published. See the [publishing guide](https://github.com/1993226871/agent-eval-platform/blob/main/docs/guides/sdk-publishing.md) for the required package-name/namespace ownership and explicit release approval. After publication, consumers can use pip or Maven/Gradle without a repository checkout.
+Distribution metadata and build checks are prepared, but this SDK has not been publicly published. See the [publishing guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/sdk-publishing.md) for the required package-name/namespace ownership and explicit release approval. After publication, consumers can use pip or Maven/Gradle without a repository checkout.
 
 ## License
 

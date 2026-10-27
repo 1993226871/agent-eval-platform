@@ -99,7 +99,7 @@ describe("private session flow", () => {
     );
     app("/workspace/datasets");
     expect(
-      await screen.findByRole("heading", { name: "登录 AgentEval" }),
+      await screen.findByRole("heading", { name: "登录 VeyraEval" }),
     ).toBeVisible();
   });
 });

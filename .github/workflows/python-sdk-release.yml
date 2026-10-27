@@ -1,0 +1,109 @@
+name: Python SDK release
+on:
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: Target registry (accounts and publishers are separate)
+        type: choice
+        options: [testpypi, pypi]
+        default: testpypi
+      version:
+        description: Exact version expected in pyproject.toml
+        type: string
+        required: true
+        default: '0.1.0'
+      publish:
+        description: Upload publicly to the selected registry
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: python-sdk-release-${{ inputs.registry }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check requested version and publication source
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          python - <<'PY'
+          import os, tomllib
+          from pathlib import Path
+          project = tomllib.loads(Path('sdks/python/pyproject.toml').read_text())['project']
+          assert project['version'] == os.environ['EXPECTED_VERSION'], 'Requested version differs from source'
+          if os.environ['PUBLISH'] == 'true':
+              assert os.environ['GITHUB_REPOSITORY'] == '1993226871/veyraeval', 'Unexpected repository'
+              assert os.environ['GITHUB_REF'] == 'refs/heads/main', 'Publication requires main'
+          print(f"Preparing {project['name']}=={project['version']} at {os.environ['GITHUB_SHA']}")
+          PY
+      - run: python -m pip install -r sdks/python/requirements-test.lock build==1.3.0 twine==6.2.0
+      - run: python -m pytest sdks/python/tests -q
+      - run: python -m build sdks/python
+      - run: python -m twine check sdks/python/dist/*
+      - name: Verify wheel and record release manifest
+        run: |
+          python - <<'PY'
+          import hashlib, os, subprocess, sys, tomllib
+          from pathlib import Path
+          dist = Path('sdks/python/dist')
+          wheels = list(dist.glob('*.whl'))
+          sdists = list(dist.glob('*.tar.gz'))
+          assert len(wheels) == len(sdists) == 1, 'Expected exactly one wheel and one sdist'
+          subprocess.run([sys.executable, 'scripts/verify_sdk_wheel.py', str(wheels[0])], check=True)
+          project = tomllib.loads(Path('sdks/python/pyproject.toml').read_text())['project']
+          manifest = f"{project['name']}=={project['version']}\nCommit: {os.environ['GITHUB_SHA']}\n\n"
+          for path in wheels + sdists:
+              manifest += f'{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n'
+          Path('release-manifest.txt').write_text(manifest)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('### Python SDK artifacts\n\n```text\n' + manifest + '```\n')
+          PY
+      - name: Install built wheel outside the source tree
+        run: |
+          python -m venv /tmp/sdk-consumer
+          /tmp/sdk-consumer/bin/python -m pip install sdks/python/dist/*.whl
+          cd /tmp
+          /tmp/sdk-consumer/bin/python -c "from agent_eval import AgentResult, EvaluationWorker, observe; from importlib.metadata import version; print(version('veyraeval-sdk'))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-sdk-distributions
+          path: |
+            sdks/python/dist/*.whl
+            sdks/python/dist/*.tar.gz
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-sdk-release-manifest
+          path: release-manifest.txt
+          if-no-files-found: error
+  publish:
+    if: inputs.publish && github.ref == 'refs/heads/main' && github.repository == '1993226871/veyraeval'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: ${{ inputs.registry }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-sdk-distributions
+          path: dist/
+      - name: Publish to TestPyPI
+        if: inputs.registry == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+      - name: Publish to PyPI
+        if: inputs.registry == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1

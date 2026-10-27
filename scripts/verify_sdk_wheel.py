@@ -11,6 +11,7 @@ with zipfile.ZipFile(wheel) as package:
     metadata_files=[name for name in package.namelist() if name.endswith('.dist-info/METADATA')]
     assert len(metadata_files)==1, 'Wheel must contain one distribution metadata file'
     metadata=Parser().parsestr(package.read(metadata_files[0]).decode('utf-8'))
+    assert metadata['Name']=='veyraeval-sdk', 'Wheel must use the approved VeyraEval distribution name'
     assert metadata['License-Expression']=='Apache-2.0', 'Missing Apache-2.0 license metadata'
     assert metadata['Description-Content-Type']=='text/markdown', 'Missing Markdown project description'
     assert len(metadata.get_payload().strip())>200, 'Missing SDK usage documentation'

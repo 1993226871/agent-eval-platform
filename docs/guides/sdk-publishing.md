@@ -6,12 +6,12 @@
 
 | 项目 | 当前源码标识 | 发布前必须确认 |
 | --- | --- | --- |
-| Python 分发名 | `agent-eval-sdk`，版本 `0.1.0` | PyPI 名称是否可用、是否属于你的账号，以及是否使用该名称。Python 导入名仍是 `agent_eval`。 |
-| Java SDK | `io.agenteval:agent-eval-sdk:0.1.0` | `io.agenteval` namespace 的发布权。不能仅凭代码中的 groupId 声称拥有该域名。 |
-| Java 协议 | `io.agenteval:protocol:0.1.0` | 与 SDK 一起提供，避免消费者找不到共享 DTO/Jackson 协议依赖。 |
-| Java 父 POM | `io.agenteval:agent-eval-platform:0.1.0`，类型 `pom` | 一并发布以解析版本/BOM/许可证等继承元数据。无需发布 API、Worker、core 或 infrastructure jar。 |
+| Python 分发名 | `veyraeval-sdk`，版本 `0.1.0` | 名称已选定，仍需确认 PyPI 可创建或属于本人，并为本仓库配置 Trusted Publisher。Python 导入名仍是 `agent_eval`。 |
+| Java SDK | `io.github.1993226871:veyraeval-sdk:0.1.0` | 名称已选定；维护者已确认 namespace 为 Verified，仍需配置发布凭据和签名。 |
+| Java 协议 | `io.github.1993226871:veyraeval-protocol:0.1.0` | 与 SDK 一起提供，避免消费者找不到共享 DTO/Jackson 协议依赖。 |
+| Java 父 POM | `io.github.1993226871:veyraeval-platform:0.1.0`，类型 `pom` | 一并发布以解析版本/BOM/许可证等继承元数据。无需发布 API、Worker、core 或 infrastructure jar。 |
 
-若没有 `agenteval.io` 的 namespace 权限，可在账号验证后考虑 `io.github.1993226871`，但这不是已批准或已取得的坐标。更换 groupId 必须同步父 POM、模块父引用、内部依赖和文档；Java 包名 `io.agenteval.*` 不必随 Maven groupId 一起改变。
+已选定 `io.github.1993226871` 为 Maven groupId，并同步父 POM、所有模块父引用、内部依赖和公开接入文档；维护者已确认该 namespace 为 Verified。品牌及分发包统一为 VeyraEval；Python 导入名 `agent_eval`、Java 包名 `io.agenteval.*` 和平台接入环境变量保持兼容，不随分发坐标更名。
 
 PyPI 与 Central 的公开 SDK 包会暴露其代码；私有 GitHub 仓库不会让公开注册表中的源码包变成私有。发布前也应确认公开范围、账号适用规则及上游依赖许可证。
 
@@ -21,6 +21,7 @@ PyPI 与 Central 的公开 SDK 包会暴露其代码；私有 GitHub 仓库不�
 - Maven 父 POM包含项目、许可证、维护者及 SCM 元数据；SDK/protocol 二进制 jar附带 LICENSE。
 - `sdk-distribution` profile生成 SDK/protocol 的 binary、sources 和 Javadoc jar。
 - `.github/workflows/sdk-distributions.yml` 仅在手工触发时构建、检查并保存产物。没有注册表写凭证、没有 OIDC 发布权限、没有上传注册表的命令。
+- `.github/workflows/python-sdk-release.yml` 是单独的 Python 发布工作流：默认仅构建，显式启用发布后才使用所选注册表的 OIDC Publisher。当前仍未绑定发布账号或上传注册表。
 
 本地准备：
 
@@ -30,7 +31,7 @@ python scripts/verify_java_sdk_distribution.py
 python -m pip install build==1.3.0 twine==6.2.0
 python -m build sdks/python
 python -m twine check sdks/python/dist/*
-python scripts/verify_sdk_wheel.py sdks/python/dist/agent_eval_sdk-0.1.0-py3-none-any.whl
+python scripts/verify_sdk_wheel.py sdks/python/dist/veyraeval_sdk-0.1.0-py3-none-any.whl
 ```
 
 Python 默认先构建 sdist，再从 sdist构建 wheel，验证源码分发包本身能独立打包。Java 不能只把 SDK 的单个 jar传上去：缺失 protocol 或父 POM 时，下游依赖解析会失败。
@@ -40,18 +41,62 @@ Python 默认先构建 sdist，再从 sdist构建 wheel，验证源码分发包�
 1. 确认公开名称、版本和 PyPI 所有权；创建/配置对应项目。若已有同名其他维护者项目，不得直接使用该名字。
 2. 建议先在 TestPyPI 验证包元数据、安装及导入。源码中的 `AGENT_EVAL_API_KEY` 指平台接入密钥，与 PyPI 发布账号无关。
 3. 配置 PyPI Trusted Publisher，绑定准确的 GitHub owner、repo、发布 workflow 和受保护 environment；给该 environment 配置人工批准。
-4. 后续单独增加发布作业：只下载本次构建的 SDK 产物，使用 `pypa/gh-action-pypi-publish`，将 OIDC `id-token: write` 限定在发布作业。该作业尚未加入本仓库。
+4. 使用 `python-sdk-release.yml` 的独立发布作业：只下载本次构建的 SDK 产物，使用 `pypa/gh-action-pypi-publish`，将 OIDC `id-token: write` 限定在发布作业。构建作业不具备发布权限。
 5. 你审核具体产物/版本并明确批准后才公开发布，再从干净环境按注册表依赖安装验证。已发布的同版本不能随意覆盖。
 
 发布成功后，用户才可执行（名称仍需以最终批准值为准）：
 
 ```bash
-python -m pip install agent-eval-sdk==0.1.0
+python -m pip install veyraeval-sdk==0.1.0
 ```
 
 ```python
 from agent_eval import AgentResult, EvaluationWorker, observe
 ```
+
+### Python 首次发布的账号配置
+
+PyPI 与 TestPyPI 使用独立账号和项目权限，分别注册并配置双因素认证。不要在聊天、源码或普通配置文件里填写密码或 Token；本方案使用 Trusted Publishing，不需要保存长期 PyPI Token。
+
+先在 GitHub 仓库 Settings → Environments 中创建 `testpypi` 和 `pypi`，限制部署来源为 `main`。若仓库套餐支持 Required reviewers，配置人工审批；若不支持，该工作流不会自动获得人工审批能力，须由有权限的维护者在确认具体提交和产物后手工触发。不要将仅写了 `environment` 误认为已配置审批。
+
+本仓库于2026-10-27已配置这两个 GitHub environment：部署分支只允许 `main`，Required reviewer 为维护者 `1993226871`。允许发起工作流的维护者本人审批，适配单维护者流程；发布前仍须检查此次运行的 manifest 和实际产物。GitHub 环境配置不等于 PyPI/TestPyPI 的 Publisher 已绑定，后者需要在对应注册表单独完成。
+
+在对应注册表的 Publishing 页面填写下表。不存在的项目使用 Pending Publisher；已有且属于你的项目使用项目管理页的 Trusted Publisher。已有但不属于你的项目必须换名称。
+
+| 字段 | 值 |
+| --- | --- |
+| PyPI Project Name | `veyraeval-sdk` |
+| Owner | `1993226871` |
+| Repository | `veyraeval` |
+| Workflow | `python-sdk-release.yml`（只填文件名） |
+| Environment | TestPyPI 填 `testpypi`，PyPI 填 `pypi` |
+
+2026-10-27 公开 API 查询：`veyraeval-sdk` 在 PyPI 和 TestPyPI 均返回404，选用此品牌分发名。404不代表名称一定可注册，Pending Publisher 也不预留名称；首次发布前仍需复查注册结果和权限。
+
+已存在的 PyPI 账号无需重新注册。将 GitHub 关联到 PyPI 账号不等于为此仓库创建了 Trusted Publisher；需要在 [PyPI Publishing](https://pypi.org/manage/account/publishing/) 中，按上表注册本项目的 Pending Publisher（已有本人项目则进入项目管理配置）。TestPyPI 账号及 Publisher 需要在测试站点单独配置。
+
+### 手工演练与正式发布
+
+1. 工作流合入 `main` 后，在 Actions → Python SDK release 选择 Run workflow，分支选 `main`，`registry=testpypi`，`version=0.1.0`，保持 `publish=false`。不会上传注册表。
+2. 下载 `python-sdk-distributions` 和 `python-sdk-release-manifest`，核对源码提交、包名、版本和 SHA-256。构建会运行 SDK 测试、sdist→wheel 构建、Twine 检查、许可证/Schema 验证及独立虚拟环境安装。
+3. 确认 TestPyPI 项目归属和 Publisher 绑定后，明确批准一次测试上传，再选择相同提交对应的 `main`、`registry=testpypi`、`publish=true`。每次运行重新构建，应核对这次运行的 manifest；人工环境审批可在构建结束后检查实际产物。
+4. 从 TestPyPI 安装验证成功，再核对 PyPI 绑定与正式发布范围，明确批准正式上传；选择 `registry=pypi`、`publish=true`。工作流只允许从 `main` 公开上传，不因普通 push/tag 自动发布，不跳过同版本已存在错误。
+5. 正式发布完成后按最终包名重新安装并运行实际 Agent 接入示例，再更新 README、安装文档和 Release。上传成功不能替代与实际平台交互验收。
+
+TestPyPI 安装演练（包名按最终确认值替换）：在干净环境先从正式 PyPI 安装依赖，再仅从 TestPyPI 安装 SDK，避免混用两个索引来解析依赖。
+
+```bash
+python -m venv .venv-sdk-check
+# 激活环境后执行；Windows: .venv-sdk-check\Scripts\Activate.ps1
+# Linux/macOS: source .venv-sdk-check/bin/activate
+python -m pip install httpx==0.28.1 jsonschema==4.23.0
+python -m pip install --no-deps --index-url https://test.pypi.org/simple/ veyraeval-sdk==0.1.0
+python -m pip check
+python -c "from agent_eval import AgentResult, EvaluationWorker, observe"
+```
+
+PyPI 与 TestPyPI 均发布可公开下载的文件。测试上传也需要审核，不能因为是测试站点就认为文件私有。上传失败后先查明是否已有部分文件成功，不要自动改版本反复上传。
 
 ## Java：真正发布时的步骤
 
@@ -65,14 +110,14 @@ from agent_eval import AgentResult, EvaluationWorker, observe
 
 ```xml
 <dependency>
-  <groupId>io.agenteval</groupId>
-  <artifactId>agent-eval-sdk</artifactId>
+  <groupId>io.github.1993226871</groupId>
+  <artifactId>veyraeval-sdk</artifactId>
   <version>0.1.0</version>
 </dependency>
 ```
 
 ```kotlin
-implementation("io.agenteval:agent-eval-sdk:0.1.0")
+implementation("io.github.1993226871:veyraeval-sdk:0.1.0")
 ```
 
 普通用户无需下载仓库、执行 `mvn install` 或配置平台服务端模块。若尚未公开发布，继续使用[Java源码接入](java-sdk.md)或[Python源码接入](python-sdk.md)，不要把候选坐标写成已上线依赖。

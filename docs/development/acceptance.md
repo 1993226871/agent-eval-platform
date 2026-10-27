@@ -11,7 +11,7 @@
 | 完整Compose E2E | 8通过 |
 | Python SDK wheel | 实际构建0.1.0，10份共享schema与规范一致 |
 
-[最终Linux验收与测量artifact](https://github.com/1993226871/agent-eval-platform/actions/runs/40381313430)包含固定gVisor发行包SHA512校验、真实隔离、完整Java构建、Web源码构建、真实Chrome版本和全部8个场景。此前[普通CI](https://github.com/1993226871/agent-eval-platform/actions/runs/40383234543)验证协议、两语言SDK、前端、Java及独立浏览器报告场景；相同运行代码、后续CI配置提交2194e59的全部普通CI作业也已通过。
+[最终Linux验收与测量artifact](https://github.com/1993226871/veyraeval/actions/runs/40381313430)包含固定gVisor发行包SHA512校验、真实隔离、完整Java构建、Web源码构建、真实Chrome版本和全部8个场景。此前[普通CI](https://github.com/1993226871/veyraeval/actions/runs/40383234543)验证协议、两语言SDK、前端、Java及独立浏览器报告场景；相同运行代码、后续CI配置提交2194e59的全部普通CI作业也已通过。
 
 八个完整场景实际验证：管理员建号与发额度、普通用户复制示例并接入SDK/发起/报告/对比/删除；Java与Python均取得RULE、LLM和真实强化PYTHON的SCORED结果及嵌套轨迹；进程在处理函数中崩溃后只执行一次；模型已接受后断链，重启不重发且重复对账只消费一次；HTTPS签名附件上传下载与数据库/对象恢复；50在线Worker、20运行任务和10000事件。
 
@@ -34,6 +34,6 @@
 
 最终增加的平台到真实Runner删除场景先确认缓存包含私人测试标记，再删除实验、推进仅测试实例的宽限期，等待DELETED后确认响应已清空且墓碑已保存。
 
-首次修复验收[40343019300](https://github.com/1993226871/agent-eval-platform/actions/runs/40343019300)有一次综合隔离探针NO_RESULT（其余25项通过），原因未稳定复现。保留失败记录并增加有界完整诊断；随后两个独立节点均通过26项Runner和8个E2E，最终节点另连续10次综合隔离探针通过。没有删除失败断言、跳过隔离或放宽资源限制。
+首次修复验收[40343019300](https://github.com/1993226871/veyraeval/actions/runs/40343019300)有一次综合隔离探针NO_RESULT（其余25项通过），原因未稳定复现。保留失败记录并增加有界完整诊断；随后两个独立节点均通过26项Runner和8个E2E，最终节点另连续10次综合隔离探针通过。没有删除失败断言、跳过隔离或放宽资源限制。
 
 后续main上的重复检查再次复现了上述NO_RESULT。2026-10-27已通过panic证据确认根因并修复，取代前述尚未定位状态；最新验收采用100次检查，详见[运行时事件说明](runner-resource-incident.md)。

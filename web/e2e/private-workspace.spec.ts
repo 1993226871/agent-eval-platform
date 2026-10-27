@@ -89,7 +89,7 @@ test("real session, CSRF, immutable publication, and one-time worker credential"
   ).toEqual({ local: 0, session: 0 });
   await page.getByRole("button", { name: "退出登录" }).click();
   await expect(
-    page.getByRole("heading", { name: "登录 AgentEval" }),
+    page.getByRole("heading", { name: "登录 VeyraEval" }),
   ).toBeVisible();
   expect(requests.length).toBeGreaterThan(5);
   expect(requests.every((request) => request.csrf)).toBe(true);
