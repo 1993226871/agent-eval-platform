@@ -46,6 +46,7 @@ const execution = enumeration(['QUEUED', 'LEASED', 'RUNNING', 'SUCCEEDED', 'FAIL
 define('Trial', { id: uuid, experiment_id: uuid, workspace_id: uuid, case_index: integer, attempt: integer, trace_id: text, status: execution, task: jsonValue });
 define('Wallet', { workspace_id: uuid, granted: credits, consumed: credits, reserved: credits, available: credits });
 schemas.Wallet.properties.unit = enumeration(['CREDITS','CNY_MICRO']);
+define('AdminAccount', {user_id:uuid,workspace_id:uuid,email:{type:'string',format:'email'},admin:bool,must_change_password:bool,quota:ref('Wallet')});
 define('QuotaEntry', { id: uuid, call_id: nullable(uuid), type: text, granted_delta: credits, consumed_delta: credits, reserved_delta: credits, reason: text, actor_user_id: nullable(uuid), created_at: date });
 define('QuotaAdjustment', { credits, reason: text, idempotency_key: uuid });
 define('QuotaLedgerPage', { items: array(ref('QuotaEntry')), next_cursor: nullable(text) });
@@ -125,7 +126,7 @@ op('get', '/api/v1/admin/workspaces/{workspaceId}/resource-limits', 'getUserReso
 op('post', '/api/v1/admin/workspaces/{workspaceId}/resource-limits', 'configureUserResources', ref('ConfigureResources'), ref('ResourceLimitView'));
 op('get', '/api/v1/audit-events', 'listAuditEvents', null, ref('AuditPage'), 200, { query: cursor });
 op('get', '/api/v1/experiment-deletions/{id}', 'getDeletionStatus', null, ref('DeletionStatus'));
-op('get', '/api/v1/admin/users', 'listAccounts', null, array(ref('CurrentUser')), 200, { query: page });
+op('get', '/api/v1/admin/users', 'listAccounts', null, array(ref('AdminAccount')), 200, { query: page });
 op('post', '/api/v1/admin/users', 'createAccount', ref('AccountCreate'), ref('CurrentUser'), 201);
 op('get', '/api/v1/catalog', 'listResources', null, array(ref('CatalogResource')), 200, { query: [{ name: 'kind', in: 'query', required: true, schema: kind }, ...page] });
 op('get', '/api/v1/catalog-summaries', 'listResourceSummaries', null, array(ref('ResourceSummary')), 200, { query: [{ name: 'kind', in: 'query', required: true, schema: kind }, ...page] });

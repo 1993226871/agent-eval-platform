@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "../../api/client";
+import type { Schema } from "../../api/types";
 import {
   Badge,
   ErrorNotice,
@@ -13,6 +14,17 @@ import { formatCredits, integerCredits } from "../models/credits";
 import { ResourceAdminPanel } from "./ResourceAdminPanel";
 import { ModelConnectionForm } from "../models/ModelConnectionForm";
 import { formatCny, parseCny } from "../models/money";
+import { ModelTestResult } from "./ModelTestResult";
+
+function accountAmount(
+  wallet: Schema<"Wallet"> | undefined,
+  field: "available" | "consumed" | "reserved" | "granted",
+) {
+  if (!wallet) return "—";
+  return wallet.unit === "CNY_MICRO"
+    ? formatCny(wallet[field])
+    : `${formatCredits(wallet[field])} credits`;
+}
 
 export function AdminPage() {
   const { workspace_id } = useWorkspace();
@@ -27,8 +39,10 @@ export function AdminPage() {
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [adjustKey, setAdjustKey] = useState(crypto.randomUUID());
+  const adjustForm = useRef<HTMLFormElement>(null);
   const accounts = useQuery({
     queryKey: [workspace_id, "admin-accounts", offset],
+    refetchInterval: 10000,
     queryFn: () =>
       request(
         api.GET("/api/v1/admin/users", {
@@ -87,7 +101,14 @@ export function AdminPage() {
   });
   const [disableReason, setDisableReason] = useState("");
   const testCalls = useRef(new Map<string, string>());
-  const testModel = async (profileId: string) => {
+  const [testResult, setTestResult] = useState<{
+    modelName: string;
+    billingMode?: string;
+    result: Schema<"ModelCallResolution">;
+  }>();
+  const testModel = async (profile: Schema<"ModelProfile">) => {
+    const profileId = profile.id;
+    setTestResult(undefined);
     let callId = testCalls.current.get(profileId);
     if (!callId) {
       callId = crypto.randomUUID();
@@ -101,6 +122,11 @@ export function AdminPage() {
     );
     if (["SUCCEEDED", "FAILED_UNSENT", "RECONCILED"].includes(result.status))
       testCalls.current.delete(profileId);
+    setTestResult({
+      modelName: profile.name,
+      billingMode: profile.billing_mode,
+      result,
+    });
     return result;
   };
   const modelAction = useMutation({
@@ -205,6 +231,7 @@ export function AdminPage() {
             <section className="panel">
               <h2>调整累计额度</h2>
               <form
+                ref={adjustForm}
                 onSubmit={(event) => {
                   event.preventDefault();
                   adjust.mutate();
@@ -270,25 +297,68 @@ export function AdminPage() {
           </div>
           <section className="panel">
             <h2>账户列表</h2>
+            <p className="hint">
+              按页查看所有用户的额度，每10秒刷新；调整额度后自动更新。人民币与历史
+              credits 分别标注。
+            </p>
+            <button
+              onClick={() => accounts.refetch()}
+              disabled={accounts.isFetching}
+            >
+              刷新额度
+            </button>
             <div className="table-scroll">
               <table>
                 <thead>
                   <tr>
                     <th>邮箱</th>
-                    <th>工作空间</th>
                     <th>账户状态</th>
+                    <th>可用额度</th>
+                    <th>已使用</th>
+                    <th>预留中</th>
+                    <th>累计发放</th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {accounts.data?.map((user) => (
                     <tr key={user.user_id}>
-                      <td>{user.email}</td>
                       <td>
-                        <code>{user.workspace_id}</code>
+                        <div>{user.email}</div>
+                        <details>
+                          <summary>工作空间</summary>
+                          <code>{user.workspace_id}</code>
+                        </details>
                       </td>
                       <td>
                         {user.admin ? "管理员" : "个人账户"}
                         {user.must_change_password && " · 待改密"}
+                      </td>
+                      {(
+                        [
+                          "available",
+                          "consumed",
+                          "reserved",
+                          "granted",
+                        ] as const
+                      ).map((field) => (
+                        <td key={field}>{accountAmount(user.quota, field)}</td>
+                      ))}
+                      <td>
+                        <button
+                          onClick={() => {
+                            setWorkspace(user.workspace_id);
+                            setAmount("");
+                            setReason("");
+                            setAdjustKey(crypto.randomUUID());
+                            adjustForm.current?.scrollIntoView?.({
+                              behavior: "smooth",
+                              block: "center",
+                            });
+                          }}
+                        >
+                          调整额度
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -323,7 +393,7 @@ export function AdminPage() {
           <p className="hint">
             连通性测试失败或待对账时，再次点击会查询原调用。收到明确结果后，下次点击才创建新的收费测试。
           </p>
-          {modelAction.data != null && <JsonBlock value={modelAction.data} />}
+          {testResult && <ModelTestResult {...testResult} />}
           <section className="panel">
             <h2>已配置模型</h2>
             <label>
@@ -365,7 +435,7 @@ export function AdminPage() {
                         <button
                           disabled={!item.enabled || modelAction.isPending}
                           onClick={() =>
-                            modelAction.mutate(() => testModel(item.id))
+                            modelAction.mutate(() => testModel(item))
                           }
                         >
                           {item.billing_mode === "BYOK"

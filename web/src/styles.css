@@ -501,6 +501,9 @@ dialog::backdrop {
   border-radius: 6px;
   background: white;
 }
+.model-test-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .metrics > div {
   padding: 24px;
   border-right: 1px solid var(--line);

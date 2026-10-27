@@ -7,6 +7,11 @@ public final class QuotaService {
     private final QuotaRepository repository;
     public QuotaService(QuotaRepository repository) { this.repository=repository; }
     public QuotaWallet wallet(WorkspaceActor actor) { return repository.wallet(actor.workspaceId()); }
+    public Map<UUID,QuotaWallet> walletsForAdministrator(WorkspaceActor admin,Collection<UUID> workspaceIds) {
+        if(admin==null || !admin.admin()) throw new ScopeViolationException();
+        if(workspaceIds==null || workspaceIds.size()>100 || workspaceIds.stream().anyMatch(Objects::isNull)) throw new IllegalArgumentException("Invalid wallet page");
+        return workspaceIds.isEmpty()?Map.of():repository.wallets(Set.copyOf(workspaceIds));
+    }
     public List<QuotaEntry> entries(WorkspaceActor actor,int limit) {
         if(limit<1 || limit>100) throw new IllegalArgumentException("Invalid ledger limit");
         return repository.entries(actor.workspaceId(),limit);

@@ -24,6 +24,28 @@ class QuotaApiIT {
     @DynamicPropertySource static void database(DynamicPropertyRegistry p) { p.add("spring.datasource.url",postgres::getJdbcUrl); p.add("spring.datasource.username",postgres::getUsername); p.add("spring.datasource.password",postgres::getPassword); }
     @Autowired IdentityService identities;
     @Autowired ObjectMapper json;
+    @Test void administratorCanSeeEachWalletWithoutExposingOtherUsersToOrdinaryAccounts() throws Exception {
+        var owner=identities.createUser(UUID.randomUUID()+"@wallet-overview.local","Temporary-Password-1",false);
+        var legacy=identities.createUser(UUID.randomUUID()+"@wallet-overview.local","Temporary-Password-1",false);
+        var admin=identities.createUser(UUID.randomUUID()+"@wallet-overview.local","Temporary-Password-1",true);
+        try(var user=login(owner.email());var management=login(admin.email())) {
+            String moneyPath="/api/v1/admin/workspaces/"+owner.workspaceId()+"/quota/money-adjustments";
+            assertThat(post(management,moneyPath,json.writeValueAsString(Map.of("amount","5","reason","Test monetary budget","idempotency_key",UUID.randomUUID())),true).statusCode()).isEqualTo(200);
+            String legacyPath="/api/v1/admin/workspaces/"+legacy.workspaceId()+"/quota/adjustments";
+            assertThat(post(management,legacyPath,json.writeValueAsString(Map.of("credits","77","reason","Test legacy budget","idempotency_key",UUID.randomUUID())),true).statusCode()).isEqualTo(200);
+            assertThat(get(user,"/api/v1/admin/users").statusCode()).isEqualTo(403);
+            var response=get(management,"/api/v1/admin/users?limit=100");
+            assertThat(response.statusCode()).isEqualTo(200);
+            var rows=json.readTree(response.body());
+            var wallets=new HashMap<String,com.fasterxml.jackson.databind.JsonNode>();
+            rows.forEach(row->wallets.put(row.path("workspace_id").asText(),row.path("quota")));
+            assertThat(wallets.get(owner.workspaceId().toString()).path("available").asText()).isEqualTo("5000000");
+            assertThat(wallets.get(owner.workspaceId().toString()).path("unit").asText()).isEqualTo("CNY_MICRO");
+            assertThat(wallets.get(legacy.workspaceId().toString()).path("available").asText()).isEqualTo("77");
+            assertThat(wallets.get(legacy.workspaceId().toString()).path("unit").asText()).isEqualTo("CREDITS");
+            assertThat(response.body()).doesNotContain("password_hash","encrypted_api_key","Temporary-Password-1");
+        }
+    }
     @LocalServerPort int port;
     @Test void quotaAdjustmentRequiresAdminCsrfAndStableIdempotencyKey() throws Exception {
         var owner=identities.createUser(UUID.randomUUID()+"@quota.local","Temporary-Password-1",false);

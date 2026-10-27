@@ -16,6 +16,12 @@ public class JdbcQuotaRepository implements QuotaRepository {
     private final TransactionTemplate transactions;
     public JdbcQuotaRepository(JdbcClient jdbc,PlatformTransactionManager manager) { this.jdbc=jdbc; transactions=new TransactionTemplate(manager); }
     public QuotaWallet wallet(UUID workspaceId) { return loadWallet(workspaceId,false); }
+    @Override public Map<UUID,QuotaWallet> wallets(Collection<UUID> workspaceIds) {
+        if(workspaceIds.isEmpty()) return Map.of();
+        return jdbc.sql("select * from quota_wallets where workspace_id in (:ids)").param("ids",workspaceIds)
+            .query((row,index)->new QuotaWallet(row.getObject("workspace_id",UUID.class),row.getLong("granted"),row.getLong("consumed"),row.getLong("reserved"),row.getString("unit")))
+            .list().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(QuotaWallet::workspaceId,java.util.function.Function.identity()));
+    }
     private QuotaWallet loadWallet(UUID workspaceId,boolean lock) {
         return jdbc.sql("select * from quota_wallets where workspace_id=?"+(lock?" for update":"")).param(workspaceId)
             .query((row,index)->new QuotaWallet(row.getObject("workspace_id",UUID.class),row.getLong("granted"),row.getLong("consumed"),row.getLong("reserved"),row.getString("unit"))).optional().orElseThrow(ScopeViolationException::new);

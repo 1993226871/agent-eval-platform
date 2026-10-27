@@ -1445,6 +1445,17 @@ export interface components {
       /** @enum {string} */
       unit?: "CREDITS" | "CNY_MICRO";
     };
+    AdminAccount: {
+      /** Format: uuid */
+      user_id: string;
+      /** Format: uuid */
+      workspace_id: string;
+      /** Format: email */
+      email: string;
+      admin: boolean;
+      must_change_password: boolean;
+      quota: components["schemas"]["Wallet"];
+    };
     QuotaEntry: {
       /** Format: uuid */
       id: string;
@@ -2237,7 +2248,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CurrentUser"][];
+          "application/json": components["schemas"]["AdminAccount"][];
         };
       };
       400: components["responses"]["Rejected"];

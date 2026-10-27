@@ -651,7 +651,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CurrentUser"
+                    "$ref": "#/components/schemas/AdminAccount"
                   }
                 }
               }
@@ -6423,6 +6423,41 @@
           "consumed",
           "reserved",
           "available"
+        ]
+      },
+      "AdminAccount": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "admin": {
+            "type": "boolean"
+          },
+          "must_change_password": {
+            "type": "boolean"
+          },
+          "quota": {
+            "$ref": "#/components/schemas/Wallet"
+          }
+        },
+        "required": [
+          "user_id",
+          "workspace_id",
+          "email",
+          "admin",
+          "must_change_password",
+          "quota"
         ]
       },
       "QuotaEntry": {

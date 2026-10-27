@@ -2,6 +2,7 @@ package io.agenteval.quota;
 import java.util.*;
 public interface QuotaRepository {
     QuotaWallet wallet(UUID workspaceId);
+    Map<UUID,QuotaWallet> wallets(Collection<UUID> workspaceIds);
     List<QuotaEntry> entries(UUID workspaceId,int limit);
     QuotaLedgerPage page(UUID workspaceId,String cursor,int limit);
     QuotaWallet adjust(UUID workspaceId,long credits,String reason,UUID key,UUID adminId);

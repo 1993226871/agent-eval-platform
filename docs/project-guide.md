@@ -149,7 +149,7 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：592个文件</summary>
+<summary>展开完整目录树：594个文件</summary>
 
 ```text
 veyraeval/
@@ -874,6 +874,8 @@ veyraeval/
 │   │   │   ├── admin/
 │   │   │   │   ├── AdminPage.test.tsx
 │   │   │   │   ├── AdminPage.tsx
+│   │   │   │   ├── ModelTestResult.test.tsx
+│   │   │   │   ├── ModelTestResult.tsx
 │   │   │   │   └── ResourceAdminPanel.tsx
 │   │   │   ├── administration/
 │   │   │   │   ├── AuditPage.tsx
@@ -1790,6 +1792,8 @@ veyraeval/
 | [`web/src/components/ui.tsx`](../web/src/components/ui.tsx) | 共享UI基础组件：对话框、状态徽章、错误/加载态、JSON显示和页面标题。 |
 | [`web/src/features/admin/AdminPage.test.tsx`](../web/src/features/admin/AdminPage.test.tsx) | 前端回归测试：preserves a connectivity call identity after lost or pending responses。 |
 | [`web/src/features/admin/AdminPage.tsx`](../web/src/features/admin/AdminPage.tsx) | 管理员建号、调额、模型配置/测试/停用及不确定模型调用对账。 |
+| [`web/src/features/admin/ModelTestResult.test.tsx`](../web/src/features/admin/ModelTestResult.test.tsx) | 模型测试摘要的成功/等待/未知费用状态、人民币微额、自带Key与折叠详情测试。 |
+| [`web/src/features/admin/ModelTestResult.tsx`](../web/src/features/admin/ModelTestResult.tsx) | 中文模型测试结果卡，展示Token用量和按计费模式解释的费用，原始JSON默认折叠。 |
 | [`web/src/features/admin/ResourceAdminPanel.tsx`](../web/src/features/admin/ResourceAdminPanel.tsx) | 管理员查看并修改指定工作空间资源上限及原因。 |
 | [`web/src/features/administration/AuditPage.tsx`](../web/src/features/administration/AuditPage.tsx) | 本人工作空间动作审计的分页浏览。 |
 | [`web/src/features/administration/DeletionStatusPage.tsx`](../web/src/features/administration/DeletionStatusPage.tsx) | 异步删除进度、失败重试次数与完成状态。 |
