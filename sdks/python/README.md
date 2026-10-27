@@ -4,10 +4,10 @@ Connect your own Agent to private evaluations. Your Agent runs in your environme
 
 ## Install
 
-Python 3.11 or newer. From this repository:
+Python 3.11 or newer. Install the published SDK from PyPI:
 
 ```bash
-python -m pip install ./sdks/python
+python -m pip install veyraeval-sdk==0.1.0
 ```
 
 ## Connect an Agent
@@ -72,7 +72,7 @@ Schemas in `src/agent_eval/schemas` are generated copies of `contracts/schemas`;
 
 ## Registry publication
 
-Distribution metadata and build checks are prepared, but this SDK has not been publicly published. See the [publishing guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/sdk-publishing.md) for the required package-name/namespace ownership and explicit release approval. After publication, consumers can use pip or Maven/Gradle without a repository checkout.
+Version `0.1.0` is available on [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/) and [TestPyPI](https://test.pypi.org/project/veyraeval-sdk/0.1.0/). The Python import name remains `agent_eval`. Registry downloads, artifact SHA-256, dependencies, imports and packaged schemas have been verified in fresh environments. See the [publishing guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/sdk-publishing.md) for future releases. Contributors can still install from this repository with `python -m pip install ./sdks/python`. The Java SDK has not yet been published to Maven Central.
 
 ## License
 

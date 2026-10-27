@@ -1,9 +1,9 @@
 # Python Agent 接入
 
-需要 Python 3.11 或更高版本。从本仓库安装 SDK，或安装自行构建的 wheel；当前不提供公共 PyPI 包。
+需要 Python 3.11 或更高版本。SDK `0.1.0` 已发布到 [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/)，可直接安装，无需下载仓库。下面的订单示例文件仍位于仓库的 `examples/python-order-agent/`；自己的 Agent 项目只需引入 SDK 并按接入示例注册处理函数。
 
 ```bash
-python -m pip install ./sdks/python
+python -m pip install veyraeval-sdk==0.1.0
 export AGENT_EVAL_URL=https://your-platform.example
 export AGENT_EVAL_AGENT_ID=<平台注册的Agent UUID>
 export AGENT_EVAL_API_KEY=<本次创建的接入密钥>

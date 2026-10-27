@@ -1,12 +1,14 @@
 # SDK 发布与依赖引入
 
-可以发布。Python 使用 PyPI（用户通过 pip 安装），Java 使用 Maven Central（用户通过 Maven/Gradle 引入）。**本仓库目前是发布准备状态，没有执行注册表上传，也没有声称下面坐标已经可安装。** 项目仓库、分支推送和 SDK 公开发布是不同操作，均应按各自授权执行。
+Python 使用 PyPI（用户通过 pip 安装），Java 使用 Maven Central（用户通过 Maven/Gradle 引入）。**Python SDK `veyraeval-sdk==0.1.0` 已发布到 PyPI 和 TestPyPI；Java SDK 尚未上传 Maven Central。** 项目仓库、分支推送和 SDK 公开发布是不同操作，均应按各自授权执行。
+
+2026-10-27 发布的 Python `0.1.0` 来自提交 `4cb1c20c30086d5fac75435c29e2399d5488869e`。[TestPyPI 发布运行](https://github.com/1993226871/veyraeval/actions/runs/40462602375)与[正式 PyPI 发布运行](https://github.com/1993226871/veyraeval/actions/runs/40463092611)均通过环境审批后成功上传。两个站点的文件已重新下载并比对各自 CI 清单的 SHA-256，在全新环境中通过安装、依赖、导入和10份协议资源验证。不同运行会重新构建，两个站点的压缩包哈希不必相同；各自必须匹配对应发布运行的 manifest。
 
 ## 当前名称与真正的发布前提
 
 | 项目 | 当前源码标识 | 发布前必须确认 |
 | --- | --- | --- |
-| Python 分发名 | `veyraeval-sdk`，版本 `0.1.0` | 名称已选定，仍需确认 PyPI 可创建或属于本人，并为本仓库配置 Trusted Publisher。Python 导入名仍是 `agent_eval`。 |
+| Python 分发名 | `veyraeval-sdk`，版本 `0.1.0` | 已发布并验证；后续版本沿用已配置的 Trusted Publisher，每次上传仍单独审批。Python 导入名仍是 `agent_eval`。 |
 | Java SDK | `io.github.1993226871:veyraeval-sdk:0.1.0` | 名称已选定；维护者已确认 namespace 为 Verified，仍需配置发布凭据和签名。 |
 | Java 协议 | `io.github.1993226871:veyraeval-protocol:0.1.0` | 与 SDK 一起提供，避免消费者找不到共享 DTO/Jackson 协议依赖。 |
 | Java 父 POM | `io.github.1993226871:veyraeval-platform:0.1.0`，类型 `pom` | 一并发布以解析版本/BOM/许可证等继承元数据。无需发布 API、Worker、core 或 infrastructure jar。 |
@@ -21,7 +23,7 @@ PyPI 与 Central 的公开 SDK 包会暴露其代码；私有 GitHub 仓库不�
 - Maven 父 POM包含项目、许可证、维护者及 SCM 元数据；SDK/protocol 二进制 jar附带 LICENSE。
 - `sdk-distribution` profile生成 SDK/protocol 的 binary、sources 和 Javadoc jar。
 - `.github/workflows/sdk-distributions.yml` 仅在手工触发时构建、检查并保存产物。没有注册表写凭证、没有 OIDC 发布权限、没有上传注册表的命令。
-- `.github/workflows/python-sdk-release.yml` 是单独的 Python 发布工作流：默认仅构建，显式启用发布后才使用所选注册表的 OIDC Publisher。当前仍未绑定发布账号或上传注册表。
+- `.github/workflows/python-sdk-release.yml` 是单独的 Python 发布工作流：默认仅构建，显式启用发布后才使用所选注册表的 OIDC Publisher。PyPI/TestPyPI 均已配置并完成首次发布。
 
 本地准备：
 
@@ -44,7 +46,7 @@ Python 默认先构建 sdist，再从 sdist构建 wheel，验证源码分发包�
 4. 使用 `python-sdk-release.yml` 的独立发布作业：只下载本次构建的 SDK 产物，使用 `pypa/gh-action-pypi-publish`，将 OIDC `id-token: write` 限定在发布作业。构建作业不具备发布权限。
 5. 你审核具体产物/版本并明确批准后才公开发布，再从干净环境按注册表依赖安装验证。已发布的同版本不能随意覆盖。
 
-发布成功后，用户才可执行（名称仍需以最终批准值为准）：
+用户现在可直接安装已发布版本：
 
 ```bash
 python -m pip install veyraeval-sdk==0.1.0
@@ -72,7 +74,7 @@ PyPI 与 TestPyPI 使用独立账号和项目权限，分别注册并配置双�
 | Workflow | `python-sdk-release.yml`（只填文件名） |
 | Environment | TestPyPI 填 `testpypi`，PyPI 填 `pypi` |
 
-2026-10-27 公开 API 查询：`veyraeval-sdk` 在 PyPI 和 TestPyPI 均返回404，选用此品牌分发名。404不代表名称一定可注册，Pending Publisher 也不预留名称；首次发布前仍需复查注册结果和权限。
+当前 `veyraeval-sdk` 在 PyPI 和 TestPyPI 均已有本项目的 `0.1.0` 版本。后续版本应使用项目管理页的 Trusted Publisher；新项目的 Pending Publisher 不会预留名称。
 
 已存在的 PyPI 账号无需重新注册。将 GitHub 关联到 PyPI 账号不等于为此仓库创建了 Trusted Publisher；需要在 [PyPI Publishing](https://pypi.org/manage/account/publishing/) 中，按上表注册本项目的 Pending Publisher（已有本人项目则进入项目管理配置）。TestPyPI 账号及 Publisher 需要在测试站点单独配置。
 
@@ -120,7 +122,7 @@ PyPI 与 TestPyPI 均发布可公开下载的文件。测试上传也需要审�
 implementation("io.github.1993226871:veyraeval-sdk:0.1.0")
 ```
 
-普通用户无需下载仓库、执行 `mvn install` 或配置平台服务端模块。若尚未公开发布，继续使用[Java源码接入](java-sdk.md)或[Python源码接入](python-sdk.md)，不要把候选坐标写成已上线依赖。
+Java SDK 在正式发布前继续使用[Java源码接入](java-sdk.md)，不能把候选 Maven 坐标写成已上线依赖。Python 已可按[Python接入](python-sdk.md)直接从 PyPI 安装，无需本地构建。
 
 ## 官方参考
 

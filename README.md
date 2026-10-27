@@ -88,12 +88,12 @@ flowchart LR
 <a id="sdk-preview"></a>
 ## SDK integration
 
-SDK提供 **Worker 接入**和**执行轨迹采集**。双语言包可从源码构建安装，尚未发布到公共制品仓库。
+SDK提供 **Worker 接入**和**执行轨迹采集**。Python SDK 已发布到 [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/)，可直接通过 pip 安装；Java SDK 当前仍从源码构建安装，尚未发布 Maven Central。
 
 ### Python
 
 ```python
-# python -m pip install ./sdks/python
+# python -m pip install veyraeval-sdk==0.1.0
 from threading import Event
 from agent_eval import AgentResult, EvaluationWorker, observe
 
@@ -142,7 +142,7 @@ try (var worker = EvaluationWorker.fromEnvironment()) {
 | Deployment | Linux · Docker Compose |
 | Engineering | TDD · 共享协议契约 · 租户与额度并发测试 |
 
-Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界。依赖版本、lockfile与实际取得的镜像digest已锁定；SDK坐标 `0.1.0` 为源码构建，尚未发布公共包仓库。
+Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界。依赖版本、lockfile与实际取得的镜像digest已锁定；Python SDK `0.1.0` 已发布 PyPI，Java SDK `0.1.0` 尚未发布 Maven Central。
 
 <a id="documentation"></a>
 ## Documentation
@@ -151,7 +151,7 @@ Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界�
 
 - [快速开始](docs/guides/quickstart.md)：源码构建与 HTTPS 平台启动。
 - [Python SDK](docs/guides/python-sdk.md) / [Java SDK](docs/guides/java-sdk.md)：接入自定义 Agent。
-- [SDK 发布指南](docs/guides/sdk-publishing.md)：PyPI/Maven Central 的准备、命名空间、产物与审批；目前尚未公开发布。
+- [SDK 发布指南](docs/guides/sdk-publishing.md)：Python 已发布版本、发布验证及 Maven Central 的准备、命名空间、产物与审批。
 - [自定义评测器](docs/guides/custom-evaluators.md)、[运维与恢复](docs/guides/operations.md)、[验收说明](docs/development/acceptance.md)。
 
 本地设计草稿与实施过程不随当前源码分发。忽略规则不会删除旧提交中的文件；历史清理是另行授权的操作。
