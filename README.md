@@ -8,9 +8,10 @@
 
 <p>
   <img src="https://img.shields.io/badge/status-source_preview-0f766e?style=flat-square" alt="Status: source preview" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square" alt="License: Apache 2.0" /></a>
   <img src="https://img.shields.io/badge/backend-Java_21-007396?style=flat-square" alt="Backend target: Java 21" />
-  <img src="https://img.shields.io/badge/SDKs-Java_%2B_Python-3776AB?style=flat-square" alt="Planned SDKs: Java and Python" />
-  <img src="https://img.shields.io/badge/evaluation-rules_%2B_LLM_%2B_code-0f766e?style=flat-square" alt="Planned evaluation methods: rules, LLM and code" />
+  <img src="https://img.shields.io/badge/SDKs-Java_%2B_Python-3776AB?style=flat-square" alt="SDKs: Java and Python" />
+  <img src="https://img.shields.io/badge/evaluation-rules_%2B_LLM_%2B_code-0f766e?style=flat-square" alt="Evaluation methods: rules, LLM and code" />
 </p>
 
 <p>
@@ -24,7 +25,7 @@
 </div>
 
 > [!IMPORTANT]
-> 源码预览版 `0.1.0`：双语言SDK、自建证据、RULE/LLM/PYTHON评测、累计额度/对账、私人工作台、报告/对比、重评、删除清理、资源预算与审计均已实现。HTTPS Compose、双SDK三类评测、真实runsc隔离、浏览器完整流程和备份恢复已通过验收。生产执行节点需重新验收，真实付费模型准确率与高可用部署不在本次验证范围。参阅[快速开始](docs/guides/quickstart.md)、[验收记录](docs/development/acceptance.md)及[完整实现决策](docs/development/implementation-decisions.md)。
+> 源码预览版 `0.1.0`：双语言SDK、自建证据、RULE/LLM/PYTHON评测、累计额度/对账、私人工作台、报告/对比、重评、删除清理、资源预算与审计均已实现。HTTPS Compose、双SDK三类评测、真实runsc隔离、浏览器完整流程和备份恢复已通过验收。生产执行节点需重新验收，真实付费模型准确率与高可用部署不在本次验证范围。参阅[快速开始](docs/guides/quickstart.md)、[验收记录](docs/development/acceptance.md)及[项目说明](docs/project-guide.md)。
 
 <a id="overview"></a>
 ## Overview
@@ -76,8 +77,8 @@ flowchart LR
 | 方式 | 适用内容 | 示例 | 当前状态 |
 | --- | --- | --- | --- |
 | Rule-based | 可明确表达的事实和约束 | Schema、参数、显式依赖、调用次数 | 可执行并查询报告 |
-| LLM-as-judge | 开放性内容和语义判断 | 信息完整性、证据支持、工具结果使用是否合理 | 已提供配置范式，执行待接入 |
-| Custom Python | 特定业务计算与自定义指标 | 根据折扣、优惠券和运费计算应退金额 | 已提供配置范式，隔离执行待接入 |
+| LLM-as-judge | 开放性内容和语义判断 | 信息完整性、证据支持、工具结果使用是否合理 | 已实现模型网关、证据评分、累计额度与对账 |
+| Custom Python | 特定业务计算与自定义指标 | 根据折扣、优惠券和运费计算应退金额 | 已实现，需通过验收的 Linux/runsc 执行节点 |
 
 三类评测器使用统一的结果结构：状态、分数、通过结论、解释和证据引用。Python 代码在平台的强化隔离环境执行，默认无网络访问。
 
@@ -146,19 +147,14 @@ Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界�
 <a id="documentation"></a>
 ## Documentation
 
-从[完整设计规格](docs/superpowers/specs/2026-10-25-agent-evaluation-platform-design.md)开始，了解：
+先读[项目完整说明](docs/project-guide.md)：架构、流程图、完整目录树、每个目录和文件的职责，以及推荐阅读顺序。
 
-- 第一版范围、已确认需求及待确认默认方案。
-- 私人空间、任务集、评测器、套件与实验版本。
-- Worker 注册、长轮询、租约、心跳和取消。
-- 双 SDK 职责、轨迹事件、证据完整性和附件存储。
-- 规则、LLM 与 Python 评测接口及聚合逻辑。
-- 累计额度、调用预留、结算、异常对账和安全边界。
-- 数据模型、测试策略和端到端验收场景。
+- [快速开始](docs/guides/quickstart.md)：源码构建与 HTTPS 平台启动。
+- [Python SDK](docs/guides/python-sdk.md) / [Java SDK](docs/guides/java-sdk.md)：接入自定义 Agent。
+- [SDK 发布指南](docs/guides/sdk-publishing.md)：PyPI/Maven Central 的准备、命名空间、产物与审批；目前尚未公开发布。
+- [自定义评测器](docs/guides/custom-evaluators.md)、[运维与恢复](docs/guides/operations.md)、[验收说明](docs/development/acceptance.md)。
 
-参阅[分阶段实施计划](docs/superpowers/plans/2026-10-25-agent-evaluation-platform.md)：20 项 TDD 任务，覆盖文件布局、共享接口、测试命令和阶段验收。实现状态与本地验证记录见[实施进度](docs/development/progress.md)。
-
-从[快速开始](docs/guides/quickstart.md)启动源码构建的HTTPS平台，按[Python接入](docs/guides/python-sdk.md)或[Java接入](docs/guides/java-sdk.md)连接自定义Agent；配置[评测器](docs/guides/custom-evaluators.md)，并参阅[运维与恢复](docs/guides/operations.md)。详细缓存与关闭行为见两套SDK目录说明。
+本地设计草稿与实施过程不随当前源码分发。忽略规则不会删除旧提交中的文件；历史清理是另行授权的操作。
 
 <a id="roadmap"></a>
 ## Roadmap
@@ -174,13 +170,17 @@ Docker Compose 组织服务，Python 代码执行使用独立Linux/runsc边界�
 - [x] 完成额度账本、报告、证据定位和版本比较。
 - [x] 实现实验删除、资源预算、审计记录和私人工作台。
 - [x] 提供演示 Agent、基础任务集、部署与恢复指南。
-- [x] 完成独立整分支审阅、全部修复和最终验收；[审阅与裁定](docs/development/final-review.md)。
+- [x] 完成独立整分支审阅、全部修复和最终验收。
 
 ## Development
 
 项目采用测试驱动开发。行为测试先于产品代码，重点验证跨空间隔离、双 SDK 协议一致性、重复消息、失联恢复、Python 隔离及并发额度结算。
 
 在引入新能力前，先检查它是否符合设计规格；协议或评分语义的变化需要保留版本与兼容性说明。
+
+## License
+
+本项目采用 [Apache License 2.0](LICENSE)。第三方依赖仍遵循各自的许可证。
 
 ---
 

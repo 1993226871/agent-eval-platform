@@ -1,6 +1,6 @@
 # 源码预览版0.1.0验收记录
 
-验证日期：2026-10-27。最新Runner修复提交`257e7d6`解决已确认的gVisor宿主PID预算耗尽，专项代码审阅通过；完整验收与根因见[运行时事件记录](runner-resource-incident.md)。此前六项Important与一项Minor的整分支审阅修复仍全部保留，详见[审阅记录](final-review.md)。后续文档和CI配置更新不改变运行代码。
+验证日期：2026-10-27。最新Runner修复提交`257e7d6`解决已确认的gVisor宿主PID预算耗尽，完整验收与根因见[运行时事件记录](runner-resource-incident.md)。当前目录及文件职责见[项目说明](../project-guide.md)。后续文档和CI配置更新不改变运行代码。
 
 | 验证 | 结果 |
 | --- | --- |
@@ -30,10 +30,10 @@
 
 恢复测试停止平台写入口和应用，将PostgreSQL custom dump与S3对象及SHA256清单恢复到新的空实例；检查行数、私人实验、附件字节，并验证非空目标会被拒绝。专用Runner执行注册表需要独立停机备份。
 
-复现方法与安装边界见[快速开始](../guides/quickstart.md)、[运维指南](../guides/operations.md)及[完整实现决策](implementation-decisions.md)。尚未发布公共包或开放公网。
+复现方法与安装边界见[快速开始](../guides/quickstart.md)、[运维指南](../guides/operations.md)及[项目说明](../project-guide.md)。尚未发布公共包或开放公网。
 
 最终增加的平台到真实Runner删除场景先确认缓存包含私人测试标记，再删除实验、推进仅测试实例的宽限期，等待DELETED后确认响应已清空且墓碑已保存。
 
 首次修复验收[40343019300](https://github.com/1993226871/agent-eval-platform/actions/runs/40343019300)有一次综合隔离探针NO_RESULT（其余25项通过），原因未稳定复现。保留失败记录并增加有界完整诊断；随后两个独立节点均通过26项Runner和8个E2E，最终节点另连续10次综合隔离探针通过。没有删除失败断言、跳过隔离或放宽资源限制。
 
-后续main上的重复检查再次复现了上述NO_RESULT。2026-10-27已通过panic证据确认根因并修复，取代前述尚未定位状态；最新验收采用100次检查，详见[完整事件与裁定](runner-resource-incident.md)。
+后续main上的重复检查再次复现了上述NO_RESULT。2026-10-27已通过panic证据确认根因并修复，取代前述尚未定位状态；最新验收采用100次检查，详见[运行时事件说明](runner-resource-incident.md)。

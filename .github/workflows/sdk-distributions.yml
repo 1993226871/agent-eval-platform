@@ -1,0 +1,36 @@
+name: Build SDK distributions (no publication)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  distribution-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: chmod +x mvnw && ./mvnw --batch-mode --no-transfer-progress -P sdk-distribution -pl sdks/java -am verify
+      - run: python -m pip install build==1.3.0 twine==6.2.0
+      - run: python -m build sdks/python
+      - run: python -m twine check sdks/python/dist/*
+      - run: python scripts/verify_sdk_wheel.py sdks/python/dist/agent_eval_sdk-0.1.0-py3-none-any.whl
+      - run: python scripts/verify_java_sdk_distribution.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdk-distributions-unpublished
+          path: |
+            sdks/python/dist/*.whl
+            sdks/python/dist/*.tar.gz
+            pom.xml
+            platform/protocol/pom.xml
+            platform/protocol/target/*.jar
+            sdks/java/pom.xml
+            sdks/java/target/*.jar

@@ -1,7 +1,7 @@
 name: Linux sandbox acceptance
 on:
   push:
-    branches: [codex/platform-implementation, main]
+    branches: [main, 'feature/**']
     paths:
       - 'runner/**'
       - 'e2e/**'
@@ -20,7 +20,7 @@ permissions:
 jobs:
   hardened-isolation:
     # Dedicated ephemeral VM, no pull_request trigger and no repository secrets.
-    if: github.repository == '1993226871/agent-eval-platform' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/platform-implementation')
+    if: github.repository == '1993226871/agent-eval-platform' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feature/'))
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:

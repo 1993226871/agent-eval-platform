@@ -35,6 +35,11 @@ artifacts/
 .spool/
 .tools/
 .superpowers/
+docs/superpowers/
+docs/development/implementation-decisions.md
+docs/development/final-review.md
+docs/development/progress.md
+docs/development/web-design.md
 
 # Editor and operating system
 .idea/

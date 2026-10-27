@@ -2,6 +2,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion><parent><groupId>io.agenteval</groupId><artifactId>agent-eval-platform</artifactId><version>0.1.0</version><relativePath>../../pom.xml</relativePath></parent>
   <artifactId>protocol</artifactId>
+  <name>AgentEval Shared Protocol</name>
+  <description>Shared DTOs and strict JSON codec for AgentEval SDK and platform communication.</description>
+  <build><resources><resource><directory>src/main/resources</directory></resource><resource><directory>${maven.multiModuleProjectDirectory}</directory><includes><include>LICENSE</include></includes><targetPath>META-INF</targetPath></resource></resources></build>
   <dependencies>
     <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId></dependency>
     <dependency><groupId>com.fasterxml.jackson.datatype</groupId><artifactId>jackson-datatype-jsr310</artifactId></dependency>

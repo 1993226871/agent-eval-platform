@@ -2,6 +2,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.agenteval</groupId><artifactId>agent-eval-platform</artifactId><version>0.1.0</version><packaging>pom</packaging>
+  <name>AgentEval Platform</name>
+  <description>Agent evaluation platform and Java/Python SDKs.</description>
+  <url>https://github.com/1993226871/agent-eval-platform</url>
+  <licenses><license><name>Apache License, Version 2.0</name><url>https://www.apache.org/licenses/LICENSE-2.0.txt</url><distribution>repo</distribution></license></licenses>
+  <developers><developer><id>1993226871</id><name>AgentEval Platform maintainers</name><url>https://github.com/1993226871</url></developer></developers>
+  <scm><connection>scm:git:https://github.com/1993226871/agent-eval-platform.git</connection><developerConnection>scm:git:ssh://git@github.com/1993226871/agent-eval-platform.git</developerConnection><url>https://github.com/1993226871/agent-eval-platform</url><tag>HEAD</tag></scm>
   <modules><module>platform/protocol</module><module>platform/core</module><module>platform/infrastructure</module><module>platform/api</module><module>platform/worker</module><module>sdks/java</module><module>examples/java-order-agent</module></modules>
   <properties>
     <maven.compiler.release>21</maven.compiler.release><maven.compiler.parameters>true</maven.compiler.parameters><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -21,4 +27,13 @@
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.5.3</version><configuration><useModulePath>false</useModulePath><systemPropertyVariables><contracts.dir>${maven.multiModuleProjectDirectory}/contracts</contracts.dir></systemPropertyVariables></configuration></plugin>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><version>3.5.3</version><executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions></plugin>
   </plugins></pluginManagement></build>
+  <profiles>
+    <profile>
+      <id>sdk-distribution</id>
+      <build><plugins>
+        <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-source-plugin</artifactId><version>3.3.1</version><executions><execution><id>sdk-sources</id><goals><goal>jar-no-fork</goal></goals></execution></executions></plugin>
+        <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-javadoc-plugin</artifactId><version>3.11.2</version><configuration><doclint>none</doclint><quiet>true</quiet></configuration><executions><execution><id>sdk-javadoc</id><goals><goal>jar</goal></goals></execution></executions></plugin>
+      </plugins></build>
+    </profile>
+  </profiles>
 </project>

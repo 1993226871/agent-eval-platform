@@ -69,3 +69,11 @@ python -m pytest sdks/python/tests -q
 ```
 
 Schemas in `src/agent_eval/schemas` are generated copies of `contracts/schemas`; tests fail if they drift. After a contract change run `python sdks/python/scripts/sync_contracts.py` and re-run both Java and Python contract tests.
+
+## Registry publication
+
+Distribution metadata and build checks are prepared, but this SDK has not been publicly published. See the [publishing guide](https://github.com/1993226871/agent-eval-platform/blob/main/docs/guides/sdk-publishing.md) for the required package-name/namespace ownership and explicit release approval. After publication, consumers can use pip or Maven/Gradle without a repository checkout.
+
+## License
+
+Apache License 2.0; see the repository LICENSE and the LICENSE included with this distribution.

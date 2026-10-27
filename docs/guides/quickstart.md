@@ -36,4 +36,4 @@ Compose 包含 Web、API、Worker、单一数据库迁移作业、PostgreSQL、R
 
 默认的 RustFS 单节点单盘配置服务于小规模部署，没有冗余；它不是高可用存储。需要高可用时应配置合适的外部 S3 服务，并重新验证签名、存储和恢复。当前 Redis 是预留的临时基础设施，容量、额度和恢复状态由 PostgreSQL 决定。
 
-参阅 [运维指南](operations.md)、[评分器指南](custom-evaluators.md)及[实现与验证进度](../development/progress.md)。
+参阅 [运维指南](operations.md)、[评分器指南](custom-evaluators.md)及[项目结构说明](../project-guide.md)。

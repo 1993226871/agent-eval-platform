@@ -81,3 +81,11 @@ python -m pytest sdks/python/tests -q
 ```
 
 Both SDKs consume the same versioned contracts and fixture manifest. The Java SDK depends on `platform/protocol`, not server core, infrastructure or Spring modules.
+
+## Registry publication
+
+Distribution metadata and build checks are prepared, but this SDK has not been publicly published. See the [publishing guide](https://github.com/1993226871/agent-eval-platform/blob/main/docs/guides/sdk-publishing.md) for the required package-name/namespace ownership and explicit release approval. After publication, consumers can use pip or Maven/Gradle without a repository checkout.
+
+## License
+
+Apache License 2.0; see the repository LICENSE and META-INF/LICENSE in the SDK jar.
