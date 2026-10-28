@@ -40,7 +40,13 @@ test("real session, CSRF, immutable publication, and one-time worker credential"
   await page.getByRole("button", { name: "新建任务集" }).click();
   await page.getByLabel("名称", { exact: true }).fill("浏览器集成案例");
   await page.getByRole("button", { name: "创建草稿" }).click();
-  await expect(page.getByLabel("草稿内容")).toBeVisible();
+  await expect(page.getByRole("button", { name: "新增任务" })).toBeVisible();
+  await page.getByRole("button", { name: "新增任务", exact: true }).click();
+  await page.getByLabel("任务要求 1", { exact: true }).fill("浏览器测试任务");
+  await page.getByRole("button", { name: "保存草稿", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "发布版本", exact: true }),
+  ).toBeEnabled();
   await page.getByRole("button", { name: "发布版本", exact: true }).click();
   await expect(
     page.getByRole("combobox", { name: "查看版本" }).getByRole("option"),
@@ -48,7 +54,7 @@ test("real session, CSRF, immutable publication, and one-time worker credential"
   await page
     .getByRole("combobox", { name: "查看版本" })
     .selectOption({ label: "v1" });
-  await expect(page.getByLabel("已发布版本")).toBeDisabled();
+  await expect(page.getByLabel("任务要求 1", { exact: true })).toBeDisabled();
   await page.screenshot({
     path: path.resolve("../.tools/web-dataset-desktop.png"),
   });

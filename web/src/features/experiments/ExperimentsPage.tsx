@@ -122,7 +122,7 @@ export function ExperimentsPage() {
     <>
       <PageHeading
         title="实验"
-        description="用固定版本的任务集与评分套件运行 Agent。平台排队，SDK Worker 执行并上报证据。"
+        description="用固定版本的任务集与评分规则集运行 Agent。平台排队，SDK Worker 执行并上报证据。"
       >
         <button
           className="primary"
@@ -306,7 +306,7 @@ export function ExperimentsPage() {
             </select>
           </label>
           <label>
-            套件版本
+            评分规则集版本
             <select
               required
               value={suite}

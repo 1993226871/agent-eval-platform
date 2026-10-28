@@ -119,7 +119,7 @@ test("HTTPS administrator provisions CNY and a config-file Agent evaluates, comp
       .getByRole("combobox", { name: "任务集版本", exact: true })
       .selectOption({ index: 1 });
     await page
-      .getByRole("combobox", { name: "套件版本", exact: true })
+      .getByRole("combobox", { name: "评分规则集版本", exact: true })
       .selectOption({ index: 1 });
     const started = page.waitForResponse(
       (response) =>

@@ -26,6 +26,7 @@ class CatalogVersionIT {
     @Autowired TemplateService templates;
     @Autowired IdentityService identities;
     @Autowired ObjectMapper json;
+    @Autowired org.springframework.jdbc.core.simple.JdbcClient jdbc;
 
     @Test void preservesPublishedVersionsAndRejectsCrossScopeReferences() throws Exception {
         var a=actor(); var b=actor();
@@ -96,6 +97,45 @@ class CatalogVersionIT {
         assertThat(catalog.version(actor,bundle.datasetVersion().id()).content().get("cases").size()).isEqualTo(1);
         assertThatThrownBy(() -> catalog.version(actor(),bundle.suiteVersion().id())).isInstanceOf(ScopeViolationException.class);
     }
+    @Test void publishesInlineRulesAsOneImmutableRuleSetAndDoesNotDuplicateOnRetry() throws Exception {
+        var actor=actor();
+        var content=json.readTree("{\"entries\":[{\"definition\":"+rule()+",\"dimension\":\"outcome\",\"required_to_pass\":true,\"weight\":1}]}");
+        var draft=catalog.create(actor,ResourceKind.SUITE,"订单评分规则集",content);
+        var v1=catalog.publish(actor,draft.id());
+        var evaluatorId=UUID.fromString(v1.content().at("/entries/0/evaluator_version").asText());
+        assertThat(catalog.version(actor,evaluatorId).content().at("/config/expected").asInt()).isEqualTo(100);
+        assertThat(v1.contentHash()).isEqualTo(CanonicalJson.hash(v1.content()));
+        assertThat(catalog.publish(actor,draft.id()).id()).isEqualTo(v1.id());
+        assertThat(catalog.list(actor,ResourceKind.EVALUATOR,0,100)).hasSize(1);
+        ((com.fasterxml.jackson.databind.node.ObjectNode)content.at("/entries/0/definition/config")).put("expected",80);
+        catalog.update(actor,draft.id(),draft.revision(),draft.name(),content);
+        var v2=catalog.publish(actor,draft.id());
+        assertThat(v2.id()).isNotEqualTo(v1.id());
+        assertThat(catalog.version(actor,evaluatorId).content().at("/config/expected").asInt()).isEqualTo(100);
+        assertThat(catalog.version(actor,UUID.fromString(v2.content().at("/entries/0/evaluator_version").asText())).content().at("/config/expected").asInt()).isEqualTo(80);
+        assertThatThrownBy(()->catalog.version(actor(),evaluatorId)).isInstanceOf(ScopeViolationException.class);
+    }
+
+    @Test void rejectsInvalidInlineRulesBeforeCreatingChildResources() throws Exception {
+        var actor=actor();
+        var content=json.readTree("{\"entries\":[{\"definition\":"+rule()+",\"dimension\":\"outcome\",\"required_to_pass\":true,\"weight\":1},{\"definition\":{},\"dimension\":\"process\",\"required_to_pass\":false,\"weight\":1}]}");
+        var draft=catalog.create(actor,ResourceKind.SUITE,"无效规则集",content);
+        assertThatThrownBy(()->catalog.publish(actor,draft.id())).isInstanceOf(IllegalArgumentException.class);
+        assertThat(catalog.list(actor,ResourceKind.EVALUATOR,0,100)).isEmpty();
+        assertThat(catalog.versions(actor,draft.id(),0,100)).isEmpty();
+    }
+
+    @Test void rollsBackGeneratedRulesWhenRuleSetPublicationExceedsVersionBudget() throws Exception {
+        var actor=actor();
+        var content=json.readTree("{\"entries\":[{\"definition\":"+rule()+",\"dimension\":\"outcome\",\"required_to_pass\":true,\"weight\":1}]}");
+        var draft=catalog.create(actor,ResourceKind.SUITE,"原子发布",content);
+        jdbc.sql("update workspace_resource_limits set max_published_versions=1 where workspace_id=?").param(actor.workspaceId()).update();
+        // One slot allows the child version; admitting the parent must fail and undo the child.
+        assertThatThrownBy(()->catalog.publish(actor,draft.id())).isInstanceOf(io.agenteval.workers.CapacityExceededException.class);
+        assertThat(catalog.list(actor,ResourceKind.EVALUATOR,0,100)).isEmpty();
+        assertThat(jdbc.sql("select count(*) from catalog_versions where workspace_id=?").param(actor.workspaceId()).query(Long.class).single()).isZero();
+    }
+
     private WorkspaceActor actor() { return identities.createUser(UUID.randomUUID()+"@test.local","Temporary-Password-1",false).actor(); }
     private String rule() { return "{\"type\":\"RULE\",\"criterion_id\":\"amount\",\"required_evidence\":[\"output\"],\"threshold\":1,\"config\":{\"operator\":\"eq\",\"selector\":\"/output/amount\",\"expected\":100}}"; }
     private String suite(UUID version,boolean required) { return "{\"entries\":[{\"evaluator_version\":\""+version+"\",\"dimension\":\"outcome\",\"required_to_pass\":"+required+",\"weight\":1}]}"; }

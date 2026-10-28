@@ -2,6 +2,8 @@
 
 本文根据当前源码整理，描述系统现在如何工作，不记录私人设计讨论。适合第一次接手仓库的开发者：先理解运行角色，再跟一次实验，最后按文件索引进入实现。
 
+工作台当前以“任务集”和“评分规则集”组织日常使用：任务与规则通过表单编辑，评分规则集整体发布。内部 EVALUATOR/SUITE 仍保存规则与集合的固定版本，确保历史实验可追溯；详见[工作台使用指南](guides/tasks-and-rule-sets.md)。
+
 ## 1. 一句话理解项目
 
 这是给自定义Agent评测用的平台。用户在私人工作空间维护任务集与评分体系，在平台发起实验；Java/Python SDK在用户自己的环境领取任务、运行Agent并上报过程和结果；平台冻结证据，执行规则、LLM Judge或强化隔离的Python评测，生成可追溯报告。
@@ -149,7 +151,7 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：599个文件</summary>
+<summary>展开完整目录树：604个文件</summary>
 
 ```text
 veyraeval/
@@ -260,7 +262,8 @@ veyraeval/
 │   │   ├── python-evaluation-walkthrough.md
 │   │   ├── python-sdk.md
 │   │   ├── quickstart.md
-│   │   └── sdk-publishing.md
+│   │   ├── sdk-publishing.md
+│   │   └── tasks-and-rule-sets.md
 │   └── project-guide.md
 ├── e2e/
 │   ├── conftest.py
@@ -896,8 +899,12 @@ veyraeval/
 │   │   │   │   ├── CatalogEditor.test.tsx
 │   │   │   │   ├── CatalogEditor.tsx
 │   │   │   │   ├── CatalogPage.tsx
+│   │   │   │   ├── DatasetFields.tsx
 │   │   │   │   ├── PreviewPanel.test.tsx
 │   │   │   │   ├── PreviewPanel.tsx
+│   │   │   │   ├── RuleSetFields.tsx
+│   │   │   │   ├── ValueFields.test.tsx
+│   │   │   │   ├── ValueFields.tsx
 │   │   │   │   ├── pagination.test.ts
 │   │   │   │   ├── pagination.ts
 │   │   │   │   ├── queries.ts
@@ -1292,6 +1299,7 @@ veyraeval/
 | [`docs/guides/operations.md`](../docs/guides/operations.md) | 说明文档：运维与恢复；启动、健康与网络；停写备份与空目标恢复；密钥轮换。 |
 | [`docs/guides/python-evaluation-walkthrough.md`](../docs/guides/python-evaluation-walkthrough.md) | 完整使用教程：安装SDK、接入Agent、运行双实验、规则评分、匿名实跑结果、轨迹定位和排错。 |
 | [`docs/guides/python-sdk.md`](../docs/guides/python-sdk.md) | 说明文档：Python Agent 接入。 |
+| [`docs/guides/tasks-and-rule-sets.md`](../docs/guides/tasks-and-rule-sets.md) | 工作台表单使用指南：创建任务、配置规则/LLM Rubric/Python、发布规则集与启动实验。 |
 | [`docs/guides/quickstart.md`](../docs/guides/quickstart.md) | 说明文档：从源码启动私人评测平台；构建与启动；完成第一次评测；部署边界。 |
 | [`docs/guides/sdk-publishing.md`](../docs/guides/sdk-publishing.md) | 两语言已发布版本与验证、PyPI及Maven分发流程、命名空间/账号条件和依赖写法。 |
 | [`docs/project-guide.md`](../docs/project-guide.md) | 当前项目的架构、流程、目录和逐文件职责全量索引，即本文。 |
@@ -1816,6 +1824,10 @@ veyraeval/
 | [`web/src/features/auth/AuthProvider.tsx`](../web/src/features/auth/AuthProvider.tsx) | 登录用户状态、首次改密/权限约束、私有路由和Session失效后的缓存清理。 |
 | [`web/src/features/auth/LoginFlow.test.tsx`](../web/src/features/auth/LoginFlow.test.tsx) | 前端回归测试：requires password change, preserves CSRF, and hides admin navigation；returns to login after a protected resource rejects the session。 |
 | [`web/src/features/catalog/CatalogEditor.test.tsx`](../web/src/features/catalog/CatalogEditor.test.tsx) | 前端回归测试：keeps editing an incomplete LLM token limit without crashing the page；keeps published versions immutable and permits returning to the draft；explains archival and preserves JSONL error line numbers。 |
+| [`web/src/features/catalog/DatasetFields.tsx`](../web/src/features/catalog/DatasetFields.tsx) | 任务集表单：逐条添加任务，编辑输入、参考答案与超时设置。 |
+| [`web/src/features/catalog/RuleSetFields.tsx`](../web/src/features/catalog/RuleSetFields.tsx) | 评分规则集表单：下拉选择评分方式，编辑规则条件、Rubric、Python及权重。 |
+| [`web/src/features/catalog/ValueFields.tsx`](../web/src/features/catalog/ValueFields.tsx) | 递归类型化字段编辑：文本、数字、布尔、字段组、列表和空值，无需JSON输入。 |
+| [`web/src/features/catalog/ValueFields.test.tsx`](../web/src/features/catalog/ValueFields.test.tsx) | 验证嵌套字段类型保留、改名和重复字段名校验。 |
 | [`web/src/features/catalog/CatalogEditor.tsx`](../web/src/features/catalog/CatalogEditor.tsx) | 草稿内容编辑/保存/发布/归档、固定版本只读及JSONL导入、模型绑定和单次估算。 |
 | [`web/src/features/catalog/CatalogPage.tsx`](../web/src/features/catalog/CatalogPage.tsx) | 任务集、评测器、套件的列表、分页、创建及编辑器装配。 |
 | [`web/src/features/catalog/PreviewPanel.test.tsx`](../web/src/features/catalog/PreviewPanel.test.tsx) | 前端回归测试：replays an uncertain paid preview and rotates its identity only after success。 |

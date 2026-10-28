@@ -49,14 +49,22 @@ public class JdbcCatalogRepository implements CatalogRepository {
             if(current.archived() || current.revision()!=expected.revision()) throw new CatalogConflictException();
             var existing=jdbc.sql("select * from catalog_versions where resource_id=? and workspace_id=? and draft_revision=?").params(current.id(),actor.workspaceId(),current.revision()).query(this::mapVersion).optional();
             if(existing.isPresent()) return existing.get();
-            io.agenteval.administration.JdbcResourceAdmission.metadata(jdbc,actor.workspaceId(),"catalog_versions");
-            if(current.kind()==ResourceKind.SUITE) for(var entry:current.content().path("entries")) {
-                jdbc.sql("select id from catalog_versions where id=? and workspace_id=? and kind='EVALUATOR' for key share").params(UUID.fromString(entry.path("evaluator_version").asText()),actor.workspaceId()).query(UUID.class).optional().orElseThrow(ScopeViolationException::new);
+            var publishedContent=current.content();
+            if(current.kind()==ResourceKind.SUITE) for(var entry:publishedContent.path("entries")) {
+                if(entry.has("definition")) {
+                    var definition=entry.get("definition");
+                    var child=create(actor,ResourceKind.EVALUATOR,definition.path("criterion_id").asText(),definition);
+                    var frozen=publish(actor,child,CanonicalJson.hash(definition));
+                    ((com.fasterxml.jackson.databind.node.ObjectNode)entry).put("evaluator_version",frozen.id().toString());
+                } else {
+                    jdbc.sql("select id from catalog_versions where id=? and workspace_id=? and kind='EVALUATOR' for key share").params(UUID.fromString(entry.path("evaluator_version").asText()),actor.workspaceId()).query(UUID.class).optional().orElseThrow(ScopeViolationException::new);
+                }
             }
+            io.agenteval.administration.JdbcResourceAdmission.metadata(jdbc,actor.workspaceId(),"catalog_versions");
             int next=jdbc.sql("select coalesce(max(number),0)+1 from catalog_versions where resource_id=? and workspace_id=?").params(current.id(),actor.workspaceId()).query(Integer.class).single();
             UUID id=UUID.randomUUID();
             jdbc.sql("insert into catalog_versions(id,resource_id,workspace_id,kind,name,content,content_hash,number,draft_revision) values (?,?,?,?,?,cast(? as jsonb),?,?,?)")
-                .params(id,current.id(),actor.workspaceId(),current.kind().name(),current.name(),current.content().toString(),hash,next,current.revision()).update();
+                .params(id,current.id(),actor.workspaceId(),current.kind().name(),current.name(),publishedContent.toString(),CanonicalJson.hash(publishedContent),next,current.revision()).update();
             io.agenteval.administration.JdbcAuditWriter.append(jdbc,actor,io.agenteval.administration.AuditAction.VERSION_PUBLISHED,id);
             return version(actor,id);
         });

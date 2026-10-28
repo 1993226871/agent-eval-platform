@@ -201,7 +201,7 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
                       : "暂无有效自动分数"}
                   </p>
                   <p>{item.result.reason}</p>
-                  <small>评测器版本：{item.result.evaluator_version}</small>
+                  <small>评分规则版本：{item.result.evaluator_version}</small>
                   <div className="actions evidence-links">
                     {item.result.evidence_refs.map((ref) => (
                       <button
@@ -299,7 +299,7 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
           }}
         >
           <label>
-            重评套件版本
+            重评评分规则集版本
             <select
               required
               value={suite}

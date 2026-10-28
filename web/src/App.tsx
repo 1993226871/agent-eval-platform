@@ -41,8 +41,7 @@ function Layout() {
   const links = [
     ["experiments", "实验"],
     ["datasets", "任务集"],
-    ["evaluators", "评测器"],
-    ["suites", "评分套件"],
+    ["rule-sets", "评分规则集"],
     ["agents", "Agent 接入"],
     ["quota", "个人额度"],
     ["models", "评审模型"],
@@ -115,11 +114,15 @@ export function App() {
           />
           <Route
             path="/workspace/evaluators"
-            element={<CatalogPage key="evaluators" kind="EVALUATOR" />}
+            element={<Navigate to="/workspace/rule-sets" replace />}
           />
           <Route
             path="/workspace/suites"
-            element={<CatalogPage key="suites" kind="SUITE" />}
+            element={<Navigate to="/workspace/rule-sets" replace />}
+          />
+          <Route
+            path="/workspace/rule-sets"
+            element={<CatalogPage key="rule-sets" kind="SUITE" />}
           />
           <Route path="/workspace/agents" element={<AgentsPage />} />
           <Route path="/workspace/quota" element={<QuotaPage />} />

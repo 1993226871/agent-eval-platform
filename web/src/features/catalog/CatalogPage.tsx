@@ -14,9 +14,13 @@ import { CatalogEditor } from "./CatalogEditor";
 import { useCatalog, useModels, useVersionOptions } from "./queries";
 import { PreviewPanel } from "./PreviewPanel";
 
-const labels = { DATASET: "任务集", EVALUATOR: "评测器", SUITE: "评分套件" };
+const labels = {
+  DATASET: "任务集",
+  EVALUATOR: "评分规则",
+  SUITE: "评分规则集",
+};
 const initial: Record<ResourceKind, Record<string, unknown>> = {
-  DATASET: { cases: [{ instruction: "请完成任务", input: {}, expected: {} }] },
+  DATASET: { cases: [] },
   EVALUATOR: {
     type: "RULE",
     criterion_id: "answer_check",
@@ -34,7 +38,6 @@ export function CatalogPage({ kind }: { kind: ResourceKind }) {
   const [selected, setSelected] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
-  const [modelId, setModelId] = useState("");
   const models = useModels();
   const evaluatorVersions = useVersionOptions("EVALUATOR");
   const detail = useQuery({
@@ -58,11 +61,6 @@ export function CatalogPage({ kind }: { kind: ResourceKind }) {
   const templates = useQuery({
     queryKey: [workspace_id, "templates"],
     queryFn: () => request(api.GET("/api/v1/templates")),
-  });
-  const judges = useQuery({
-    queryKey: [workspace_id, "judge-templates"],
-    enabled: kind === "EVALUATOR",
-    queryFn: () => request(api.GET("/api/v1/templates/judges")),
   });
   const refresh = () => cache.invalidateQueries({ queryKey: [workspace_id] });
   const action = useMutation({
@@ -98,7 +96,11 @@ export function CatalogPage({ kind }: { kind: ResourceKind }) {
     <>
       <PageHeading
         title={labels[kind]}
-        description="编辑草稿、发布固定版本，为实验选择可重复的评测配置。"
+        description={
+          kind === "DATASET"
+            ? "逐条编写任务、输入和参考答案，发布后用于实验。"
+            : "在一个规则集中配置检查条件、LLM Rubric 或 Python 评分，整体发布后用于实验。"
+        }
       >
         <button className="primary" onClick={() => setCreateOpen(true)}>
           新建{labels[kind]}
@@ -113,9 +115,16 @@ export function CatalogPage({ kind }: { kind: ResourceKind }) {
           <button
             disabled={action.isPending}
             onClick={() =>
-              action.mutate(() =>
-                request(api.POST("/api/v1/templates/starter/copy")),
-              )
+              action.mutate(async () => {
+                const bundle = await request(
+                  api.POST("/api/v1/templates/starter/copy"),
+                );
+                setSelected(
+                  kind === "DATASET"
+                    ? bundle.dataset_version.resource_id
+                    : bundle.suite_version.resource_id,
+                );
+              })
             }
           >
             复制完整入门示例
@@ -141,53 +150,6 @@ export function CatalogPage({ kind }: { kind: ResourceKind }) {
               </button>
             ))}
         </div>
-        {kind === "EVALUATOR" && (
-          <>
-            <label>
-              示例使用的评审模型
-              <select
-                value={modelId}
-                onChange={(event) => setModelId(event.target.value)}
-              >
-                <option value="">选择模型</option>
-                {models.data?.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="actions">
-              {judges.data?.map((item) => (
-                <button
-                  key={item.id}
-                  disabled={!modelId || action.isPending}
-                  onClick={() =>
-                    action.mutate(async () => {
-                      const model = models.data?.find(
-                        (value) => value.id === modelId,
-                      );
-                      if (!model) return;
-                      const copy = await request(
-                        api.POST("/api/v1/templates/judges/{id}/copy", {
-                          params: { path: { id: item.id } },
-                          body: {
-                            model_profile_id: model.id,
-                            price_version_id: model.price.id,
-                          },
-                        }),
-                      );
-                      setSelected(copy.id);
-                    })
-                  }
-                >
-                  复制 {item.name}
-                </button>
-              ))}
-            </div>
-            <ErrorNotice error={models.error ?? judges.error} />
-          </>
-        )}
       </details>
       <div className="catalog-layout">
         <section className="resource-list" aria-label={labels[kind] + "列表"}>
@@ -261,16 +223,6 @@ export function CatalogPage({ kind }: { kind: ResourceKind }) {
                 request(
                   api.DELETE("/api/v1/catalog/{id}", {
                     params: { path: { id: selected } },
-                  }),
-                ),
-              )
-            }
-            onImport={(jsonl) =>
-              saved(
-                request(
-                  api.POST("/api/v1/catalog/{id}/import", {
-                    params: { path: { id: selected } },
-                    body: { revision: detail.data!.revision, jsonl },
                   }),
                 ),
               )

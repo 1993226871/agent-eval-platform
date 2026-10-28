@@ -190,7 +190,7 @@ function ExperimentReportPage({ id }: { id: string }) {
               value.evaluation_suite_version_ids[0] !==
                 value.suite_version_id) && (
               <p className="warning-notice">
-                当前报告包含重评配置或多个实际评分套件，请先核对版本范围，再进行实验对比。
+                当前报告包含重评配置或多个实际评分规则集，请先核对版本范围，再进行实验对比。
               </p>
             )}
             <dl className="metrics">

@@ -47,7 +47,7 @@ public final class CatalogService {
             if(task.has("timeout_seconds") && (!task.get("timeout_seconds").isIntegralNumber() || task.get("timeout_seconds").asLong()<1 || task.get("timeout_seconds").asLong()>3600)) throw new IllegalArgumentException("Invalid task timeout");
         }
     }
-    private void validateEvaluator(JsonNode content) {
+    public static void validateEvaluator(JsonNode content) {
         if(!Set.of("RULE","LLM","PYTHON").contains(content.path("type").asText())) throw new IllegalArgumentException("Unknown evaluator type");
         if(!content.path("criterion_id").asText().matches("[a-zA-Z0-9_.-]{1,64}") || !content.path("config").isObject()) throw new IllegalArgumentException("Invalid criterion/config");
         if(!content.path("required_evidence").isArray()) throw new IllegalArgumentException("required_evidence must be explicit");
@@ -55,11 +55,25 @@ public final class CatalogService {
     }
     private void validateSuite(WorkspaceActor actor,JsonNode content) {
         var entries=content.path("entries"); if(!entries.isArray() || entries.isEmpty() || entries.size()>100) throw new IllegalArgumentException("Suite requires 1..100 entries");
-        boolean required=false; var ids=new HashSet<UUID>(); var weights=new HashMap<String,java.math.BigDecimal>();
+        boolean required=false; var criteria=new HashSet<String>(); var ids=new HashSet<UUID>(); var weights=new HashMap<String,java.math.BigDecimal>();
         for(var item:entries) {
-            UUID id=UUID.fromString(item.path("evaluator_version").asText());
-            if(!ids.add(id)) throw new IllegalArgumentException("Duplicate evaluator version");
-            if(repository.version(actor,id).kind()!=ResourceKind.EVALUATOR) throw new IllegalArgumentException("Expected evaluator version");
+            JsonNode definition;
+            if(item.has("definition")) {
+                definition=item.get("definition");
+                validateEvaluator(definition);
+                var evidence=new ArrayList<String>(); definition.path("required_evidence").forEach(value -> evidence.add(value.asText()));
+                var evaluator=new io.agenteval.evaluation.EvaluatorDefinition(UUID.randomUUID(),definition.path("criterion_id").asText(),definition.path("type").asText(),evidence,definition.path("threshold").decimalValue(),definition.path("config"));
+                if(evaluator.type().equals("RULE")) new io.agenteval.evaluation.RuleEvaluator().validate(evaluator);
+                if(evaluator.type().equals("LLM")) new io.agenteval.evaluation.JudgePromptBuilder().validate(evaluator);
+                if(evaluator.type().equals("PYTHON") && definition.at("/config/code").asText().isBlank()) throw new IllegalArgumentException("Python code required");
+            } else {
+                UUID id=UUID.fromString(item.path("evaluator_version").asText());
+                if(!ids.add(id)) throw new IllegalArgumentException("Duplicate evaluator version");
+                var version=repository.version(actor,id);
+                if(version.kind()!=ResourceKind.EVALUATOR) throw new IllegalArgumentException("Expected evaluator version");
+                definition=version.content();
+            }
+            if(!criteria.add(definition.path("criterion_id").asText())) throw new IllegalArgumentException("Duplicate criterion identifier");
             String dimension=item.path("dimension").asText();
             if(!Set.of("outcome","process").contains(dimension) || !item.path("required_to_pass").isBoolean() || !item.path("weight").isNumber()) throw new IllegalArgumentException("Invalid suite item");
             var weight=item.get("weight").decimalValue(); if(weight.signum()<0) throw new IllegalArgumentException("Negative weight");

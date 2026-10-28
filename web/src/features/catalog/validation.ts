@@ -3,7 +3,9 @@ import type { ResourceKind } from "../../api/types";
 
 const entry = z
   .object({
-    evaluator_version: z.uuid(),
+    evaluator_version: z.uuid().optional(),
+    definition: z.record(z.string(), z.unknown()).optional(),
+    name: z.string().optional(),
     dimension: z.enum(["outcome", "process"]),
     required_to_pass: z.boolean(),
     weight: z.number().finite().min(0).max(1000000),
@@ -38,11 +40,30 @@ export function parseContent(
   } else if (kind === "SUITE") {
     const entries = z
       .array(entry)
-      .min(1, "至少添加一个评测项。")
+      .min(1, "至少添加一条评分规则。")
       .max(100)
       .parse(object.entries);
+    const criteria = new Set<string>();
+    for (const item of entries) {
+      if (!item.definition && !item.evaluator_version)
+        throw new Error("请配置每一条评分规则。");
+      if (item.definition) {
+        parseContent(pretty(item.definition), "EVALUATOR");
+        const id = String(item.definition.criterion_id);
+        if (criteria.has(id))
+          throw new Error("评分规则重复，请删除重复规则或新增独立规则。");
+        criteria.add(id);
+      }
+    }
+    for (const dimension of new Set(entries.map((item) => item.dimension)))
+      if (
+        entries
+          .filter((item) => item.dimension === dimension)
+          .reduce((sum, item) => sum + item.weight, 0) <= 0
+      )
+        throw new Error("每个评分维度至少需要一条权重大于零的规则。");
     if (!entries.some((item) => item.required_to_pass))
-      throw new Error("至少设置一个必需通过的评测项。");
+      throw new Error("至少设置一个必须通过的评分规则。");
   } else {
     const definition = z
       .object({

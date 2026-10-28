@@ -13,9 +13,9 @@ import type { Schema } from "../../api/types";
 
 const reasonLabels: Record<string, string> = {
   DATASET_VERSION_MISMATCH: "任务集版本不同",
-  SUITE_VERSION_MISMATCH: "实际评分套件版本不同",
-  MIXED_EVALUATION_SUITES: "实验中混用了多个评分套件",
-  EVALUATOR_VERSION_MISMATCH: "评测器版本不同",
+  SUITE_VERSION_MISMATCH: "实际评分规则集版本不同",
+  MIXED_EVALUATION_SUITES: "实验中混用了多个评分规则集",
+  EVALUATOR_VERSION_MISMATCH: "评分规则版本不同",
   MODEL_PRICE_VERSION_MISMATCH: "模型或计价版本不同",
   EVIDENCE_SCOPE_MISMATCH: "证据完整性或原始/修订范围不同",
   ATTEMPT_PLAN_MISMATCH: "计划执行次数不同",
@@ -106,7 +106,7 @@ export function ComparisonDetails({
               <td>—</td>
             </tr>
             <tr>
-              <th>实际套件版本</th>
+              <th>实际评分规则集版本</th>
               <td>{left.evaluation_suite_version_ids.join(", ")}</td>
               <td>{right.evaluation_suite_version_ids.join(", ")}</td>
               <td>—</td>

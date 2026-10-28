@@ -62,7 +62,7 @@ export function EstimateNotice({
       )}
       {value && value.planned_credits === null && (
         <p className="warning-notice">
-          无法给出完整费用预估：部分 LLM 评测器缺少有效模型、价格或 Token
+          无法给出完整费用预估：部分 LLM 评分规则缺少有效模型、价格或 Token
           配置。请检查所选套件；无效配置不会获得评分。重试和重评另计。
         </p>
       )}

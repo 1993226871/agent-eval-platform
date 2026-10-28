@@ -28,6 +28,8 @@
 > 源码预览版 `0.1.0`：双语言SDK、自建证据、RULE/LLM/PYTHON评测、累计额度/对账、私人工作台、报告/对比、重评、删除清理、资源预算与审计均已实现。HTTPS Compose、双SDK三类评测、真实runsc隔离、浏览器完整流程和备份恢复已通过验收。生产执行节点需重新验收，真实付费模型准确率与高可用部署不在本次验证范围。参阅[快速开始](docs/guides/quickstart.md)、[验收记录](docs/development/acceptance.md)及[项目说明](docs/project-guide.md)。
 
 <a id="overview"></a>
+
+任务集与评分规则集支持表单编辑，规则检查、LLM Rubric 和自定义 Python 在同一规则集中配置。参阅[工作台使用指南](docs/guides/tasks-and-rule-sets.md)。
 已完成本地部署的 Windows 用户可双击根目录 `start.cmd` 启动，使用 `status.cmd` 查看状态、`stop.cmd` 停止服务并保留数据。首次安装及配置路径参数见[快速开始](docs/guides/quickstart.md)。
 
 ## Overview

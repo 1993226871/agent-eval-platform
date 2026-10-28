@@ -79,7 +79,7 @@ describe("experiment submission recovery", () => {
       "agent",
     );
     await user.selectOptions(screen.getByLabelText("任务集版本"), "DATASET");
-    await user.selectOptions(screen.getByLabelText("套件版本"), "SUITE");
+    await user.selectOptions(screen.getByLabelText("评分规则集版本"), "SUITE");
     expect(
       await screen.findByText(/¥54,043,195,528\.445958/),
     ).toBeInTheDocument();

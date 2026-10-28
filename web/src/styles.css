@@ -846,3 +846,78 @@ dialog::backdrop {
     margin: 20px auto;
   }
 }
+
+/* Authoring follows the task / rule hierarchy rather than exposing wire formats. */
+.catalog-form-body {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.catalog-fields {
+  display: grid;
+  gap: 18px;
+  margin: 16px 0;
+  min-width: 0;
+}
+.definition-fields {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--teal);
+  padding: 18px;
+  margin: 0;
+  min-width: 0;
+}
+.definition-fields > legend {
+  padding: 0 8px;
+  font-weight: 600;
+}
+.definition-fields > label,
+.value-fields > label {
+  margin-bottom: 12px;
+}
+.field-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.value-fields {
+  min-width: 0;
+  padding: 8px 0;
+}
+.nested-fields {
+  border-left: 1px solid var(--line);
+  padding-left: 14px;
+}
+.value-row {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+}
+.rubric-fields {
+  border: 1px solid var(--line);
+  padding: 14px;
+}
+.rubric-fields > label {
+  margin-bottom: 12px;
+}
+.evidence-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding-top: 12px;
+}
+@media (max-width: 700px) {
+  .field-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .definition-fields {
+    padding: 12px;
+  }
+}
+
+.rubric-fields textarea {
+  min-height: 64px;
+}
+.catalog-fields > label {
+  margin: 0;
+}
