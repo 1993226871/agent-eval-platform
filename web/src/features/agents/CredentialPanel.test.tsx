@@ -9,6 +9,7 @@ it("shows a Worker key only at issuance and keeps it out of persistent browser s
   const storage = vi.spyOn(Storage.prototype, "setItem");
   const props = {
     agentId: "agent-1",
+    agentVersion: "release-2",
     credentials: [],
     onIssue: vi.fn().mockResolvedValue({ id: "credential-1", secret }),
     onRevoke: vi.fn().mockResolvedValue(undefined),
@@ -37,4 +38,36 @@ it("shows a Worker key only at issuance and keeps it out of persistent browser s
     screen.queryByRole("button", { name: "查看密钥" }),
   ).not.toBeInTheDocument();
   expect(storage).not.toHaveBeenCalled();
+});
+
+it("offers a complete config file and handler example only while the key is visible", async () => {
+  const user = userEvent.setup();
+  const copy = vi.spyOn(navigator.clipboard, "writeText");
+  render(
+    <CredentialPanel
+      agentId="agent-1"
+      agentVersion="release-2"
+      credentials={[]}
+      onIssue={vi
+        .fn()
+        .mockResolvedValue({ id: "credential-1", secret: "ae_config_fixture" })}
+      onRevoke={vi.fn()}
+    />,
+  );
+  await user.click(screen.getByRole("button", { name: "创建接入凭证" }));
+  const output = await screen.findByLabelText("Python SDK 配置文件");
+  const config = JSON.parse(output.textContent!);
+  expect(config).toEqual({
+    platform_url: window.location.origin,
+    agent_id: "agent-1",
+    agent_version: "release-2",
+    api_key: "ae_config_fixture",
+  });
+  expect(screen.getByText(/EvaluationWorker.from_config/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "复制配置" }));
+  expect(copy).toHaveBeenCalledWith(output.textContent);
+  await user.click(screen.getByRole("button", { name: "我已保存" }));
+  expect(
+    screen.queryByLabelText("Python SDK 配置文件"),
+  ).not.toBeInTheDocument();
 });

@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { spawn } from "node:child_process";
+import { writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
-test("HTTPS administrator provisions credits and a private user evaluates, compares and deletes", async ({
+test("HTTPS administrator provisions CNY and a config-file Agent evaluates, compares and deletes", async ({
   page,
 }) => {
   test.setTimeout(180000);
@@ -32,12 +33,14 @@ test("HTTPS administrator provisions credits and a private user evaluates, compa
   await page
     .getByRole("combobox", { name: "用户工作空间", exact: true })
     .selectOption({ label: email });
-  await page.getByLabel("调整 credits", { exact: true }).fill("10000");
+  await page.getByLabel("调整金额（元）", { exact: true }).fill("1");
   await page
     .getByLabel("调整原因", { exact: true })
     .fill("Browser acceptance budget");
   await page.getByRole("button", { name: "提交额度调整", exact: true }).click();
-  await expect(page.getByText(/调整后可用：10,000 credits/)).toBeVisible();
+  await expect(
+    page.getByText("调整后可用：¥6.00", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "退出登录", exact: true }).click();
   await page.getByLabel("邮箱", { exact: true }).fill(email);
   await page.getByLabel("密码", { exact: true }).fill(temporary);
@@ -76,22 +79,32 @@ test("HTTPS administrator provisions credits and a private user evaluates, compa
   await expect(page.getByLabel("本次接入密钥")).not.toBeEmpty();
   const secret = (await page.getByLabel("本次接入密钥").textContent())?.trim();
   if (!secret) throw new Error("One-time fixture credential missing");
+  const configuration = JSON.parse(
+    (await page.getByLabel("Python SDK 配置文件").textContent())!,
+  ) as Record<string, string>;
+  expect(configuration.agent_id).toBe(agent.id);
+  expect(configuration.api_key).toBe(secret);
+  expect(configuration.agent_version).toBe("v1");
+  configuration.ca_cert = ca;
+  configuration.spool_path = path.join(root, "browser-sdk.sqlite");
+  const configurationPath = path.join(root, "browser-agent.local.json");
+  await writeFile(configurationPath, JSON.stringify(configuration), {
+    mode: 0o600,
+  });
   await page.getByRole("button", { name: "我已保存", exact: true }).click();
   const worker = spawn(
     python,
-    [path.resolve("../examples/python-order-agent/main.py")],
+    [
+      path.resolve("../examples/python-order-agent/main.py"),
+      "--config",
+      configurationPath,
+    ],
     {
       cwd: path.resolve(".."),
       stdio: "ignore",
       env: {
         ...process.env,
-        AGENT_EVAL_URL: process.env.WEB_BASE_URL,
-        AGENT_EVAL_API_KEY: secret,
-        AGENT_EVAL_AGENT_ID: agent.id,
-        AGENT_EVAL_AGENT_VERSION: "v1",
-        AGENT_EVAL_SPOOL: path.join(root, "browser-sdk.sqlite"),
         PYTHONPATH: path.resolve("../sdks/python/src"),
-        SSL_CERT_FILE: ca,
       },
       windowsHide: true,
     },

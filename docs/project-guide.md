@@ -149,7 +149,7 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：594个文件</summary>
+<summary>展开完整目录树：599个文件</summary>
 
 ```text
 veyraeval/
@@ -780,11 +780,13 @@ veyraeval/
 │   └── requirements-test.lock
 ├── scripts/
 │   ├── tests/
+│   │   ├── test_local_platform.py
 │   │   └── test_stage_maven_bundle.py
 │   ├── build-openapi.mjs
 │   ├── build-release.sh
 │   ├── ci-install-runsc.sh
 │   ├── configure_deployment.py
+│   ├── local-platform.ps1
 │   ├── manage_backup.py
 │   ├── stage_maven_bundle.py
 │   ├── verify_java_sdk_distribution.py
@@ -943,7 +945,10 @@ veyraeval/
 ├── README.md
 ├── mvnw
 ├── mvnw.cmd
-└── pom.xml
+├── pom.xml
+├── start.cmd
+├── status.cmd
+└── stop.cmd
 ```
 
 </details>
@@ -1168,6 +1173,9 @@ veyraeval/
 | [`README.md`](../README.md) | 项目首页：能力、接入示例、当前状态、文档入口和Apache许可证。 |
 | [`mvnw`](../mvnw) | Linux/macOS Maven Wrapper入口，用项目固定的Maven构建Java模块。 |
 | [`mvnw.cmd`](../mvnw.cmd) | Windows Maven Wrapper入口。 |
+| [`start.cmd`](../start.cmd) | Windows双击启动入口，等待服务就绪并打开工作台。 |
+| [`stop.cmd`](../stop.cmd) | Windows停止入口，保留容器和持久数据。 |
+| [`status.cmd`](../status.cmd) | Windows服务状态查询入口。 |
 | [`pom.xml`](../pom.xml) | Java聚合父POM：七个模块、Java21、依赖/BOM/测试插件版本、项目许可证；sdk-distribution打包，sdk-central签名并固定只生成本地bundle。 |
 
 ### .github · GitHub自动化
@@ -1706,6 +1714,8 @@ veyraeval/
 | [`scripts/build-openapi.mjs`](../scripts/build-openapi.mjs) | 维护HTTP接口和DTO的规范定义，确定性生成contracts/openapi/platform-v1.yaml。 |
 | [`scripts/build-release.sh`](../scripts/build-release.sh) | 验证Java、Web并构建Python wheel；只生成源码构建产物，不上传公开注册表。 |
 | [`scripts/ci-install-runsc.sh`](../scripts/ci-install-runsc.sh) | 只在专用GitHub托管Linux VM校验并安装固定gVisor，登记Docker runtime和有界panic日志。 |
+| [`scripts/local-platform.ps1`](../scripts/local-platform.ps1) | 复用已有配置和镜像启动、停止或查询平台，按需启动Docker Desktop。 |
+| [`scripts/tests/test_local_platform.py`](../scripts/tests/test_local_platform.py) | 使用模拟Docker验证Windows编排、配置保留、失败提示及停止语义。 |
 | [`scripts/configure_deployment.py`](../scripts/configure_deployment.py) | 生成私有部署env、密钥与可选本地开发TLS证书，拒绝覆盖现有部署配置。 |
 | [`scripts/manage_backup.py`](../scripts/manage_backup.py) | 停止写入后备份数据库和S3对象/校验清单，或恢复到新建空目标；拒绝破坏非空目标。 |
 | [`scripts/stage_maven_bundle.py`](../scripts/stage_maven_bundle.py) | 将与已验证SHA-256一致的bundle单次提交Central USER_MANAGED并等待校验；未知上传不重试，不执行正式发布。 |
@@ -1766,7 +1776,7 @@ veyraeval/
 | [`sdks/python/src/agent_eval/spool.py`](../sdks/python/src/agent_eval/spool.py) | SQLite持久队列：事件序号、稳定ID、确认、执行标记、附件负载和容量统计。 |
 | [`sdks/python/src/agent_eval/telemetry.py`](../sdks/python/src/agent_eval/telemetry.py) | contextvars Span上下文、装饰器/手动Span、脱敏、截断和结构化事件捕获。 |
 | [`sdks/python/src/agent_eval/transport.py`](../sdks/python/src/agent_eval/transport.py) | 平台HTTP客户端：注册、长轮询、租约心跳、事件批量上传、附件及结果提交。 |
-| [`sdks/python/src/agent_eval/worker.py`](../sdks/python/src/agent_eval/worker.py) | 用户Agent Worker：领取任务、调用注册处理函数、异步结果、独立心跳、持久上传和安全收尾。 |
+| [`sdks/python/src/agent_eval/worker.py`](../sdks/python/src/agent_eval/worker.py) | 配置文件/环境变量初始化，文件路径解析与Agent处理函数注册； 用户Agent Worker：领取任务、调用注册处理函数、异步结果、独立心跳、持久上传和安全收尾。 |
 | [`sdks/python/tests/test_contracts.py`](../sdks/python/tests/test_contracts.py) | Python单元/契约回归测试；检查`test_shared_contract_fixtures`。 |
 | [`sdks/python/tests/test_spool.py`](../sdks/python/tests/test_spool.py) | Python单元/契约回归测试；检查`test_ack_then_delete_and_record_overflow`、`test_execution_marker_survives_restart_without_storing_token`。 |
 | [`sdks/python/tests/test_telemetry.py`](../sdks/python/tests/test_telemetry.py) | Python单元/契约回归测试；检查`test_contextvars_keep_parallel_spans_separate`、`test_redaction_and_capture_failure_do_not_change_output`、`test_outside_worker_is_noop_and_exceptions_are_preserved`、`test_configured_secrets_are_removed_from_payload_keys_and_span_names`、`test_packaged_schemas_match_repository_contracts`。 |
@@ -1801,7 +1811,7 @@ veyraeval/
 | [`web/src/features/administration/ResourceUsagePanel.tsx`](../web/src/features/administration/ResourceUsagePanel.tsx) | 显示个人配额/资源用量和等待原因。 |
 | [`web/src/features/agents/AgentsPage.tsx`](../web/src/features/agents/AgentsPage.tsx) | 注册/浏览Agent和装配凭证管理界面。 |
 | [`web/src/features/agents/CredentialPanel.test.tsx`](../web/src/features/agents/CredentialPanel.test.tsx) | 前端回归测试：shows a Worker key only at issuance and keeps it out of persistent browser storage。 |
-| [`web/src/features/agents/CredentialPanel.tsx`](../web/src/features/agents/CredentialPanel.tsx) | 限制Agent范围的Worker凭证生成、一次性显示与撤销。 |
+| [`web/src/features/agents/CredentialPanel.tsx`](../web/src/features/agents/CredentialPanel.tsx) | 创建凭证时展示并复制Python SDK私有JSON配置和接入步骤； 限制Agent范围的Worker凭证生成、一次性显示与撤销。 |
 | [`web/src/features/auth/AuthPages.tsx`](../web/src/features/auth/AuthPages.tsx) | 登录和首次/主动修改密码页面。 |
 | [`web/src/features/auth/AuthProvider.tsx`](../web/src/features/auth/AuthProvider.tsx) | 登录用户状态、首次改密/权限约束、私有路由和Session失效后的缓存清理。 |
 | [`web/src/features/auth/LoginFlow.test.tsx`](../web/src/features/auth/LoginFlow.test.tsx) | 前端回归测试：requires password change, preserves CSRF, and hides admin navigation；returns to login after a protected resource rejects the session。 |

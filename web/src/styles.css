@@ -407,6 +407,10 @@ td button + button {
 .credential-list li > span:first-child {
   flex: 1;
 }
+.credential-panel pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .secret-output {
   display: block;
   padding: 16px;

@@ -1,6 +1,7 @@
 """HTTP control plane. Never include response bodies, URLs, or credentials in errors."""
 import hashlib
 import json
+import ssl
 from pathlib import Path
 from urllib.parse import urlsplit
 from uuid import uuid4
@@ -21,7 +22,7 @@ class TransportUnavailable(RuntimeError):
 class HttpTransport:
     heartbeat_seconds = 15
 
-    def __init__(self, base_url, api_key, agent_version="v1", instance_id=None, client=None):
+    def __init__(self, base_url, api_key, agent_version="v1", instance_id=None, client=None, *, ca_cert=None):
         url = urlsplit(base_url)
         if url.scheme not in {"https", "http"} or not url.hostname or url.username or url.password or url.query or url.fragment:
             raise ValueError("Invalid platform URL")
@@ -32,7 +33,8 @@ class HttpTransport:
         self.base_url = base_url.rstrip("/")
         self.agent_version = agent_version
         self.instance_id = instance_id or str(uuid4())
-        self._client = client or httpx.Client(timeout=httpx.Timeout(25, connect=5), follow_redirects=False)
+        self._client = client or httpx.Client(timeout=httpx.Timeout(25, connect=5), follow_redirects=False,
+                                              verify=ssl.create_default_context(cafile=ca_cert) if ca_cert else True)
         self._key = api_key
 
     def _request(self, method, path, body=None, assignment=None):
@@ -59,7 +61,7 @@ class HttpTransport:
     def register(self, agent_id):
         identity = self.instance_id[:80] + ":" + hashlib.sha256(agent_id.encode()).hexdigest()[:32]
         request = {"agent_id": agent_id, "agent_version": self.agent_version, "instance_id": identity,
-                   "protocol_version": "1.0", "sdk_language": "PYTHON", "sdk_version": "0.1.0", "max_concurrency": 1}
+                   "protocol_version": "1.0", "sdk_language": "PYTHON", "sdk_version": "0.1.1", "max_concurrency": 1}
         validate_message("RegisterWorkerRequest", request)
         result = self._request("POST", "/workers/register", request)
         if not isinstance(result, dict) or set(result) != {"worker_id", "heartbeat_seconds", "lease_seconds"} or result["heartbeat_seconds"] != 15 or result["lease_seconds"] != 60:

@@ -1,4 +1,5 @@
 # Local secrets and configuration
+agent-eval.local.json
 .env
 .env.*
 !.env.example

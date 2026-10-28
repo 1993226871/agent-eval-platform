@@ -144,3 +144,58 @@ def test_invalid_business_result_is_reported_without_breaking_worker(tmp_path):
         worker.execute("agent-one", grant())
         assert transport.completions[0]["status"] == "FAILED"
         assert transport.completions[0]["output"] is None
+
+
+def test_config_file_registers_agent_and_resolves_paths_without_environment(tmp_path, monkeypatch):
+    import json
+    from unittest.mock import patch
+    config = tmp_path / "agent-eval.local.json"
+    config.write_text(json.dumps({
+        "platform_url": "https://platform.example", "api_key": "private-fixture-key",
+        "agent_id": "agent-one", "agent_version": "release-2",
+        "spool_path": "state/events.sqlite", "ca_cert": "certs/platform.crt",
+    }), encoding="utf-8")
+    monkeypatch.setenv("AGENT_EVAL_API_KEY", "unrelated-environment-key")
+    handler = Mock(return_value=AgentResult("done"))
+    with patch("agent_eval.worker.HttpTransport") as transport:
+        worker = EvaluationWorker.from_config(config, handler=handler)
+        transport.assert_called_once_with(
+            "https://platform.example", "private-fixture-key", "release-2", None,
+            ca_cert=tmp_path / "certs/platform.crt")
+        assert worker._handlers == {"agent-one": handler}
+        assert (tmp_path / "state/events.sqlite").is_file()
+        assert worker._owns_resources
+        worker.stop()
+        transport.return_value.close.assert_called_once()
+
+
+def test_config_errors_do_not_leak_credentials_or_create_spool(tmp_path):
+    import json
+    import pytest
+    config = tmp_path / "agent-eval.local.json"
+    for content in [
+        {"api_key": "never-print-this"},
+        {"platform_url": "https://platform.example", "api_key": "never-print-this", "agent_id": 123},
+        ["never-print-this"],
+    ]:
+        config.write_text(json.dumps(content), encoding="utf-8")
+        with pytest.raises(ValueError) as failure:
+            EvaluationWorker.from_config(config, handler=Mock())
+        assert "never-print-this" not in str(failure.value)
+        assert not (tmp_path / ".agent-eval").exists()
+
+
+def test_config_defaults_and_transport_failure_close_spool(tmp_path):
+    import json
+    from unittest.mock import patch
+    import pytest
+    config = tmp_path / "agent-eval.local.json"
+    config.write_text(json.dumps({"platform_url": "https://platform.example", "api_key": "key", "agent_id": "agent-one"}), encoding="utf-8")
+    with patch("agent_eval.worker.HttpTransport") as transport:
+        worker = EvaluationWorker.from_config(config, handler=Mock())
+        transport.assert_called_once_with("https://platform.example", "key", "v1", None, ca_cert=None)
+        worker.stop()
+    with patch("agent_eval.worker.FileSpool") as spool, patch("agent_eval.worker.HttpTransport", side_effect=ValueError("Invalid platform URL")):
+        with pytest.raises(ValueError):
+            EvaluationWorker.from_config(config, handler=Mock())
+        spool.return_value.close.assert_called_once()

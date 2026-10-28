@@ -96,6 +96,7 @@ export function AgentsPage() {
               <CredentialPanel
                 key={selectedAgent.id}
                 agentId={selectedAgent.id}
+                agentVersion={selectedAgent.version}
                 credentials={credentials.data ?? []}
                 onIssue={async () => {
                   const issued = await request(

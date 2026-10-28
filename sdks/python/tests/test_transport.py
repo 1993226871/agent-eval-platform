@@ -55,7 +55,12 @@ def test_error_does_not_echo_platform_secrets():
 def test_each_registered_agent_has_a_distinct_instance_identity():
     instances = []
     def server(request):
-        instances.append(json.loads(request.content)["instance_id"])
+        import tomllib
+        from pathlib import Path
+        body = json.loads(request.content)
+        expected = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+        assert body["sdk_version"] == expected
+        instances.append(body["instance_id"])
         return httpx.Response(200, json={"worker_id": str(uuid4()), "heartbeat_seconds": 15, "lease_seconds": 60})
     transport = HttpTransport("https://platform.test", "ae_private", instance_id="same-process", client=httpx.Client(transport=httpx.MockTransport(server)))
     transport.register(str(uuid4()))
@@ -118,3 +123,14 @@ def test_running_worker_stops_on_revoked_attempt_without_reinvoking_handler(tmp_
         assert worker.active_heartbeat_count == 0
         assert all(not poller.is_alive() for poller in worker._pollers)
     transport.close()
+
+
+def test_explicit_ca_is_used_for_tls_verification():
+    import ssl
+    from unittest.mock import patch
+    context = ssl.create_default_context()
+    with patch("agent_eval.transport.ssl.create_default_context", return_value=context) as create_context, patch("agent_eval.transport.httpx.Client") as client:
+        transport = HttpTransport("https://platform.test", "key", ca_cert="platform.crt")
+        create_context.assert_called_once_with(cafile="platform.crt")
+        assert client.call_args.kwargs["verify"] is context
+        transport.close()

@@ -28,6 +28,8 @@
 > 源码预览版 `0.1.0`：双语言SDK、自建证据、RULE/LLM/PYTHON评测、累计额度/对账、私人工作台、报告/对比、重评、删除清理、资源预算与审计均已实现。HTTPS Compose、双SDK三类评测、真实runsc隔离、浏览器完整流程和备份恢复已通过验收。生产执行节点需重新验收，真实付费模型准确率与高可用部署不在本次验证范围。参阅[快速开始](docs/guides/quickstart.md)、[验收记录](docs/development/acceptance.md)及[项目说明](docs/project-guide.md)。
 
 <a id="overview"></a>
+已完成本地部署的 Windows 用户可双击根目录 `start.cmd` 启动，使用 `status.cmd` 查看状态、`stop.cmd` 停止服务并保留数据。首次安装及配置路径参数见[快速开始](docs/guides/quickstart.md)。
+
 ## Overview
 
 VeyraEval Platform 旨在帮助开发者回答两个问题：**Agent 是否完成了任务，以及它是怎样完成的。**
@@ -88,12 +90,12 @@ flowchart LR
 <a id="sdk-preview"></a>
 ## SDK integration
 
-SDK提供 **Worker 接入**和**执行轨迹采集**。Python SDK 已发布到 [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/)，Java SDK 已发布 Maven Central，均可直接引入依赖。
+SDK提供 **Worker 接入**和**执行轨迹采集**。Python `0.1.1` 新增 JSON 配置文件接入，可在平台注册 Agent、生成凭证后复制配置，无需逐项设置环境变量。Python SDK 已发布到 [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/)，Java SDK 已发布 Maven Central，均可直接引入依赖。
 
 ### Python
 
 ```python
-# python -m pip install veyraeval-sdk==0.1.0
+# python -m pip install veyraeval-sdk==0.1.1
 from threading import Event
 from agent_eval import AgentResult, EvaluationWorker, observe
 

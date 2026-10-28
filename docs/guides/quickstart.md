@@ -20,6 +20,24 @@ Linux 上证书目录和私钥必须可被配置的 `WEB_UID/WEB_GID` 读取。�
 
 平台首次登录必须修改密码。管理员创建的新用户默认获得 ¥5.00 累计平台评审额度，没有周期重置。自带 API Key 不扣平台额度。基础规则评测无需模型额度，仍受执行次数和存储预算限制。模型接入和价格口径见 [LLM 模型接入与额度](llm-models.md)。
 
+## Windows 日常一键启动
+
+完成上面的首次构建和配置后，在仓库根目录双击 `start.cmd`。脚本会按需打开 Docker Desktop，等待 Linux 引擎和平台服务就绪，然后打开 `https://localhost:8443`。首次等待默认最多 180 秒；Docker Desktop 必须已安装。
+
+- `start.cmd`：启动平台，复用 `.tools/local/.env` 和现有镜像。
+- `status.cmd`：查看各服务状态。
+- `stop.cmd`：停止平台，保留容器和数据库、附件数据；不会退出 Docker Desktop 或停止其他项目。
+
+配置在其他位置时，在 PowerShell 中指定已有文件：
+
+```powershell
+.\start.cmd -EnvFile "C:\your-deployment\.env"
+.\status.cmd -EnvFile "C:\your-deployment\.env"
+.\stop.cmd -EnvFile "C:\your-deployment\.env"
+```
+
+不需要自动打开浏览器时，可运行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/local-platform.ps1 -Action start -NoBrowser`。此参数只作用于当前 PowerShell 进程，不修改系统执行策略。脚本不会生成配置、重置密码、更换密钥、导入证书或重新构建镜像。代码更新后需要按构建流程更新镜像；初次安装不能直接用日常启动脚本替代。
+
 ## 完成第一次评测
 
 也可以直接按 [完整 Python 使用示例](python-evaluation-walkthrough.md) 自动创建私人任务集、规则与两个示范 Agent，并查看真实评分及轨迹。下面是通过工作台逐步操作的方式。

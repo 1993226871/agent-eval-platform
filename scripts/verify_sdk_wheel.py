@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import sys
+import tomllib
 import zipfile
 from email.parser import Parser
 
@@ -12,6 +13,8 @@ with zipfile.ZipFile(wheel) as package:
     assert len(metadata_files)==1, 'Wheel must contain one distribution metadata file'
     metadata=Parser().parsestr(package.read(metadata_files[0]).decode('utf-8'))
     assert metadata['Name']=='veyraeval-sdk', 'Wheel must use the approved VeyraEval distribution name'
+    expected = tomllib.loads((root/'sdks/python/pyproject.toml').read_text(encoding='utf-8'))['project']['version']
+    assert metadata['Version']==expected, 'Wheel version must match source metadata'
     assert metadata['License-Expression']=='Apache-2.0', 'Missing Apache-2.0 license metadata'
     assert metadata['Description-Content-Type']=='text/markdown', 'Missing Markdown project description'
     assert len(metadata.get_payload().strip())>200, 'Missing SDK usage documentation'

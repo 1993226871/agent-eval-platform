@@ -6,11 +6,17 @@ Python 使用 PyPI（用户通过 pip 安装），Java 使用 Maven Central（�
 
 同日发布的 Java `0.1.0` 来自提交 `04058c3`。[Portal上传校验运行](https://github.com/1993226871/veyraeval/actions/runs/40474230908)通过后由维护者在Portal执行正式发布。9个POM/jar及9份签名已从公开Central重新下载并逐一匹配CI bundle，独立项目使用全新Maven缓存编译、运行通过。详细签名与部署记录见[Java发布指南](maven-central.md)。
 
+## Python 0.1.1 更新
+
+本次源码版本为 `0.1.1`，新增 `EvaluationWorker.from_config(path, handler=...)`：从私有 JSON 读取平台地址、Agent ID、版本和 Worker 接入密钥，可选配置开发证书及持久暂存路径。平台创建凭证后展示可复制配置，关闭弹窗即清除该次展示内容。原有环境变量接入仍可用，Java SDK 保持 `0.1.0`。
+
+版本号、工作流默认值和构建产物校验同步更新；Worker 注册上报版本与包元数据一致。发布仍依次通过 CI、TestPyPI 安装验收和正式 PyPI 上传，不能将本地构建视为已发布。当前可下载版本以 [PyPI 版本列表](https://pypi.org/project/veyraeval-sdk/#history) 和对应 GitHub Actions 发布结果为准。
+
 ## 当前名称与真正的发布前提
 
 | 项目 | 当前源码标识 | 发布前必须确认 |
 | --- | --- | --- |
-| Python 分发名 | `veyraeval-sdk`，版本 `0.1.0` | 已发布并验证；后续版本沿用已配置的 Trusted Publisher，每次上传仍单独审批。Python 导入名仍是 `agent_eval`。 |
+| Python 分发名 | `veyraeval-sdk`，源码版本 `0.1.1` | 已发布并验证；后续版本沿用已配置的 Trusted Publisher，每次上传仍单独审批。Python 导入名仍是 `agent_eval`。 |
 | Java SDK | `io.github.1993226871:veyraeval-sdk:0.1.0` | 已发布并通过全新缓存的独立消费项目验证；后续版本继续单独审批。 |
 | Java 协议 | `io.github.1993226871:veyraeval-protocol:0.1.0` | 已与 SDK 一起发布，消费者自动解析共享 DTO/Jackson 协议依赖。 |
 | Java 父 POM | `io.github.1993226871:veyraeval-platform:0.1.0`，类型 `pom` | 已发布以解析版本/BOM/许可证等继承元数据。没有发布 API、Worker、core 或 infrastructure jar。 |
@@ -35,7 +41,7 @@ python scripts/verify_java_sdk_distribution.py
 python -m pip install build==1.3.0 twine==6.2.0
 python -m build sdks/python
 python -m twine check sdks/python/dist/*
-python scripts/verify_sdk_wheel.py sdks/python/dist/veyraeval_sdk-0.1.0-py3-none-any.whl
+python scripts/verify_sdk_wheel.py sdks/python/dist/veyraeval_sdk-0.1.1-py3-none-any.whl
 ```
 
 Python 默认先构建 sdist，再从 sdist构建 wheel，验证源码分发包本身能独立打包。Java 不能只把 SDK 的单个 jar传上去：缺失 protocol 或父 POM 时，下游依赖解析会失败。
@@ -48,10 +54,10 @@ Python 默认先构建 sdist，再从 sdist构建 wheel，验证源码分发包�
 4. 使用 `python-sdk-release.yml` 的独立发布作业：只下载本次构建的 SDK 产物，使用 `pypa/gh-action-pypi-publish`，将 OIDC `id-token: write` 限定在发布作业。构建作业不具备发布权限。
 5. 你审核具体产物/版本并明确批准后才公开发布，再从干净环境按注册表依赖安装验证。已发布的同版本不能随意覆盖。
 
-用户现在可直接安装已发布版本：
+Python SDK 安装（选择注册表中已发布的对应版本）：
 
 ```bash
-python -m pip install veyraeval-sdk==0.1.0
+python -m pip install veyraeval-sdk==0.1.1
 ```
 
 ```python
@@ -82,7 +88,7 @@ PyPI 与 TestPyPI 使用独立账号和项目权限，分别注册并配置双�
 
 ### 手工演练与正式发布
 
-1. 工作流合入 `main` 后，在 Actions → Python SDK release 选择 Run workflow，分支选 `main`，`registry=testpypi`，`version=0.1.0`，保持 `publish=false`。不会上传注册表。
+1. 工作流合入 `main` 后，在 Actions → Python SDK release 选择 Run workflow，分支选 `main`，`registry=testpypi`，`version=0.1.1`，保持 `publish=false`。不会上传注册表。
 2. 下载 `python-sdk-distributions` 和 `python-sdk-release-manifest`，核对源码提交、包名、版本和 SHA-256。构建会运行 SDK 测试、sdist→wheel 构建、Twine 检查、许可证/Schema 验证及独立虚拟环境安装。
 3. 确认 TestPyPI 项目归属和 Publisher 绑定后，明确批准一次测试上传，再选择相同提交对应的 `main`、`registry=testpypi`、`publish=true`。每次运行重新构建，应核对这次运行的 manifest；人工环境审批可在构建结束后检查实际产物。
 4. 从 TestPyPI 安装验证成功，再核对 PyPI 绑定与正式发布范围，明确批准正式上传；选择 `registry=pypi`、`publish=true`。工作流只允许从 `main` 公开上传，不因普通 push/tag 自动发布，不跳过同版本已存在错误。
@@ -95,7 +101,7 @@ python -m venv .venv-sdk-check
 # 激活环境后执行；Windows: .venv-sdk-check\Scripts\Activate.ps1
 # Linux/macOS: source .venv-sdk-check/bin/activate
 python -m pip install httpx==0.28.1 jsonschema==4.23.0
-python -m pip install --no-deps --index-url https://test.pypi.org/simple/ veyraeval-sdk==0.1.0
+python -m pip install --no-deps --index-url https://test.pypi.org/simple/ veyraeval-sdk==0.1.1
 python -m pip check
 python -c "from agent_eval import AgentResult, EvaluationWorker, observe"
 ```

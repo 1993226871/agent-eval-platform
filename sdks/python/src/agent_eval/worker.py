@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import inspect
+import json
 import os
 import random
 import threading
@@ -45,6 +46,42 @@ class EvaluationWorker:
         worker = cls(transport, spool)
         worker._owns_resources = True
         return worker
+
+    @classmethod
+    def from_config(cls, path="agent-eval.local.json", *, handler):
+        """Load a single Agent's private JSON configuration; paths are relative to the file."""
+        if not callable(handler):
+            raise ValueError("A callable Agent handler is required")
+        path = Path(path).resolve()
+        try:
+            config = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (json.JSONDecodeError, UnicodeError):
+            raise ValueError("Invalid SDK JSON configuration") from None
+        if not isinstance(config, dict):
+            raise ValueError("SDK configuration must be an object")
+        required = {"platform_url", "api_key", "agent_id"}
+        optional = {"agent_version", "instance_id", "spool_path", "ca_cert"}
+        if config.keys() - required - optional:
+            raise ValueError("Unknown SDK configuration field")
+        for field in required | (config.keys() & optional):
+            if not isinstance(config.get(field), str) or not config[field].strip():
+                raise ValueError("Missing or invalid SDK configuration field: " + field)
+
+        def local_path(value):
+            return (path.parent / value).resolve()
+
+        ca_cert = local_path(config["ca_cert"]) if "ca_cert" in config else None
+        spool = FileSpool(local_path(config.get("spool_path", ".agent-eval/spool.sqlite")))
+        try:
+            transport = HttpTransport(config["platform_url"], config["api_key"],
+                                      config.get("agent_version", "v1"), config.get("instance_id"),
+                                      ca_cert=ca_cert)
+        except Exception:
+            spool.close()
+            raise
+        worker = cls(transport, spool)
+        worker._owns_resources = True
+        return worker.register_agent(config["agent_id"], handler)
 
     def register_agent(self, agent_id, handler):
         if self._pollers or not isinstance(agent_id, str) or not callable(handler):

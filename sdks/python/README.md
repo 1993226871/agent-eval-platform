@@ -7,8 +7,40 @@ Connect your own Agent to private evaluations. Your Agent runs in your environme
 Python 3.11 or newer. Install the published SDK from PyPI:
 
 ```bash
-python -m pip install veyraeval-sdk==0.1.0
+python -m pip install veyraeval-sdk==0.1.1
 ```
+
+## Connect with a configuration file (0.1.1+)
+
+SDK 0.1.1 adds `from_config`; 0.1.0 does not include this method. Install 0.1.1 or newer in your Agent's Python environment. For source development, run `python -m pip install ./sdks/python` from the repository root.
+
+After registering an Agent, issue a Worker credential in the platform and choose **复制配置**. Save the JSON as `agent-eval.local.json` in your own Agent project:
+
+```json
+{
+  "platform_url": "https://localhost:8443",
+  "agent_id": "YOUR_AGENT_UUID",
+  "agent_version": "v1",
+  "api_key": "YOUR_WORKER_KEY"
+}
+```
+
+Pass your existing task handler directly; the Agent ID is read from the file:
+
+```python
+worker = EvaluationWorker.from_config("agent-eval.local.json", handler=handle)
+try:
+    worker.start()
+    Event().wait()
+finally:
+    worker.stop()
+```
+
+Import `Event` and `EvaluationWorker` as in the example below. No username/password or `AGENT_EVAL_*` environment variables are needed. The file is read once at construction; changing/revoking credentials requires updating it and restarting the Worker. A credential belongs to an Agent and can serve multiple experiments, rather than being recreated for each task.
+
+Optional string fields: `spool_path` (default `.agent-eval/spool.sqlite`), `ca_cert` (your development certificate), and `instance_id`. `agent_version` defaults to `v1`. Relative spool/certificate paths resolve from the configuration file's directory. TLS verification remains enabled. Use the platform address reachable from the Agent machine; `localhost` refers to that machine.
+
+Add `agent-eval.local.json` and `.agent-eval/` to your Agent project's `.gitignore`. The private file contains the Worker key, not a model-provider key. Keep one spool per Worker process. The platform displays the secret and complete configuration only at issuance; it does not store another browser copy for later retrieval.
 
 ## Connect an Agent
 
@@ -72,7 +104,7 @@ Schemas in `src/agent_eval/schemas` are generated copies of `contracts/schemas`;
 
 ## Registry publication
 
-Version `0.1.0` is available on [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/) and [TestPyPI](https://test.pypi.org/project/veyraeval-sdk/0.1.0/). The Python import name remains `agent_eval`. Registry downloads, artifact SHA-256, dependencies, imports and packaged schemas have been verified in fresh environments. See the [publishing guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/sdk-publishing.md) for future releases. Contributors can still install from this repository with `python -m pip install ./sdks/python`. The Java SDK `0.1.0` is also published to Maven Central.
+Version `0.1.1` adds configuration-file connection and explicit development CA support. Check the registry version list for publication status. The first release, `0.1.0`, is available on [PyPI](https://pypi.org/project/veyraeval-sdk/0.1.0/) and [TestPyPI](https://test.pypi.org/project/veyraeval-sdk/0.1.0/). The Python import name remains `agent_eval`. Registry downloads, artifact SHA-256, dependencies, imports and packaged schemas have been verified in fresh environments. See the [publishing guide](https://github.com/1993226871/veyraeval/blob/main/docs/guides/sdk-publishing.md) for future releases. Contributors can still install from this repository with `python -m pip install ./sdks/python`. The Java SDK `0.1.0` is also published to Maven Central.
 
 ## License
 
