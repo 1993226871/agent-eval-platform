@@ -921,3 +921,25 @@ dialog::backdrop {
 .catalog-fields > label {
   margin: 0;
 }
+
+.experiment-title {
+  display: inline-block;
+  font-weight: 600;
+  font-size: 16px;
+}
+.identity-details {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.identity-details code {
+  overflow-wrap: anywhere;
+}
+.task-instruction {
+  max-width: 65ch;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.experiment-context {
+  border-left: 3px solid var(--teal);
+}

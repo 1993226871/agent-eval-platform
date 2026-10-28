@@ -17,6 +17,11 @@ import {
 } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
 import { TrialEvidence } from "./TrialEvidence";
+import {
+  experimentTitle,
+  executionPlan,
+  executionStatus,
+} from "../experiments/presentation";
 import { EstimateNotice, useExperimentEstimate } from "../experiments/estimate";
 
 export function ExperimentReport() {
@@ -119,7 +124,18 @@ function ExperimentReportPage({ id }: { id: string }) {
       .find((item) => item.trial_id === selected?.trial_id) ?? selected;
   return (
     <>
-      <PageHeading title="实验报告" description={id}>
+      <PageHeading
+        title={
+          experiment.data
+            ? `${experiment.data.agent_name} 的评测报告`
+            : "实验报告"
+        }
+        description={
+          experiment.data
+            ? `${experiment.data.dataset_name} · v${experiment.data.dataset_version_number} ｜ ${experiment.data.suite_name} · v${experiment.data.suite_version_number}`
+            : "正在加载实验信息"
+        }
+      >
         <button disabled={download.isPending} onClick={() => download.mutate()}>
           导出 JSON 与证据
         </button>
@@ -144,6 +160,37 @@ function ExperimentReportPage({ id }: { id: string }) {
           重跑 Agent
         </button>
       </PageHeading>
+      {experiment.data && (
+        <section className="panel experiment-context" aria-label="关联实验信息">
+          <h2>本次评测对象</h2>
+          <p>
+            Agent：<strong>{experiment.data.agent_name}</strong> · 版本{" "}
+            {experiment.data.agent_version}
+          </p>
+          <p>
+            任务集：{experiment.data.dataset_name} · v
+            {experiment.data.dataset_version_number}
+          </p>
+          <p>
+            评分规则集：{experiment.data.suite_name} · v
+            {experiment.data.suite_version_number}
+          </p>
+          <p>{executionPlan(experiment.data)}</p>
+          <p>
+            创建时间：
+            {new Date(experiment.data.created_at).toLocaleString("zh-CN")}
+          </p>
+          <details className="identity-details">
+            <summary>查看实验与 Agent 编号</summary>
+            <p>
+              实验编号：<code>{id}</code>
+            </p>
+            <p>
+              Agent 编号：<code>{experiment.data.agent_id}</code>
+            </p>
+          </details>
+        </section>
+      )}
       {experiment.data?.source_experiment_id && (
         <p>
           重跑来源：
@@ -175,7 +222,7 @@ function ExperimentReportPage({ id }: { id: string }) {
                   {value.finished_attempts} / {value.planned_attempts}
                 </strong>{" "}
                 · 已开始 {value.started_attempts} · 实验状态{" "}
-                <Badge>{value.experiment_status}</Badge>
+                <Badge>{executionStatus(value.experiment_status)}</Badge>
               </p>
               <p>
                 质量已判定：
@@ -287,10 +334,10 @@ function ExperimentReportPage({ id }: { id: string }) {
                 任务集：<code>{value.dataset_version_id}</code>
               </p>
               <p>
-                原始套件：<code>{value.suite_version_id}</code>
+                原始评分规则集编号：<code>{value.suite_version_id}</code>
               </p>
               <p>
-                当前实际套件：
+                当前实际评分规则集编号：
                 <code>{value.evaluation_suite_version_ids.join(", ")}</code>
               </p>
               <p>
@@ -311,7 +358,8 @@ function ExperimentReportPage({ id }: { id: string }) {
                     ?.filter((item) => item.id !== id)
                     .map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.agent_version} · {item.id.slice(0, 8)}
+                        {experimentTitle(item)} ·{" "}
+                        {new Date(item.created_at).toLocaleString("zh-CN")}
                       </option>
                     ))}
                 </select>
@@ -365,7 +413,7 @@ function ExperimentReportPage({ id }: { id: string }) {
                         <small>{item.trial_id}</small>
                       </td>
                       <td>
-                        <Badge>{item.execution_status}</Badge>
+                        <Badge>{executionStatus(item.execution_status)}</Badge>
                       </td>
                       <td>
                         <Badge>{item.evaluation_state}</Badge>

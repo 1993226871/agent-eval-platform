@@ -15,6 +15,8 @@ import { useWorkspace } from "../auth/AuthProvider";
 import { useVersionOptions } from "../catalog/queries";
 import { DeletionControl } from "./DeletionControl";
 import { EstimateNotice, useExperimentEstimate } from "./estimate";
+import { executionPlan, executionStatus } from "./presentation";
+import { objectValue } from "../catalog/validation";
 
 export function ExperimentsPage() {
   const { workspace_id } = useWorkspace();
@@ -51,6 +53,16 @@ export function ExperimentsPage() {
   } | null>(null);
   const [selected, setSelected] = useState("");
   const [cancelId, setCancelId] = useState("");
+  const selectedExperiment = useQuery({
+    queryKey: [workspace_id, "experiment", selected],
+    enabled: !!selected,
+    queryFn: () =>
+      request(
+        api.GET("/api/v1/experiment-summaries/{id}", {
+          params: { path: { id: selected } },
+        }),
+      ),
+  });
   const trials = useQuery({
     queryKey: [workspace_id, "trials", selected],
     enabled: !!selected,
@@ -155,10 +167,10 @@ export function ExperimentsPage() {
           <table>
             <thead>
               <tr>
-                <th>实验 / Agent 版本</th>
+                <th>评测 Agent</th>
+                <th>评测配置</th>
+                <th>任务安排</th>
                 <th>执行状态</th>
-                <th>重复次数</th>
-                <th>截止时间</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -166,23 +178,58 @@ export function ExperimentsPage() {
               {experiments.data.map((item) => (
                 <tr key={item.id}>
                   <td>
-                    <Link to={"/workspace/reports/" + item.id}>报告</Link>{" "}
-                    <button
-                      className="text-button"
-                      onClick={() => setSelected(item.id)}
+                    <Link
+                      className="experiment-title"
+                      to={"/workspace/reports/" + item.id}
                     >
-                      {item.id.slice(0, 8)}
-                    </button>
-                    <small>{item.agent_version}</small>
+                      {item.agent_name}
+                    </Link>
+                    <small>Agent 版本：{item.agent_version}</small>
+                    <small>
+                      创建于 {new Date(item.created_at).toLocaleString("zh-CN")}
+                    </small>
+                    <details className="identity-details">
+                      <summary>编号与截止时间</summary>
+                      <p>
+                        实验编号：<code>{item.id}</code>
+                      </p>
+                      <p>
+                        Agent 编号：<code>{item.agent_id}</code>
+                      </p>
+                      <p>
+                        截止时间：
+                        {new Date(item.deadline).toLocaleString("zh-CN")}
+                      </p>
+                    </details>
                   </td>
                   <td>
-                    <Badge>{item.status}</Badge>
+                    <p>
+                      任务集：{item.dataset_name} · v
+                      {item.dataset_version_number}
+                    </p>
+                    <p>
+                      评分规则集：{item.suite_name} · v
+                      {item.suite_version_number}
+                    </p>
                   </td>
-                  <td>{item.repeat_count}</td>
-                  <td>{new Date(item.deadline).toLocaleString("zh-CN")}</td>
                   <td>
+                    <strong>{item.task_count} 次执行</strong>
+                    <small>
+                      {item.case_count} 道任务，每道 {item.repeat_count} 次
+                    </small>
+                  </td>
+                  <td>
+                    <Badge>{executionStatus(item.status)}</Badge>
+                  </td>
+                  <td>
+                    <Link
+                      className="button-link"
+                      to={"/workspace/reports/" + item.id}
+                    >
+                      查看报告
+                    </Link>
                     <button onClick={() => setSelected(item.id)}>
-                      查看任务
+                      查看 {item.task_count} 次任务执行
                     </button>
                     <DeletionControl
                       experimentId={item.id}
@@ -218,7 +265,7 @@ export function ExperimentsPage() {
           </table>
         </div>
       ) : (
-        <Empty title="还没有实验">先发布任务集和套件，再创建实验。</Empty>
+        <Empty title="还没有实验">先发布任务集和评分规则集，再创建实验。</Empty>
       )}
       <div className="pagination">
         <button
@@ -236,8 +283,18 @@ export function ExperimentsPage() {
       </div>
       {selected && (
         <section className="panel">
-          <h2>任务列表 · {selected.slice(0, 8)}</h2>
-          <ErrorNotice error={trials.error} />
+          <h2>
+            {selectedExperiment.data
+              ? `${selectedExperiment.data.agent_name} 的任务执行列表`
+              : "任务执行列表"}
+          </h2>
+          {selectedExperiment.data && (
+            <p className="hint">
+              {executionPlan(selectedExperiment.data)}
+              。每行是一次任务执行，点击“查看报告”可看评分与调用轨迹。
+            </p>
+          )}
+          <ErrorNotice error={trials.error ?? selectedExperiment.error} />
           {trials.isPending ? (
             <Loading />
           ) : (
@@ -245,8 +302,8 @@ export function ExperimentsPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>Trial ID</th>
-                    <th>案例序号</th>
+                    <th>任务要求</th>
+                    <th>执行次数</th>
                     <th>执行状态</th>
                   </tr>
                 </thead>
@@ -254,11 +311,18 @@ export function ExperimentsPage() {
                   {trials.data?.map((trial) => (
                     <tr key={trial.id}>
                       <td>
-                        <code>{trial.id}</code>
+                        <strong>任务 {trial.case_index + 1}</strong>
+                        <p className="task-instruction">
+                          {String(objectValue(trial.task).instruction)}
+                        </p>
+                        <details className="identity-details">
+                          <summary>执行编号</summary>
+                          <code>{trial.id}</code>
+                        </details>
                       </td>
-                      <td>{trial.case_index + 1}</td>
+                      <td>第 {trial.attempt} 次</td>
                       <td>
-                        <Badge>{trial.status}</Badge>
+                        <Badge>{executionStatus(trial.status)}</Badge>
                       </td>
                     </tr>
                   ))}

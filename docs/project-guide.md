@@ -151,7 +151,7 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：604个文件</summary>
+<summary>展开完整目录树：606个文件</summary>
 
 ```text
 veyraeval/
@@ -914,7 +914,8 @@ veyraeval/
 │   │   │   │   ├── DeletionControl.tsx
 │   │   │   │   ├── ExperimentsPage.test.tsx
 │   │   │   │   ├── ExperimentsPage.tsx
-│   │   │   │   └── estimate.tsx
+│   │   │   │   ├── estimate.tsx
+│   │   │   │   └── presentation.ts
 │   │   │   ├── models/
 │   │   │   │   ├── ModelConnectionForm.test.tsx
 │   │   │   │   ├── ModelConnectionForm.tsx
@@ -926,6 +927,7 @@ veyraeval/
 │   │   │   │   └── money.ts
 │   │   │   └── reports/
 │   │   │       ├── ComparisonView.tsx
+│   │   │       ├── ExperimentReport.test.tsx
 │   │   │       ├── ExperimentReport.tsx
 │   │   │       ├── HumanReviewPanel.tsx
 │   │   │       ├── TraceTree.test.tsx
@@ -1839,6 +1841,7 @@ veyraeval/
 | [`web/src/features/experiments/DeletionControl.test.tsx`](../web/src/features/experiments/DeletionControl.test.tsx) | 前端回归测试：requires explicit confirmation and retries with the same deletion identity。 |
 | [`web/src/features/experiments/DeletionControl.tsx`](../web/src/features/experiments/DeletionControl.tsx) | 需要确认的实验异步删除操作及相关状态反馈。 |
 | [`web/src/features/experiments/ExperimentsPage.test.tsx`](../web/src/features/experiments/ExperimentsPage.test.tsx) | 前端回归测试：reuses the same complete request after an uncertain network failure。 |
+| [`web/src/features/experiments/presentation.ts`](../web/src/features/experiments/presentation.ts) | 实验与报告共用的可读标题、任务次数说明及中文执行状态。 |
 | [`web/src/features/experiments/ExperimentsPage.tsx`](../web/src/features/experiments/ExperimentsPage.tsx) | 实验列表、版本选择、费用预估、幂等启动、任务状态、取消与删除入口。 |
 | [`web/src/features/experiments/estimate.tsx`](../web/src/features/experiments/estimate.tsx) | 查询整次实验首次评测的整数预留估算，并显示假设、配置无效及重试额外费用提示。 |
 | [`web/src/features/models/ModelConnectionForm.test.tsx`](../web/src/features/models/ModelConnectionForm.test.tsx) | 仅提交模型名/API地址/Key、携带CSRF且保存后清空Key的接入表单测试。 |
@@ -1850,6 +1853,7 @@ veyraeval/
 | [`web/src/features/models/money.test.ts`](../web/src/features/models/money.test.ts) | 人民币精确转换、微额显示和大整数金额边界测试。 |
 | [`web/src/features/models/money.ts`](../web/src/features/models/money.ts) | BigInt人民币/整数微元转换及展示，不通过浮点数计算。 |
 | [`web/src/features/reports/ComparisonView.tsx`](../web/src/features/reports/ComparisonView.tsx) | 两个实验的配置可比性、覆盖率、双通过率和可比维度差值。 |
+| [`web/src/features/reports/ExperimentReport.test.tsx`](../web/src/features/reports/ExperimentReport.test.tsx) | 验证报告即使暂时没有分数也能展示关联Agent、固定配置和执行安排，默认折叠内部编号。 |
 | [`web/src/features/reports/ExperimentReport.tsx`](../web/src/features/reports/ExperimentReport.tsx) | 实验报告、任务分页、证据定位、仅重评/重跑、人工复核和JSON导出。 |
 | [`web/src/features/reports/HumanReviewPanel.tsx`](../web/src/features/reports/HumanReviewPanel.tsx) | 向已有评测结果追加人工评分和理由，不覆盖自动结果。 |
 | [`web/src/features/reports/TraceTree.test.tsx`](../web/src/features/reports/TraceTree.test.tsx) | 前端回归测试：places out-of-order children under parents, labels incomplete capture, and escapes content；keeps orphaned and cyclic spans visible without infinite recursion。 |

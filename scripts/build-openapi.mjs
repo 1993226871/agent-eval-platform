@@ -24,7 +24,7 @@ define('AccountCreate', { email: { type: 'string', format: 'email' }, temporary_
 const kind = enumeration(['DATASET', 'EVALUATOR', 'SUITE']);
 define('CatalogResource', { id: uuid, kind, name: text, content: jsonValue, revision: integer, archived: bool });
 define('ResourceSummary', { id: uuid, kind, name: text, revision: integer, archived: bool });
-define('ExperimentSummary', { id: uuid, workspace_id: uuid, agent_id: uuid, agent_version: text, dataset_version_id: uuid, suite_version_id: uuid, repeat_count: integer, deadline: date, status: text, source_experiment_id: nullable(uuid) });
+define('ExperimentSummary', { id: uuid, workspace_id: uuid, agent_id: uuid, agent_version: text, dataset_version_id: uuid, suite_version_id: uuid, repeat_count: integer, deadline: date, status: text, source_experiment_id: nullable(uuid), agent_name: text, dataset_name: text, dataset_version_number: integer, suite_name: text, suite_version_number: integer, case_count: integer, task_count: integer, created_at: date });
 define('CatalogCreate', { kind, name: text, content: jsonValue });
 define('CatalogUpdate', { revision: integer, name: text, content: jsonValue });
 define('PublishedVersion', { id: uuid, resource_id: uuid, kind, name: text, content: jsonValue, content_hash: text, number: integer });

@@ -15,15 +15,20 @@ public class JdbcWorkspaceListings implements WorkspaceListings {
         return jdbc.sql("select id,kind,name,revision,archived from catalog_resources where workspace_id=? and kind=? and not archived order by created_at,id limit ? offset ?")
             .params(actor.workspaceId(),kind.name(),limit,offset).query((r,n) -> new ResourceSummary(r.getObject("id",UUID.class),ResourceKind.valueOf(r.getString("kind")),r.getString("name"),r.getLong("revision"),r.getBoolean("archived"))).list();
     }
-    private static final String COLUMNS="id,workspace_id,agent_id,agent_version,dataset_version_id,suite_version_id,repeat_count,deadline,status,(snapshot->>'source_experiment_id')::uuid source_experiment_id";
+    private static final String COLUMNS="e.id,e.workspace_id,e.agent_id,e.agent_version,e.dataset_version_id,e.suite_version_id,e.repeat_count,e.deadline,e.status,(e.snapshot->>'source_experiment_id')::uuid source_experiment_id,"
+        +"a.name agent_name,d.name dataset_name,d.number dataset_version_number,s.name suite_name,s.number suite_version_number,"
+        +"jsonb_array_length(e.snapshot->'dataset'->'cases') case_count,jsonb_array_length(e.snapshot->'dataset'->'cases')*e.repeat_count task_count,e.created_at";
+    private static final String FROM=" from experiments e join agents a on a.id=e.agent_id and a.workspace_id=e.workspace_id "
+        +"join catalog_versions d on d.id=e.dataset_version_id and d.workspace_id=e.workspace_id "
+        +"join catalog_versions s on s.id=e.suite_version_id and s.workspace_id=e.workspace_id ";
     @Override public List<ExperimentSummary> experiments(WorkspaceActor actor,int offset,int limit) {
         WorkspaceListings.page(offset,limit);
-        return jdbc.sql("select "+COLUMNS+" from experiments where workspace_id=? and status not in ('DELETING','DELETED') order by created_at desc,id limit ? offset ?").params(actor.workspaceId(),limit,offset).query(this::map).list();
+        return jdbc.sql("select "+COLUMNS+FROM+"where e.workspace_id=? and e.status not in ('DELETING','DELETED') order by e.created_at desc,e.id limit ? offset ?").params(actor.workspaceId(),limit,offset).query(this::map).list();
     }
     @Override public ExperimentSummary experiment(WorkspaceActor actor,UUID id) {
-        return jdbc.sql("select "+COLUMNS+" from experiments where id=? and workspace_id=? and status not in ('DELETING','DELETED')").params(id,actor.workspaceId()).query(this::map).optional().orElseThrow(ScopeViolationException::new);
+        return jdbc.sql("select "+COLUMNS+FROM+"where e.id=? and e.workspace_id=? and e.status not in ('DELETING','DELETED')").params(id,actor.workspaceId()).query(this::map).optional().orElseThrow(ScopeViolationException::new);
     }
     private ExperimentSummary map(java.sql.ResultSet r,int n) throws java.sql.SQLException {
-        return new ExperimentSummary(r.getObject("id",UUID.class),r.getObject("workspace_id",UUID.class),r.getObject("agent_id",UUID.class),r.getString("agent_version"),r.getObject("dataset_version_id",UUID.class),r.getObject("suite_version_id",UUID.class),r.getInt("repeat_count"),r.getTimestamp("deadline").toInstant(),r.getString("status"),r.getObject("source_experiment_id",UUID.class));
+        return new ExperimentSummary(r.getObject("id",UUID.class),r.getObject("workspace_id",UUID.class),r.getObject("agent_id",UUID.class),r.getString("agent_version"),r.getObject("dataset_version_id",UUID.class),r.getObject("suite_version_id",UUID.class),r.getInt("repeat_count"),r.getTimestamp("deadline").toInstant(),r.getString("status"),r.getObject("source_experiment_id",UUID.class),r.getString("agent_name"),r.getString("dataset_name"),r.getInt("dataset_version_number"),r.getString("suite_name"),r.getInt("suite_version_number"),r.getInt("case_count"),r.getInt("task_count"),r.getTimestamp("created_at").toInstant());
     }
 }

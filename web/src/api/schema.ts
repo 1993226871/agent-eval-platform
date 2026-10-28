@@ -1271,6 +1271,15 @@ export interface components {
       deadline: string;
       status: string;
       source_experiment_id: string | null;
+      agent_name: string;
+      dataset_name: string;
+      dataset_version_number: number;
+      suite_name: string;
+      suite_version_number: number;
+      case_count: number;
+      task_count: number;
+      /** Format: date-time */
+      created_at: string;
     };
     CatalogCreate: {
       /** @enum {string} */

@@ -5803,6 +5803,31 @@
                 "type": "null"
               }
             ]
+          },
+          "agent_name": {
+            "type": "string"
+          },
+          "dataset_name": {
+            "type": "string"
+          },
+          "dataset_version_number": {
+            "type": "integer"
+          },
+          "suite_name": {
+            "type": "string"
+          },
+          "suite_version_number": {
+            "type": "integer"
+          },
+          "case_count": {
+            "type": "integer"
+          },
+          "task_count": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -5815,7 +5840,15 @@
           "repeat_count",
           "deadline",
           "status",
-          "source_experiment_id"
+          "source_experiment_id",
+          "agent_name",
+          "dataset_name",
+          "dataset_version_number",
+          "suite_name",
+          "suite_version_number",
+          "case_count",
+          "task_count",
+          "created_at"
         ]
       },
       "CatalogCreate": {
