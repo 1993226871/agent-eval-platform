@@ -61,6 +61,12 @@ class ModelAdminApiIT {
             var judgeTemplates=get(user,"/api/v1/templates/judges"); assertThat(judgeTemplates.statusCode()).isEqualTo(200);
             assertThat(json.readTree(judgeTemplates.body())).hasSize(3);
             String templateConfig=json.writeValueAsString(Map.of("model_profile_id",id,"price_version_id",json.readTree(created.body()).path("price").path("id").asText()));
+            var mixed=post(user,"/api/v1/templates/starter/with-judge/copy",templateConfig);
+            assertThat(mixed.statusCode()).isEqualTo(200);
+            var mixedBody=json.readTree(mixed.body());
+            assertThat(mixedBody.at("/suite_version/content/entries")).hasSize(2);
+            assertThat(mixedBody.at("/suite_version/content/entries/1/required_to_pass").asBoolean()).isTrue();
+            assertThat(mixedBody.at("/suite_version/name").asText()).isEqualTo("订单综合评分");
             var copied=post(user,"/api/v1/templates/judges/content-coverage/copy",templateConfig);
             assertThat(copied.statusCode()).isEqualTo(200);
             var evaluator=json.readTree(copied.body()); assertThat(evaluator.path("content").path("config").path("prompt_version").asText()).isEqualTo("rubric-v1");
@@ -115,6 +121,7 @@ class ModelAdminApiIT {
             assertThat(post(management,"/api/v1/admin/models/"+id+"/disable","{\"reason\":\"No private bypass\"}").statusCode()).isEqualTo(404);
             String template=json.writeValueAsString(Map.of("model_profile_id",id,"price_version_id",model.path("price").path("id").asText()));
             assertThat(post(theirs,"/api/v1/templates/judges/content-coverage/copy",template).statusCode()).isEqualTo(404);
+            assertThat(post(theirs,"/api/v1/templates/starter/with-judge/copy",template).statusCode()).isEqualTo(404);
             assertThat(post(mine,"/api/v1/templates/judges/content-coverage/copy",template).statusCode()).isEqualTo(200);
             assertThat(post(mine,"/api/v1/models/connections/"+id+"/disable","{}").statusCode()).isEqualTo(204);
         }

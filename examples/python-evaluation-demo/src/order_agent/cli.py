@@ -27,6 +27,10 @@ def main() -> int:
         command.add_argument("--ca", type=Path, help="开发证书路径；不关闭 TLS 校验")
         command.add_argument("--timeout", type=float, default=180)
         command.add_argument("--output", type=Path, default=Path(".local/runs"))
+        if name == "demo":
+            judge = command.add_mutually_exclusive_group()
+            judge.add_argument("--judge", action="store_true", help="登录后选择评审模型，运行规则与LLM混合评测")
+            judge.add_argument("--judge-model", help="使用指定的本人可用模型UUID执行LLM评审")
         if name == "report":
             command.add_argument("experiment", help="已有实验 UUID；不会创建或重新执行任务")
     args = parser.parse_args()
@@ -47,7 +51,19 @@ def main() -> int:
         finally:
             del password
         if args.command == "demo":
-            result = run_demo(api, args.ca, args.output, args.timeout)
+            model_id = args.judge_model
+            if args.judge:
+                models = api.request("GET", "/models")
+                if not models:
+                    raise PlatformError("请先在平台的评审模型页面接入模型，或联系管理员配置平台模型。")
+                for index, model in enumerate(models, 1):
+                    billing = "平台额度" if model["billing_mode"] == "PLATFORM" else "自带API Key，由供应商计费"
+                    print(f"{index}. {model['name']}（{billing}）")
+                choice = 1 if len(models) == 1 else int(input("选择评审模型序号："))
+                if not 1 <= choice <= len(models):
+                    raise ValueError("无效的模型序号")
+                model_id = models[choice - 1]["id"]
+            result = run_demo(api, args.ca, args.output, args.timeout, model_id)
         else:
             result = args.output / ("report-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
             result.mkdir(parents=True, mode=0o700)

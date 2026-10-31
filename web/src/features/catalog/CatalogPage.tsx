@@ -39,6 +39,7 @@ export function CatalogPage({ kind }: { kind: ResourceKind }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const models = useModels();
+  const [judgeModel, setJudgeModel] = useState("");
   const evaluatorVersions = useVersionOptions("EVALUATOR");
   const detail = useQuery({
     queryKey: [workspace_id, "resource", selected],
@@ -111,7 +112,51 @@ export function CatalogPage({ kind }: { kind: ResourceKind }) {
       />
       <details className="template-strip">
         <summary>从平台示例开始</summary>
+        <p>
+          纯规则示例无需模型费用；规则 + LLM 示例会加入答案可靠性
+          Rubric，创建后启动实验才会调用模型。
+        </p>
+        <label>
+          示例评审模型
+          <select
+            value={judgeModel}
+            onChange={(event) => setJudgeModel(event.target.value)}
+          >
+            <option value="">选择可用模型</option>
+            {models.data?.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <ErrorNotice error={models.error} />
         <div className="actions">
+          <button
+            disabled={!judgeModel || action.isPending}
+            onClick={() =>
+              action.mutate(async () => {
+                const model = models.data!.find(
+                  (item) => item.id === judgeModel,
+                )!;
+                const bundle = await request(
+                  api.POST("/api/v1/templates/starter/with-judge/copy", {
+                    body: {
+                      model_profile_id: model.id,
+                      price_version_id: model.price.id,
+                    },
+                  }),
+                );
+                setSelected(
+                  kind === "DATASET"
+                    ? bundle.dataset_version.resource_id
+                    : bundle.suite_version.resource_id,
+                );
+              })
+            }
+          >
+            复制规则 + LLM 示例
+          </button>
           <button
             disabled={action.isPending}
             onClick={() =>

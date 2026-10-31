@@ -29,9 +29,9 @@ def evaluator_definitions() -> list[dict[str, Any]]:
 
 
 def suite_content(versions: list[str]) -> dict[str, Any]:
-    if len(versions) != 3:
-        raise ValueError("Three evaluator versions are required")
+    if len(versions) not in (3, 4):
+        raise ValueError("Three rules and optionally one LLM Judge version are required")
     return {"entries": [
         {"evaluator_version": version, "dimension": dimension, "required_to_pass": True, "weight": 1}
-        for version, dimension in zip(versions, ["outcome", "process", "process"], strict=True)
+        for version, dimension in zip(versions, ["outcome", "process", "process"] + (["outcome"] if len(versions) == 4 else []), strict=True)
     ]}

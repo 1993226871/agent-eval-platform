@@ -151,7 +151,7 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：606个文件</summary>
+<summary>展开完整目录树：607个文件</summary>
 
 ```text
 veyraeval/
@@ -898,6 +898,7 @@ veyraeval/
 │   │   │   ├── catalog/
 │   │   │   │   ├── CatalogEditor.test.tsx
 │   │   │   │   ├── CatalogEditor.tsx
+│   │   │   │   ├── CatalogPage.test.tsx
 │   │   │   │   ├── CatalogPage.tsx
 │   │   │   │   ├── DatasetFields.tsx
 │   │   │   │   ├── PreviewPanel.test.tsx
@@ -1831,6 +1832,7 @@ veyraeval/
 | [`web/src/features/catalog/ValueFields.tsx`](../web/src/features/catalog/ValueFields.tsx) | 递归类型化字段编辑：文本、数字、布尔、字段组、列表和空值，无需JSON输入。 |
 | [`web/src/features/catalog/ValueFields.test.tsx`](../web/src/features/catalog/ValueFields.test.tsx) | 验证嵌套字段类型保留、改名和重复字段名校验。 |
 | [`web/src/features/catalog/CatalogEditor.tsx`](../web/src/features/catalog/CatalogEditor.tsx) | 草稿内容编辑/保存/发布/归档、固定版本只读及JSONL导入、模型绑定和单次估算。 |
+| [`web/src/features/catalog/CatalogPage.test.tsx`](../web/src/features/catalog/CatalogPage.test.tsx) | 验证显式选择模型后复制规则与LLM混合示例，复制过程不启动付费实验。 |
 | [`web/src/features/catalog/CatalogPage.tsx`](../web/src/features/catalog/CatalogPage.tsx) | 任务集、评测器、套件的列表、分页、创建及编辑器装配。 |
 | [`web/src/features/catalog/PreviewPanel.test.tsx`](../web/src/features/catalog/PreviewPanel.test.tsx) | 前端回归测试：replays an uncertain paid preview and rotates its identity only after success。 |
 | [`web/src/features/catalog/PreviewPanel.tsx`](../web/src/features/catalog/PreviewPanel.tsx) | 选已有Trial证据试运行当前已保存草稿，保留不确定提交的幂等身份并查询独立结果。 |

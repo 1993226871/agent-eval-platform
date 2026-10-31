@@ -12,7 +12,8 @@ public class CatalogController {
     private final DatasetService datasets;
     private final TemplateService templates;
     private final CurrentActor current;
-    public CatalogController(CatalogService catalog,DatasetService datasets,TemplateService templates,CurrentActor current) { this.catalog=catalog; this.datasets=datasets; this.templates=templates; this.current=current; }
+    private final io.agenteval.evaluation.JudgeTemplateService judges;
+    public CatalogController(CatalogService catalog,DatasetService datasets,TemplateService templates,CurrentActor current,io.agenteval.evaluation.JudgeTemplateService judges) { this.catalog=catalog; this.datasets=datasets; this.templates=templates; this.current=current; this.judges=judges; }
     public record CreateRequest(ResourceKind kind,String name,JsonNode content) {}
     public record UpdateRequest(long revision,String name,JsonNode content) {}
     public record ImportRequest(long revision,String jsonl) {}
@@ -27,6 +28,14 @@ public class CatalogController {
     @GetMapping("/catalog/versions/{id}") public PublishedVersion version(Authentication auth,@PathVariable UUID id) { return catalog.version(current.require(auth),id); }
     @GetMapping("/catalog/{id}/versions") public List<PublishedVersionSummary> versions(Authentication auth,@PathVariable UUID id,@RequestParam(defaultValue="0") int offset,@RequestParam(defaultValue="25") int limit) { return catalog.versions(current.require(auth),id,offset,limit); }
     @PostMapping("/catalog/{id}/import") public CatalogResource importJsonl(Authentication auth,@PathVariable UUID id,@RequestBody ImportRequest request) { return datasets.importJsonl(current.require(auth),id,request.revision(),request.jsonl()); }
+    public record JudgeStarter(UUID modelProfileId,UUID priceVersionId) {}
+    @PostMapping("/templates/starter/with-judge/copy") @org.springframework.transaction.annotation.Transactional
+    public TemplateService.StarterBundle judgeStarter(Authentication auth,@RequestBody JudgeStarter request) {
+        var actor=current.require(auth);
+        var draft=judges.copy(actor,"evidence-support",request.modelProfileId(),request.priceVersionId());
+        var judge=catalog.publish(actor,draft.id());
+        return templates.copyStarter(actor,judge.id());
+    }
     @GetMapping("/templates") public List<TemplateService.Template> templates() { return templates.list(); }
     @PostMapping("/templates/{id}/copy") public CatalogResource copy(Authentication auth,@PathVariable String id) { return templates.copy(current.require(auth),id); }
     @PostMapping("/templates/starter/copy") @org.springframework.transaction.annotation.Transactional

@@ -1,4 +1,6 @@
 import unittest
+import tempfile
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from threading import Event
 
@@ -55,6 +57,46 @@ class CatalogTests(unittest.TestCase):
         definition = evaluator_definitions()[2]
         self.assertEqual(definition['config']['selector'], '/args/0')
         self.assertEqual(definition['config']['expected_selector'], '/task_input/order_id')
+
+    def test_mixed_suite_includes_required_llm_outcome(self):
+        entries = suite_content(['one', 'two', 'three', 'judge'])['entries']
+        self.assertEqual(len(entries), 4)
+        self.assertEqual(entries[-1]['evaluator_version'], 'judge')
+        self.assertEqual(entries[-1]['dimension'], 'outcome')
+        self.assertTrue(entries[-1]['required_to_pass'])
+
+    def test_demo_uses_readable_names_and_binds_the_selected_judge(self):
+        from order_agent.demo import prepare_demo
+        class API:
+            published = None
+            def __init__(self):
+                self.published = []
+                self.agent_names = []
+            def publish(self, kind, name, content):
+                self.published.append((kind, name, content))
+                return 'version-' + str(len(self.published))
+            def request(self, method, path, body=None):
+                if path == '/models':
+                    return [{'id': 'model-1', 'name': '示例评审模型', 'price': {'id': 'price-1'}}]
+                if path == '/templates/judges/evidence-support/copy':
+                    self.judge_config = body
+                    return {'id': 'judge-draft'}
+                if path == '/catalog/judge-draft/versions':
+                    return {'id': 'judge-version'}
+                if path == '/agents':
+                    self.agent_names.append(body['name'])
+                    return {'id': 'agent-' + str(len(self.agent_names))}
+                raise AssertionError(path)
+        api = API()
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = {'agents': {}}
+            prepare_demo(api, manifest, Path(directory) / 'manifest.json', 'model-1')
+        self.assertEqual(api.agent_names, ['订单助手', '金额异常助手'])
+        self.assertEqual(api.published[0][1], '订单查询')
+        self.assertEqual(api.published[-1][1], '订单综合评分')
+        self.assertEqual(len(api.published[-1][2]['entries']), 4)
+        self.assertEqual(api.judge_config, {'model_profile_id': 'model-1', 'price_version_id': 'price-1'})
+        self.assertNotIn('secret', str(manifest))
 
     def test_suite_requires_all_three_dimensions_to_pass(self):
         entries = suite_content(['one', 'two', 'three'])['entries']

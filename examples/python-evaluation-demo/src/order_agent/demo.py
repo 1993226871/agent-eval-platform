@@ -45,7 +45,41 @@ def download_report(api: Platform, experiment: str, directory: Path, timeout: fl
     return report
 
 
-def run_demo(api: Platform, ca: Path | None, root: Path, timeout: float) -> Path:
+AGENT_NAMES = {"correct": "订单助手", "buggy": "金额异常助手"}
+RULE_NAMES = {"answer_exact": "答案一致性", "tool_called": "工具选择", "tool_args": "工具参数"}
+
+
+def prepare_demo(api: Platform, manifest: dict, manifest_path: Path, judge_model_id: str | None = None) -> None:
+    model = None
+    if judge_model_id:
+        model = next((item for item in api.request("GET", "/models") if item["id"] == judge_model_id), None)
+        if model is None:
+            raise ValueError("请选择本人可用的评审模型")
+        manifest["judge_model"] = {"id": model["id"], "name": model["name"]}
+        print(f"评审模型：{model['name']}；本轮将创建 6 次首轮 LLM 评审，费用按实际用量计算。", flush=True)
+    manifest["evaluation_mode"] = "RULE_AND_LLM" if model else "RULE"
+    manifest["dataset_version"] = api.publish("DATASET", "订单查询", dataset())
+    save(manifest_path, manifest)
+    versions = []
+    for definition in evaluator_definitions():
+        versions.append(api.publish("EVALUATOR", RULE_NAMES[definition["criterion_id"]], definition))
+        manifest["evaluator_versions"] = list(versions)
+        save(manifest_path, manifest)
+    if model:
+        judge = api.request("POST", "/templates/judges/evidence-support/copy", {
+            "model_profile_id": model["id"], "price_version_id": model["price"]["id"],
+        })
+        versions.append(api.request("POST", f"/catalog/{judge['id']}/versions")["id"])
+        manifest["evaluator_versions"] = list(versions)
+        save(manifest_path, manifest)
+    manifest["suite_version"] = api.publish("SUITE", "订单综合评分" if model else "订单规则评分", suite_content(versions))
+    save(manifest_path, manifest)
+    for variant, name in AGENT_NAMES.items():
+        manifest["agents"][variant] = api.request("POST", "/agents", {"name": name, "version": "v1"})["id"]
+        save(manifest_path, manifest)
+
+
+def run_demo(api: Platform, ca: Path | None, root: Path, timeout: float, judge_model_id: str | None = None) -> Path:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:8]
     run_dir = root / run_id
     run_dir.mkdir(parents=True, mode=0o700)
@@ -53,22 +87,9 @@ def run_demo(api: Platform, ca: Path | None, root: Path, timeout: float) -> Path
     manifest_path = run_dir / "manifest.json"
     save(manifest_path, manifest)
     print(f"本轮记录目录：{run_dir.resolve()}", flush=True)
-    label = "订单示范 " + run_id
-    dataset_version = api.publish("DATASET", label, dataset())
-    manifest["dataset_version"] = dataset_version
-    save(manifest_path, manifest)
-    versions = []
-    for definition in evaluator_definitions():
-        versions.append(api.publish("EVALUATOR", label + " " + definition["criterion_id"], definition))
-        manifest["evaluator_versions"] = versions
-        save(manifest_path, manifest)
-    suite_version = api.publish("SUITE", label, suite_content(versions))
-    manifest["suite_version"] = suite_version
-    save(manifest_path, manifest)
-    for variant in ("correct", "buggy"):
-        agent_id = api.request("POST", "/agents", {"name": label + " " + variant, "version": "v1"})["id"]
-        manifest["agents"][variant] = agent_id
-        save(manifest_path, manifest)
+    prepare_demo(api, manifest, manifest_path, judge_model_id)
+    dataset_version = manifest["dataset_version"]
+    suite_version = manifest["suite_version"]
     credential = api.request("POST", "/worker-credentials", {"agent_ids": list(manifest["agents"].values())})
     # Secret lives only in process memory; store its revocable identifier, never its value.
     manifest["credential_id"] = credential["id"]
@@ -95,10 +116,10 @@ def run_demo(api: Platform, ca: Path | None, root: Path, timeout: float) -> Path
                 experiment = api.request("POST", "/experiments", body)["id"]
                 manifest["experiments"][variant] = experiment
                 save(manifest_path, manifest)
-                print(f"{variant} 报告：{api.url}/workspace/reports/{experiment}", flush=True)
+                print(f"{AGENT_NAMES[variant]} 报告：{api.url}/workspace/reports/{experiment}", flush=True)
             for variant, experiment in manifest["experiments"].items():
                 report = download_report(api, experiment, run_dir / variant, timeout)
-                print(f"{variant}: PASS {report['passed_attempts']}/{report['planned_attempts']}, "
+                print(f"{AGENT_NAMES[variant]}: PASS {report['passed_attempts']}/{report['planned_attempts']}, "
                       f"FAIL {report['failed_attempts']}, 未确定 {report['undetermined_attempts']}", flush=True)
         manifest["status"] = "COMPLETED"
     except BaseException:

@@ -141,6 +141,7 @@ op('post', '/api/v1/catalog/{id}/import', 'importJsonl', object({ revision: inte
 op('get', '/api/v1/templates', 'listTemplates', null, array(ref('Template')));
 op('post', '/api/v1/templates/{id}/copy', 'copyTemplate', null, ref('CatalogResource'));
 op('post', '/api/v1/templates/starter/copy', 'copyStarter', null, ref('StarterBundle'));
+op('post', '/api/v1/templates/starter/with-judge/copy', 'copyJudgeStarter', object({ model_profile_id: uuid, price_version_id: uuid }), ref('StarterBundle'));
 op('get', '/api/v1/templates/judges', 'listJudgeTemplates', null, array(ref('JudgeTemplate')));
 op('post', '/api/v1/templates/judges/{id}/copy', 'copyJudgeTemplate', object({ model_profile_id: uuid, price_version_id: uuid }), ref('CatalogResource'));
 op('get', '/api/v1/agents', 'listAgents', null, array(ref('Agent')));

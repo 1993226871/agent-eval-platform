@@ -1,6 +1,6 @@
 # Python Agent 完整评测示例
 
-从正式 PyPI 安装 SDK，用同一个任务集比较正确版和故意算错金额的 Agent，查看最终答案、工具调用、中间结果及平台评分。
+从正式 PyPI 安装 SDK，用同一个任务集比较正确版和故意算错金额的 Agent，查看最终答案、工具调用、中间结果及平台评分。支持纯规则与规则 + LLM Judge 两种模式。
 
 完整操作、流程图、评分解释和一次实际运行的匿名结果见 [使用教程](../../docs/guides/python-evaluation-walkthrough.md)。本目录可以复制到自己的项目目录，独立运行，不依赖平台 Java/Python 源码。
 
@@ -42,7 +42,9 @@ python -m order_agent.cli demo --url https://localhost:8443 --email user@example
 
 证书实际路径由部署者提供。复制本目录单独使用时，请修改 `--ca` 路径。公共 CA 证书的平台不需要这个参数；不要关闭 TLS 校验。
 
-程序自动创建私人任务集、规则、套件和两个 Agent，启动 SDK Worker，执行两个实验，输出本人可访问的报告链接，并下载证据至 `.local/runs/本轮ID/`。每次运行创建新资源；临时 Worker 凭据运行结束会撤销，其他示例资源保留。若撤销失败会提示手动检查。
+平台中显示的示例名称为“订单查询”“订单助手”“金额异常助手”和“订单规则评分 / 订单综合评分”，不添加时间戳或英文版本后缀。时间戳仅用于本地运行记录和请求去重。
+
+程序自动创建私人任务集、评分规则集和两个 Agent，启动 SDK Worker，执行两个实验，输出本人可访问的报告链接，并下载证据至 `.local/runs/本轮ID/`。每次运行创建新资源；临时 Worker 凭据运行结束会撤销，其他示例资源保留。若撤销失败会提示手动检查。
 
 默认最多等待每个实验 180 秒，可用 `--timeout 300` 调整。超时不代表 Agent 得 0 分，也不会自动重新执行任务。
 
@@ -53,6 +55,20 @@ python -m order_agent.cli report YOUR_EXPERIMENT_UUID --url https://your-platfor
 ```
 
 开发 HTTPS 同样需要 `--ca`。`report` 命令的实验 ID 必须来自当前账号的工作空间。
+
+## 规则 + LLM Judge
+
+```bash
+python -m order_agent.cli demo --judge --url https://your-platform.example --email user@example.com --timeout 300
+```
+
+本机 HTTPS 同样增加 `--ca`。登录后从本人可用模型中选择；只有一个可用模型时直接使用并显示名称。也可通过 `--judge-model YOUR_MODEL_UUID` 明确指定。
+
+混合模式包含答案一致性、工具选择、工具参数三条规则，以及“证据支持度”LLM Rubric。Judge 根据参考答案和 Agent 最终输出给出 0–4 级评分，换算成 0–1；至少 0.75 才通过。六次任务执行各有一次首轮 LLM 评审，必要的格式修复另计；等待/超时不能当成零分，也不要自动重新运行未知请求。
+
+平台模型消耗平台额度，自带 API Key 的模型由供应商计费。模型在平台配置，示例不接触供应商密钥。Agent 本身仍使用确定性订单查询，调用大模型的是平台评分环节。报告中的规则结果和 LLM 分数分别可追溯，LLM 分数不保证每次完全相同。
+
+工作台中也可展开“从平台示例开始”，选择“示例评审模型”，点击“复制规则 + LLM 示例”。复制仅创建本人配置；启动实验后才会实际调用模型。
 
 ## 文件职责
 
@@ -74,4 +90,4 @@ python-evaluation-demo/
     └── test_evidence.py     # SDK 工具轨迹和等待完整评分的行为测试
 ```
 
-这里是确定性的模拟订单 Agent，没有自然语言推理和模型调用，不需要模型额度或 Python Runner。密码不保存；Worker 凭据 secret 仅保存在进程内存。`.local/` 包含本人的报告和 SDK 持久化队列，请保留访问限制，不要提交到 Git。
+这里是确定性的模拟订单 Agent，不在 Agent 业务代码中调用模型。纯规则模式无需模型额度；混合模式的模型费用来自平台 LLM Judge，两种模式都不需要 Python Runner。密码不保存；Worker 凭据 secret 仅保存在进程内存。`.local/` 包含本人的报告和 SDK 持久化队列，请保留访问限制，不要提交到 Git。
