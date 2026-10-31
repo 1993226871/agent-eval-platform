@@ -151,7 +151,7 @@ flowchart TD
 下面只列入Git可分发源码/配置/测试/文档。排除`target/`、`node_modules/`、`.tools/`、本地spool、环境密钥和已停止跟踪的私人过程文档；并非把这些目录当作缺失的业务文件。
 
 <details>
-<summary>展开完整目录树：607个文件</summary>
+<summary>展开完整目录树：617个文件</summary>
 
 ```text
 veyraeval/
@@ -866,6 +866,7 @@ veyraeval/
 ├── web/
 │   ├── e2e/
 │   │   ├── private-workspace.spec.ts
+│   │   ├── report-workflow.spec.ts
 │   │   ├── report.spec.ts
 │   │   └── workspace-evaluation.spec.ts
 │   ├── src/
@@ -927,13 +928,22 @@ veyraeval/
 │   │   │   │   ├── money.test.ts
 │   │   │   │   └── money.ts
 │   │   │   └── reports/
+│   │   │       ├── CaseRecovery.test.tsx
+│   │   │       ├── CaseRecovery.tsx
+│   │   │       ├── ComparisonView.test.tsx
 │   │   │       ├── ComparisonView.tsx
 │   │   │       ├── ExperimentReport.test.tsx
 │   │   │       ├── ExperimentReport.tsx
 │   │   │       ├── HumanReviewPanel.tsx
+│   │   │       ├── TaskComparison.test.tsx
+│   │   │       ├── TaskComparison.tsx
 │   │   │       ├── TraceTree.test.tsx
 │   │   │       ├── TraceTree.tsx
-│   │   │       └── TrialEvidence.tsx
+│   │   │       ├── TrialEvidence.test.tsx
+│   │   │       ├── TrialEvidence.tsx
+│   │   │       ├── diagnostics.test.ts
+│   │   │       ├── diagnostics.ts
+│   │   │       └── queries.ts
 │   │   ├── test/
 │   │   │   └── setup.ts
 │   │   ├── App.tsx
@@ -1800,6 +1810,7 @@ veyraeval/
 | --- | --- |
 | [`web/README.md`](../web/README.md) | 说明文档：VeyraEval workspace；本地开发；检查。 |
 | [`web/e2e/private-workspace.spec.ts`](../web/e2e/private-workspace.spec.ts) | 真实浏览器E2E：real session, CSRF, immutable publication, and one-time worker credential。 |
+| [`web/e2e/report-workflow.spec.ts`](../web/e2e/report-workflow.spec.ts) | 使用模拟API在真实浏览器验收失败诊断、证据定位、草稿保存跳转、逐任务对比和移动端布局；不访问实际模型或修改真实数据。 |
 | [`web/e2e/report.spec.ts`](../web/e2e/report.spec.ts) | 真实浏览器E2E：explains real SDK results and exports linked manual reviews；,。 |
 | [`web/e2e/workspace-evaluation.spec.ts`](../web/e2e/workspace-evaluation.spec.ts) | 真实浏览器E2E：HTTPS administrator provisions credits and a private user evaluates, compares and deletes。 |
 | [`web/index.html`](../web/index.html) | Vite页面壳、元信息和React入口挂载节点。 |
@@ -1854,13 +1865,22 @@ veyraeval/
 | [`web/src/features/models/credits.ts`](../web/src/features/models/credits.ts) | 十进制整数字符串/BigInt格式化和模型单次预留计算，避免浮点误差。 |
 | [`web/src/features/models/money.test.ts`](../web/src/features/models/money.test.ts) | 人民币精确转换、微额显示和大整数金额边界测试。 |
 | [`web/src/features/models/money.ts`](../web/src/features/models/money.ts) | BigInt人民币/整数微元转换及展示，不通过浮点数计算。 |
-| [`web/src/features/reports/ComparisonView.tsx`](../web/src/features/reports/ComparisonView.tsx) | 两个实验的配置可比性、覆盖率、双通过率和可比维度差值。 |
+| [`web/src/features/reports/CaseRecovery.test.tsx`](../web/src/features/reports/CaseRecovery.test.tsx) | 验证核对参考答案后创建草稿、按最新修订追加任务、保留来源和并发冲突不重试。 |
+| [`web/src/features/reports/CaseRecovery.tsx`](../web/src/features/reports/CaseRecovery.tsx) | 从冻结任务快照复制失败样例到新建或已有任务集草稿，保留摘录来源，不发布或运行评测。 |
+| [`web/src/features/reports/ComparisonView.test.tsx`](../web/src/features/reports/ComparisonView.test.tsx) | 验证不同任务集版本不按序号配对，也不请求逐任务列表。 |
+| [`web/src/features/reports/TaskComparison.test.tsx`](../web/src/features/reports/TaskComparison.test.tsx) | 验证按任务及执行次数配对、分页缺项不误报退步，以及不可比配置不判定改善。 |
+| [`web/src/features/reports/TaskComparison.tsx`](../web/src/features/reports/TaskComparison.tsx) | 逐任务配对、改善或退步展示、评分解释摘要及按需并排展开双方答案和证据。 |
+| [`web/src/features/reports/TrialEvidence.test.tsx`](../web/src/features/reports/TrialEvidence.test.tsx) | 验证固定任务、参考答案、实际回答、失败样例入口及评分引用定位执行步骤。 |
+| [`web/src/features/reports/diagnostics.test.ts`](../web/src/features/reports/diagnostics.test.ts) | 验证执行异常、评分异常、证据不足、可选项失败与质量结论分离，以及任务配对和样例复制语义。 |
+| [`web/src/features/reports/diagnostics.ts`](../web/src/features/reports/diagnostics.ts) | 依据现有执行状态和评分结果生成诊断标题、配对任务、判断通过结论变化并构建样例来源；不调用模型。 |
+| [`web/src/features/reports/queries.ts`](../web/src/features/reports/queries.ts) | 报告任务游标分页、冻结任务集版本和关联Agent身份的工作空间查询。 |
+| [`web/src/features/reports/ComparisonView.tsx`](../web/src/features/reports/ComparisonView.tsx) | 两个实验的配置可比性、可读配置名称、维度差值和逐任务对比入口。 |
 | [`web/src/features/reports/ExperimentReport.test.tsx`](../web/src/features/reports/ExperimentReport.test.tsx) | 验证报告即使暂时没有分数也能展示关联Agent、固定配置和执行安排，默认折叠内部编号。 |
 | [`web/src/features/reports/ExperimentReport.tsx`](../web/src/features/reports/ExperimentReport.tsx) | 实验报告、任务分页、证据定位、仅重评/重跑、人工复核和JSON导出。 |
 | [`web/src/features/reports/HumanReviewPanel.tsx`](../web/src/features/reports/HumanReviewPanel.tsx) | 向已有评测结果追加人工评分和理由，不覆盖自动结果。 |
 | [`web/src/features/reports/TraceTree.test.tsx`](../web/src/features/reports/TraceTree.test.tsx) | 前端回归测试：places out-of-order children under parents, labels incomplete capture, and escapes content；keeps orphaned and cyclic spans visible without infinite recursion。 |
 | [`web/src/features/reports/TraceTree.tsx`](../web/src/features/reports/TraceTree.tsx) | 按父子Span层级呈现工具/模型等调用，定位输入输出和事件来源。 |
-| [`web/src/features/reports/TrialEvidence.tsx`](../web/src/features/reports/TrialEvidence.tsx) | 单任务固定证据和当前轨迹详情，装配评测轮次与结果引用。 |
+| [`web/src/features/reports/TrialEvidence.tsx`](../web/src/features/reports/TrialEvidence.tsx) | 单任务固定输入、参考答案、实际回答、评分引用和轨迹，支持摘录失败样例及重新评分。 |
 | [`web/src/main.tsx`](../web/src/main.tsx) | React挂载入口，装配路由/查询等应用Provider并载入样式。 |
 | [`web/src/styles.css`](../web/src/styles.css) | 工作台布局、表单、表格、对话框、报告和移动端响应式样式。 |
 | [`web/src/test/setup.ts`](../web/src/test/setup.ts) | Vitest全局DOM匹配器与测试环境清理。 |

@@ -143,9 +143,7 @@ test("HTTPS administrator provisions CNY and a config-file Agent evaluates, comp
     };
     await waitPassed(first);
     await page.goto("/workspace/reports/" + first);
-    await page
-      .getByRole("button", { name: "案例 1 · 第 1 次", exact: true })
-      .click();
+    await page.getByRole("button", { name: / · 第 1 次$/ }).click();
     await expect(
       page.getByRole("heading", { name: "执行轨迹", exact: true }),
     ).toBeVisible();

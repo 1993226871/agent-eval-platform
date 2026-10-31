@@ -21,14 +21,16 @@ test("explains real SDK results and exports linked manual reviews", async ({
     page.getByRole("heading", { name: "实验", exact: true }),
   ).toBeVisible();
   await page.goto("/workspace/reports/" + ids[0]);
-  await expect(page.getByRole("heading", { name: "实验报告" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /的评测报告$/ }),
+  ).toBeVisible();
   await expect(
     page.locator(".metrics").getByText("1 / 1", { exact: true }),
   ).toHaveCount(2);
-  await page.getByRole("button", { name: "案例 1 · 第 1 次" }).click();
+  await page.getByRole("button", { name: / · 第 1 次$/ }).click();
   await expect(page.getByRole("heading", { name: "执行轨迹" })).toBeVisible();
   await expect(page.getByText("证据完整", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "output", exact: true }).click();
+  await page.getByRole("button", { name: "查看实际回答", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "固定快照中的证据：output" }),
   ).toBeVisible();

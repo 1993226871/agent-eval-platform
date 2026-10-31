@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "../../api/client";
 import type { Schema } from "../../api/types";
 import {
@@ -23,6 +18,9 @@ import {
   executionStatus,
 } from "../experiments/presentation";
 import { EstimateNotice, useExperimentEstimate } from "../experiments/estimate";
+import { TrialSummary } from "./TaskComparison";
+import { useReportDataset, useReportTrials } from "./queries";
+import { objectValue } from "../catalog/validation";
 
 export function ExperimentReport() {
   const { id = "" } = useParams();
@@ -72,19 +70,9 @@ function ExperimentReportPage({ id }: { id: string }) {
         }),
       ),
   });
-  const trials = useInfiniteQuery({
-    queryKey: [workspace_id, "report-trials", id],
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam, signal }) =>
-      request(
-        api.GET("/api/v1/reports/experiments/{id}/trials", {
-          params: { path: { id }, query: { limit: 25, cursor: pageParam } },
-          signal,
-        }),
-      ),
-    getNextPageParam: (page) => page.next_cursor ?? undefined,
-    refetchInterval: 10000,
-  });
+  const trials = useReportTrials(id);
+  const dataset = useReportDataset(experiment.data?.dataset_version_id);
+  const cases = objectValue(dataset.data?.content).cases;
   const rerun = useMutation({
     mutationFn: () => {
       if (!rerunBody) throw new Error("请重新打开重跑确认。");
@@ -207,6 +195,7 @@ function ExperimentReportPage({ id }: { id: string }) {
           experiment.error ??
           others.error ??
           trials.error ??
+          dataset.error ??
           download.error
         }
       />
@@ -383,7 +372,9 @@ function ExperimentReportPage({ id }: { id: string }) {
       )}
       <section className="panel">
         <h2>逐任务结果</h2>
-        <p className="hint">点击任务查看固定证据、指标解释和人工复核。</p>
+        <p className="hint">
+          每条执行展示质量结论和评分依据。点击任务查看参考答案、实际回答、关联步骤，或将失败样例保存为任务集草稿。
+        </p>
         {trials.isPending ? (
           <Loading />
         ) : (
@@ -391,11 +382,10 @@ function ExperimentReportPage({ id }: { id: string }) {
             <table>
               <thead>
                 <tr>
-                  <th>案例 / 尝试</th>
+                  <th>任务 / 执行次数</th>
                   <th>执行</th>
                   <th>评测</th>
-                  <th>质量结论</th>
-                  <th>结果 / 过程</th>
+                  <th>结论与原因</th>
                 </tr>
               </thead>
               <tbody>
@@ -408,32 +398,36 @@ function ExperimentReportPage({ id }: { id: string }) {
                           className="text-button"
                           onClick={() => setSelected(item)}
                         >
-                          案例 {item.case_index + 1} · 第 {item.attempt} 次
+                          {Array.isArray(cases)
+                            ? String(
+                                objectValue(cases[item.case_index])
+                                  .instruction ?? `任务 ${item.case_index + 1}`,
+                              )
+                            : `任务 ${item.case_index + 1}`}{" "}
+                          · 第 {item.attempt} 次
                         </button>
-                        <small>{item.trial_id}</small>
                       </td>
                       <td>
                         <Badge>{executionStatus(item.execution_status)}</Badge>
                       </td>
                       <td>
-                        <Badge>{item.evaluation_state}</Badge>
-                      </td>
-                      <td>
-                        <Badge
-                          tone={
-                            item.verdict === "PASS"
-                              ? "success"
-                              : item.verdict === "FAIL"
-                                ? "danger"
-                                : "warning"
-                          }
-                        >
-                          {item.verdict}
+                        <Badge>
+                          {(
+                            {
+                              COMPLETED: "评分完成",
+                              PARTIAL: "部分评分",
+                              PENDING: "等待评分",
+                              QUEUED: "等待评分",
+                              RUNNING: "评分中",
+                              WAITING_QUOTA: "等待额度",
+                              WAITING_RESOURCES: "等待资源",
+                              CANCELLED: "已取消",
+                            } as Record<string, string>
+                          )[item.evaluation_state] ?? item.evaluation_state}
                         </Badge>
                       </td>
                       <td>
-                        {item.dimensions.outcome?.score ?? "—"} /{" "}
-                        {item.dimensions.process?.score ?? "—"}
+                        <TrialSummary trial={item} />
                       </td>
                     </tr>
                   ))}
@@ -464,7 +458,11 @@ function ExperimentReportPage({ id }: { id: string }) {
         </div>
       </section>
       {currentTrial && (
-        <TrialEvidence key={id + currentTrial.trial_id} trial={currentTrial} />
+        <TrialEvidence
+          key={id + currentTrial.trial_id}
+          trial={currentTrial}
+          experimentId={id}
+        />
       )}
       <Dialog
         open={!!rerunBody}

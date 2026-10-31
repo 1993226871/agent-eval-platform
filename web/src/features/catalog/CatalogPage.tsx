@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, request } from "../../api/client";
 import type { ResourceKind } from "../../api/types";
@@ -35,7 +36,8 @@ export function CatalogPage({ kind }: { kind: ResourceKind }) {
   const cache = useQueryClient();
   const [offset, setOffset] = useState(0);
   const list = useCatalog(kind, offset);
-  const [selected, setSelected] = useState("");
+  const [search] = useSearchParams();
+  const [selected, setSelected] = useState(search.get("resource") ?? "");
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const models = useModels();

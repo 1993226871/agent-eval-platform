@@ -46,12 +46,13 @@ describe("trace evidence tree", () => {
       screen.getByText('"<script>globalThis.traceExecuted=true</script>"'),
     ).toBeVisible();
     expect(document.querySelector("script")).toBeNull();
-    expect(document.getElementById("span-child")).toHaveAttribute(
-      "data-highlighted",
-      "true",
-    );
     expect(
-      document.getElementById("span-child")?.closest('[data-span="root"]'),
+      document.querySelector('[data-span="child"] > .trace-node'),
+    ).toHaveAttribute("data-highlighted", "true");
+    expect(
+      document
+        .querySelector('[data-span="child"] > .trace-node')
+        ?.closest('[data-span="root"]'),
     ).not.toBeNull();
   });
   it("keeps orphaned and cyclic spans visible without infinite recursion", () => {

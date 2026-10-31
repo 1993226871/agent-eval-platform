@@ -10,6 +10,8 @@ import {
 } from "../../components/ui";
 import { useWorkspace } from "../auth/AuthProvider";
 import type { Schema } from "../../api/types";
+import { TaskComparison } from "./TaskComparison";
+import { useReportIdentity } from "./queries";
 
 const reasonLabels: Record<string, string> = {
   DATASET_VERSION_MISMATCH: "任务集版本不同",
@@ -31,6 +33,7 @@ export function ComparisonView() {
   const comparison = useQuery({
     queryKey: [workspace_id, "comparison", left, right],
     enabled: !!left && !!right,
+    refetchInterval: 10000,
     queryFn: ({ signal }) =>
       request(
         api.GET("/api/v1/reports/comparison", {
@@ -62,8 +65,11 @@ export function ComparisonDetails({
   comparison: Schema<"ComparisonReport">;
 }) {
   const { left, right } = comparison;
+  const leftIdentity = useReportIdentity(left.experiment_id),
+    rightIdentity = useReportIdentity(right.experiment_id);
   return (
     <>
+      <ErrorNotice error={leftIdentity.error ?? rightIdentity.error} />
       <div className="comparison-status">
         <Badge tone={comparison.directly_comparable ? "success" : "warning"}>
           {comparison.directly_comparable ? "可以直接比较" : "不能直接比较"}
@@ -83,12 +89,12 @@ export function ComparisonDetails({
               <th>范围 / 指标</th>
               <th>
                 <Link to={"/workspace/reports/" + left.experiment_id}>
-                  左侧 {left.agent_version}
+                  左侧 {leftIdentity.data?.agent_name} · {left.agent_version}
                 </Link>
               </th>
               <th>
                 <Link to={"/workspace/reports/" + right.experiment_id}>
-                  右侧 {right.agent_version}
+                  右侧 {rightIdentity.data?.agent_name} · {right.agent_version}
                 </Link>
               </th>
               <th>右 − 左</th>
@@ -98,17 +104,33 @@ export function ComparisonDetails({
             <tr>
               <th>任务集版本</th>
               <td>
-                <code>{left.dataset_version_id}</code>
+                {leftIdentity.data
+                  ? `${leftIdentity.data.dataset_name} · v${leftIdentity.data.dataset_version_number}`
+                  : "载入中"}
               </td>
               <td>
-                <code>{right.dataset_version_id}</code>
+                {rightIdentity.data
+                  ? `${rightIdentity.data.dataset_name} · v${rightIdentity.data.dataset_version_number}`
+                  : "载入中"}
               </td>
               <td>—</td>
             </tr>
             <tr>
               <th>实际评分规则集版本</th>
-              <td>{left.evaluation_suite_version_ids.join(", ")}</td>
-              <td>{right.evaluation_suite_version_ids.join(", ")}</td>
+              <td>
+                {leftIdentity.data &&
+                left.evaluation_suite_version_ids.length === 1 &&
+                left.evaluation_suite_version_ids[0] === left.suite_version_id
+                  ? `${leftIdentity.data.suite_name} · v${leftIdentity.data.suite_version_number}`
+                  : "含重评或多个配置，见版本详情"}
+              </td>
+              <td>
+                {rightIdentity.data &&
+                right.evaluation_suite_version_ids.length === 1 &&
+                right.evaluation_suite_version_ids[0] === right.suite_version_id
+                  ? `${rightIdentity.data.suite_name} · v${rightIdentity.data.suite_version_number}`
+                  : "含重评或多个配置，见版本详情"}
+              </td>
               <td>—</td>
             </tr>
             <tr>
@@ -176,12 +198,33 @@ export function ComparisonDetails({
       <p className="hint">
         证据哈希标识各次执行的实际内容。可比性核对的是同一任务版本、评分版本、原始/修订范围与完整性，执行内容无需相同。对比不代表因果结论。
       </p>
+      {left.dataset_version_id === right.dataset_version_id ? (
+        <TaskComparison
+          key={left.experiment_id + right.experiment_id}
+          leftId={left.experiment_id}
+          rightId={right.experiment_id}
+          datasetVersionId={left.dataset_version_id}
+          comparable={comparison.directly_comparable}
+        />
+      ) : (
+        <p className="warning-notice">
+          任务集版本不同，不能按任务序号配对。请使用同一任务集版本重新创建对比实验。
+        </p>
+      )}
       <details className="panel">
         <summary>查看双方版本和证据来源</summary>
         <JsonBlock
           value={{
             left: comparison.left_provenance,
             right: comparison.right_provenance,
+            dataset_versions: [
+              left.dataset_version_id,
+              right.dataset_version_id,
+            ],
+            suite_versions: [
+              left.evaluation_suite_version_ids,
+              right.evaluation_suite_version_ids,
+            ],
           }}
         />
       </details>

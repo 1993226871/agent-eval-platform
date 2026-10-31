@@ -1,5 +1,6 @@
 import { objectValue } from "./validation";
 import { NumberField, ValueFields } from "./ValueFields";
+import { Link } from "react-router-dom";
 
 export function DatasetFields({
   content,
@@ -31,6 +32,23 @@ export function DatasetFields({
       {cases.map((task, index) => (
         <fieldset className="definition-fields" key={index}>
           <legend>任务 {index + 1}</legend>
+          {objectValue(task.source).type === "evaluation_trial" && (
+            <details className="identity-details">
+              <summary>查看样例摘录来源</summary>
+              <p>此来源随草稿保存，修改后不代表仍与原任务一致。</p>
+              <p>
+                实验：{String(objectValue(task.source).experiment_id)} · 执行：
+                {String(objectValue(task.source).trial_id)}
+              </p>
+              <p>证据快照：{String(objectValue(task.source).snapshot_id)}</p>
+              <p>内容指纹：{String(objectValue(task.source).content_hash)}</p>
+              <Link
+                to={`/workspace/reports/${encodeURIComponent(String(objectValue(task.source).experiment_id))}`}
+              >
+                查看来源报告
+              </Link>
+            </details>
+          )}
           <label>
             任务要求 {index + 1}
             <textarea

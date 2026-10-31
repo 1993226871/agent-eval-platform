@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -15,10 +15,19 @@ import { useVersionOptions } from "../catalog/queries";
 import { TraceTree } from "./TraceTree";
 import { HumanReviewPanel } from "./HumanReviewPanel";
 import { resourceWaitMessage } from "../administration/ResourceUsagePanel";
+import { CaseRecovery } from "./CaseRecovery";
+import { diagnoseTrial } from "./diagnostics";
 
-export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
+export function TrialEvidence({
+  trial,
+  experimentId,
+}: {
+  trial: Schema<"TrialReport">;
+  experimentId: string;
+}) {
   const { workspace_id } = useWorkspace();
   const cache = useQueryClient();
+  const evidenceAnchor = useId();
   const [runOverride, setRunOverride] = useState("");
   const [reference, setReference] = useState("");
   const [suite, setSuite] = useState(trial.suite_version_id);
@@ -86,9 +95,12 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
       setRunOverride(value.run_id);
       setKey(crypto.randomUUID());
       await cache.invalidateQueries({ queryKey: [workspace_id, "report"] });
+      await cache.invalidateQueries({ queryKey: [workspace_id, "comparison"] });
     },
   });
   const manifest = objectValue(evidence.data?.manifest);
+  const task = objectValue(manifest.task);
+  const completion = objectValue(manifest.completion);
   const events = Array.isArray(manifest.events)
     ? manifest.events.map(objectValue)
     : [];
@@ -139,11 +151,17 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
   return (
     <section className="panel trial-evidence">
       <h2>
-        任务证据 · 案例 {trial.case_index + 1} / 第 {trial.attempt} 次
+        任务证据 · 任务 {trial.case_index + 1} / 第 {trial.attempt} 次
       </h2>
-      <p>
-        <code>{trial.trial_id}</code>
-      </p>
+      <details className="identity-details">
+        <summary>查看任务执行编号</summary>
+        <p>
+          <code>{trial.trial_id}</code>
+        </p>
+      </details>
+      {!runOverride && (
+        <p className="diagnosis-heading">{diagnoseTrial(trial).title}</p>
+      )}
       <ErrorNotice
         error={
           run.error ??
@@ -153,14 +171,56 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
           downloadError
         }
       />
+      {evidence.data && (
+        <section className="task-answer" aria-label="任务与答案">
+          <h3>任务要求</h3>
+          <p className="task-instruction">
+            {String(task.instruction ?? "未提供任务要求")}
+          </p>
+          <h3>任务输入</h3>
+          <EvidenceValue value={task.input} />
+          <h3>参考答案</h3>
+          {Object.hasOwn(task, "expected") ? (
+            <EvidenceValue value={task.expected} />
+          ) : (
+            <p>未提供参考答案，评分依照所选规则和 Rubric。</p>
+          )}
+          <h3>Agent 实际回答</h3>
+          {Object.hasOwn(completion, "output") ? (
+            <EvidenceValue value={completion.output} />
+          ) : (
+            <p>没有已提交的最终回答，请检查执行状态。</p>
+          )}
+          {(trial.verdict === "FAIL" ||
+            ["FAILED", "TIMED_OUT", "EXECUTION_UNKNOWN"].includes(
+              trial.execution_status,
+            )) &&
+            typeof task.instruction === "string" &&
+            Object.hasOwn(task, "input") && (
+              <CaseRecovery
+                key={snapshotId}
+                task={task}
+                source={{
+                  experiment_id: experimentId,
+                  trial_id: trial.trial_id,
+                  snapshot_id: snapshotId,
+                  content_hash: evidence.data.content_hash,
+                }}
+              />
+            )}
+        </section>
+      )}
       {snapshotId ? (
-        <p className="hint">
-          评分快照：<code>{snapshotId}</code>
-          <br />
-          内容哈希：<code>{evidence.data?.content_hash ?? "载入中"}</code> ·
-          套件：
-          <code>{run.data?.suite_version_id ?? trial.suite_version_id}</code>
-        </p>
+        <details className="identity-details">
+          <summary>查看评分版本与证据指纹</summary>
+          <p className="hint">
+            评分快照：<code>{snapshotId}</code>
+            <br />
+            内容哈希：<code>{evidence.data?.content_hash ?? "载入中"}</code> ·
+            套件：
+            <code>{run.data?.suite_version_id ?? trial.suite_version_id}</code>
+          </p>
+        </details>
       ) : (
         <p>
           {trial.evidence_wait_reason
@@ -175,7 +235,14 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
         run.data && (
           <>
             <p>
-              评测状态：<Badge>{run.data.status}</Badge> · {run.data.purpose}
+              评测状态：<Badge>{evaluationLabel(run.data.status)}</Badge> ·{" "}
+              {(
+                {
+                  INITIAL: "首次评分",
+                  REEVALUATION: "重新评分",
+                  PREVIEW: "预览评分",
+                } as Record<string, string>
+              )[run.data.purpose] ?? run.data.purpose}
             </p>
             {run.data.wait_reasons.length > 0 && (
               <div className="warning-notice">
@@ -193,7 +260,7 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
                 <article className="criterion" key={item.result_id}>
                   <div className="section-heading">
                     <h3>{item.result.criterion_id}</h3>
-                    <Badge>{item.result.status}</Badge>
+                    <Badge>{evaluationLabel(item.result.status)}</Badge>
                   </div>
                   <p>
                     {item.result.status === "SCORED"
@@ -209,14 +276,14 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
                         onClick={() => {
                           setReference(ref);
                           document
-                            .getElementById("selected-evidence")
+                            .getElementById(evidenceAnchor)
                             ?.scrollIntoView?.({
                               behavior: "auto",
                               block: "center",
                             });
                         }}
                       >
-                        {ref}
+                        {evidenceLabel(ref)}
                       </button>
                     ))}
                   </div>
@@ -230,7 +297,7 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
         )
       )}
       {reference && (
-        <section id="selected-evidence" className="selected-evidence">
+        <section id={evidenceAnchor} className="selected-evidence">
           <h3>固定快照中的证据：{reference}</h3>
           {evidenceValue === undefined || evidenceValue === null ? (
             <p>该引用在当前快照中无可展示内容。</p>
@@ -346,5 +413,75 @@ export function TrialEvidence({ trial }: { trial: Schema<"TrialReport"> }) {
         </form>
       </details>
     </section>
+  );
+}
+
+function evidenceLabel(reference: string) {
+  if (reference === "output") return "查看实际回答";
+  if (reference === "expected") return "查看参考答案";
+  if (reference === "task_input") return "查看任务输入";
+  if (reference === "task_instruction") return "查看任务要求";
+  if (reference.startsWith("event:")) return "查看关联执行步骤";
+  if (reference.startsWith("artifact:")) return "查看关联附件";
+  if (reference.startsWith("snapshot:")) return "查看证据快照";
+  return reference;
+}
+
+function evaluationLabel(value: string) {
+  return (
+    (
+      {
+        COMPLETED: "评分完成",
+        PARTIAL: "部分评分",
+        QUEUED: "等待评分",
+        RUNNING: "评分中",
+        CANCELLED: "已取消",
+        SCORED: "已评分",
+        ERROR: "评分器异常",
+        INSUFFICIENT_EVIDENCE: "证据不足",
+        SKIPPED: "已跳过",
+        WAITING_QUOTA: "等待额度",
+        WAITING_RESOURCES: "等待资源",
+      } as Record<string, string>
+    )[value] ?? value
+  );
+}
+
+function EvidenceValue({ value }: { value: unknown }) {
+  if (value === null) return <span>空值（null）</span>;
+  if (value === undefined) return <span>未提供</span>;
+  if (Array.isArray(value))
+    return value.length ? (
+      <ol>
+        {value.map((item, index) => (
+          <li key={index}>
+            <EvidenceValue value={item} />
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <span>空列表</span>
+    );
+  if (typeof value === "object")
+    return (
+      <dl className="evidence-value">
+        {Object.entries(value).map(([key, item]) => (
+          <div key={key}>
+            <dt>{key}</dt>
+            <dd>
+              <EvidenceValue value={item} />
+            </dd>
+          </div>
+        ))}
+      </dl>
+    );
+  return (
+    <p className="task-instruction">
+      {typeof value === "boolean"
+        ? value
+          ? "是（true）"
+          : "否（false）"
+        : String(value) || "空文本"}
+    </p>
   );
 }

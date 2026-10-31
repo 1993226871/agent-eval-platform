@@ -943,3 +943,55 @@ dialog::backdrop {
 .experiment-context {
   border-left: 3px solid var(--teal);
 }
+
+.diagnosis-summary {
+  min-width: 170px;
+  max-width: 52ch;
+}
+.diagnosis-summary p {
+  margin: 8px 0;
+}
+.task-comparison th:first-child {
+  min-width: 180px;
+}
+.task-comparison td {
+  vertical-align: top;
+}
+.task-answer {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.task-answer h3 {
+  margin: 18px 0 8px;
+}
+.diagnosis-heading {
+  font-weight: 600;
+}
+.case-recovery {
+  margin-top: 20px;
+}
+.case-recovery form {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+.evidence-value {
+  margin: 8px 0;
+}
+.evidence-value > div {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.evidence-value dt {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.evidence-value dd {
+  margin: 4px 0 0 16px;
+}
+.evidence-comparison > div {
+  min-width: 0;
+}
+.evidence-comparison .trial-evidence {
+  padding: 16px;
+}

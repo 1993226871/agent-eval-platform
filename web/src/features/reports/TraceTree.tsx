@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { Schema } from "../../api/types";
 import { Badge, JsonBlock } from "../../components/ui";
 
@@ -25,6 +25,7 @@ export function TraceTree({
   issues,
   highlightedSpan,
 }: Props) {
+  const treeId = useId();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const unique = [
     ...new Map(spans.map((span) => [span.span_id, span])).values(),
@@ -53,7 +54,7 @@ export function TraceTree({
     return (
       <li key={span.span_id} data-span={span.span_id}>
         <div
-          id={"span-" + span.span_id}
+          id={treeId + "-span-" + span.span_id}
           data-highlighted={
             highlightedSpan === span.span_id ? "true" : undefined
           }
